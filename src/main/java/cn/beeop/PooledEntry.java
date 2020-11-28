@@ -15,8 +15,6 @@
  */
 package cn.beeop;
 
-import java.sql.SQLException;
-
 import static java.lang.System.currentTimeMillis;
 
 /**
@@ -26,26 +24,28 @@ import static java.lang.System.currentTimeMillis;
  * @version 1.0
  */
 class PooledEntry {
-    private static final boolean[] FALSE_ARRAY = new boolean[6];
     volatile int state;
-    Object rawConn;
+    Object object;
     ProxyObject proxyConn;
+    ObjectFactory factory;
+
     volatile long lastAccessTime;
     volatile ObjectPool pool;
     PoolConfig config;
 
-    public PooledEntry(Object rawConn, int connState, ObjectPool connPool, PoolConfig config) throws ObjectException {
+    public PooledEntry(Object object, int connState, ObjectPool connPool, PoolConfig config) throws ObjectException {
         pool = connPool;
         state = connState;
-        this.rawConn = rawConn;
+        this.object = object;
         this.config = config;
+        factory = config.getObjectFactory();
         lastAccessTime = currentTimeMillis();//first time
     }
 
-    final void recycleSelf() throws SQLException {
+    final void recycleSelf() throws ObjectException {
         try {
             proxyConn = null;
-            // resetRawConnOnReturn();
+            factory.reset(object);
             pool.recycle(this);
         } catch (Exception e) {
             pool.abandonOnReturn(this);

@@ -15,7 +15,7 @@
  */
 package cn.beeop;
 
-import java.sql.SQLException;
+import static cn.beeop.StaticCenter.ObjectClosedException;
 
 /**
  * Object Proxy
@@ -24,30 +24,30 @@ import java.sql.SQLException;
  * @version 1.0
  */
 public class ProxyObject {
-    protected Object delegate;
-    protected PooledEntry pConn;//called by subclass to update time
+    private Object delegate;
+    private PooledEntry pConn;
     private boolean isClosed;
 
     public ProxyObject(PooledEntry pConn) {
         this.pConn = pConn;
         pConn.proxyConn = this;
-        this.delegate = pConn.rawConn;
+        this.delegate = pConn.object;
     }
 
-    public Object getDelegate() throws SQLException {
+    public Object getDelegate() throws ObjectException {
         checkClosed();
         return delegate;
     }
 
-    public boolean isClosed() throws SQLException {
+    public boolean isClosed() throws ObjectException {
         return isClosed;
     }
 
-    protected void checkClosed() throws SQLException {
-        // if (isClosed) throw ConnectionClosedException;
+    protected void checkClosed() throws ObjectException {
+        if (isClosed) throw ObjectClosedException;
     }
 
-    public final void close() throws SQLException {
+    public final void close() throws ObjectException {
         synchronized (this) {//safe close
             if (isClosed) return;
             isClosed = true;
@@ -59,7 +59,7 @@ public class ProxyObject {
     final void trySetAsClosed() {//called from FastConnectionPool
         try {
             close();
-        } catch (SQLException e) {
+        } catch (ObjectException e) {
         }
     }
 }

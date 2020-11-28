@@ -19,6 +19,7 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
+import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -36,10 +37,10 @@ import static java.util.concurrent.locks.LockSupport.*;
  * @author Chris.Liao
  * @version 1.0
  */
-public final class ObjectPool {
+public final class ObjectPool implements ObjectPoolJmx {
     private static final long spinForTimeoutThreshold = 1000L;
     private static final int maxTimedSpins = (Runtime.getRuntime().availableProcessors() < 2) ? 0 : 32;
-    private static final AtomicIntegerFieldUpdater<PooledEntry> ConnStUpd = AtomicIntegerFieldUpdater.newUpdater(PooledEntry.class, "state");
+    private static final AtomicIntegerFieldUpdater<PooledEntry> ObjStUpd = AtomicIntegerFieldUpdater.newUpdater(PooledEntry.class, "state");
     private static final AtomicReferenceFieldUpdater<Borrower, Object> BwrStUpd = AtomicReferenceFieldUpdater.newUpdater(Borrower.class, Object.class, "state");
     private static final String DESC_REMOVE_INIT = "init";
     private static final String DESC_REMOVE_BAD = "bad";
@@ -48,83 +49,87 @@ public final class ObjectPool {
     private static final String DESC_REMOVE_RESET = "reset";
     private static final String DESC_REMOVE_DESTROY = "destroy";
     private static final AtomicInteger poolNameIndex = new AtomicInteger(1);
-    private final Object connArrayLock = new Object();
-    private final Object connNotifyLock = new Object();
+    private final Object entryArrayLock = new Object();
+    private final Object entryAddNotifyLock = new Object();
+    private final PoolMonitorVo monitorVo = new PoolMonitorVo();
     private final ThreadLocal<WeakReference<Borrower>> threadLocal = new ThreadLocal<WeakReference<Borrower>>();
 
-    private int poolMaxSize;
-    private long defaultMaxWaitNanos;//nanoseconds
-    private int conUnCatchStateCode;
-    private int connectionTestTimeout;//seconds
-    private long connectionTestInterval;//milliseconds
-    private ConnectionPoolHook exitHook;
-    private PoolConfig poolConfig;
-    private Semaphore borrowSemaphore;
-    private ConcurrentLinkedQueue<Borrower> waitQueue = new ConcurrentLinkedQueue<Borrower>();
-
-    private TransferPolicy transferPolicy;
-    private ConnectionTestPolicy testPolicy;
-    private ObjectFactory connFactory;
-    private PooledConnAddThread connAddThread;
-    private volatile PooledEntry[] connArray = new PooledEntry[0];
-    private ScheduledFuture<?> idleCheckSchFuture;
-    private ScheduledThreadPoolExecutor idleSchExecutor = new ScheduledThreadPoolExecutor(2, new PoolThreadThreadFactory("IdleConnectionScan"));
     private String poolName = "";
     private String poolMode = "";
+    private int poolMaxSize;
+    private long defaultMaxWaitNanos;//nanoseconds
+    private int entryUnCatchStateCode;
+    private int objectTestTimeout;//seconds
+    private long objectTestInterval;//milliseconds
+    private Properties createProperties;
+
+    private PoolHook exitHook;
+    private PoolConfig poolConfig;
+    private Semaphore borrowSemaphore;
+    private TransferPolicy transferPolicy;
+    private ConcurrentLinkedQueue<Borrower> waitQueue = new ConcurrentLinkedQueue<Borrower>();
+
+    private ObjectFactory objectFactory;
+    private PooledConnAddThread poolEntryAddThread;
+    private volatile PooledEntry[] poolEntryArray = new PooledEntry[0];
+    private ScheduledFuture<?> idleCheckSchFuture;
+    private ScheduledThreadPoolExecutor idleSchExecutor = new ScheduledThreadPoolExecutor(2, new PoolThreadThreadFactory("IdleConnectionScan"));
     private AtomicInteger poolState = new AtomicInteger(POOL_UNINIT);
-    private AtomicInteger createConnThreadState = new AtomicInteger(THREAD_WORKING);
+    private AtomicInteger createObjThreadState = new AtomicInteger(THREAD_WORKING);
     private AtomicInteger needAddConnSize = new AtomicInteger(0);
 
     /**
      * initialize pool with configuration
      *
      * @param config data source configuration
-     * @throws SQLException check configuration fail or to create initiated connection
+     * @throws ObjectException check configuration fail or to create initiated object
      */
-    public void init(PoolConfig config) throws ObjectException {
+    public ObjectPool(PoolConfig config) throws ObjectException {
         if (poolState.get() == POOL_UNINIT) {
-            checkProxyClasses();
-            if (config == null) throw new ObjectException("DataSource configuration can't be null");
+            if (config == null) throw new ObjectException("Pool configuration can't be null");
             poolConfig = config;
 
             poolName = !isBlank(config.getPoolName()) ? config.getPoolName() : "FastPool-" + poolNameIndex.getAndIncrement();
-            commonLog.info("beeop({})starting....", poolName);
+            commonLog.info("BeeOP({})starting....", poolName);
 
             poolMaxSize = poolConfig.getMaxActive();
-            connFactory = poolConfig.getObjectFactory();
-            // connectionTestTimeout = poolConfig.getConnectionTestTimeout();
-
+            objectFactory = poolConfig.getObjectFactory();
+            objectTestTimeout = poolConfig.getAliveTestTimeout();
+            objectTestInterval = poolConfig.getAliveTestInterval();
             defaultMaxWaitNanos = MILLISECONDS.toNanos(poolConfig.getMaxWait());
-            // connectionTestInterval = poolConfig.getConnectionTestInterval();
-            createInitConnections(poolConfig.getInitialSize());
+            createProperties = poolConfig.getCreateProperties();
+
+            createInitObjects(poolConfig.getInitialSize());
 
             if (poolConfig.isFairMode()) {
                 poolMode = "fair";
                 transferPolicy = new FairTransferPolicy();
-                conUnCatchStateCode = transferPolicy.getCheckStateCode();
+                entryUnCatchStateCode = transferPolicy.getCheckStateCode();
             } else {
                 poolMode = "compete";
                 transferPolicy = new CompeteTransferPolicy();
-                conUnCatchStateCode = transferPolicy.getCheckStateCode();
+                entryUnCatchStateCode = transferPolicy.getCheckStateCode();
             }
 
-            exitHook = new ConnectionPoolHook();
+            exitHook = new PoolHook();
             Runtime.getRuntime().addShutdownHook(exitHook);
 
             borrowSemaphore = new Semaphore(poolConfig.getBorrowSemaphoreSize(), poolConfig.isFairMode());
             idleSchExecutor.setKeepAliveTime(15, SECONDS);
             idleSchExecutor.allowCoreThreadTimeOut(true);
             idleCheckSchFuture = idleSchExecutor.scheduleAtFixedRate(new Runnable() {
-                public void run() {// check idle connection
-                    closeIdleTimeoutConnection();
-                }
-            }, config.getIdleCheckTimeInitDelay(), config.getIdleCheckTimeInterval(), TimeUnit.MILLISECONDS);
+                                                                         public void run() {// check idle object
+                                                                             closeIdleTimeoutConnection();
+                                                                         }
+                                                                     }, 1000,
+                    config.getIdleCheckTimeInterval(),
+                    TimeUnit.MILLISECONDS);
 
             registerJMX();
-            commonLog.info("beeop({})has startup{mode:{},init size:{},max size:{},semaphore size:{},max wait:{}ms}",
+            commonLog.info("BeeOP({})has startup{mode:{},init size:{},max size:{},semaphore size:{},max wait:{}ms}",
                     poolName,
                     poolMode,
-                    connArray.length,
+                    poolEntryArray.length,
                     config.getMaxActive(),
                     poolConfig.getBorrowSemaphoreSize(),
                     poolConfig.getMaxWait()
@@ -132,56 +137,33 @@ public final class ObjectPool {
 
             poolState.set(POOL_NORMAL);
 
-            connAddThread = new PooledConnAddThread();
-            connAddThread.setDaemon(true);
-            connAddThread.setName("PooledEntryAdd");
-            connAddThread.start();
+            poolEntryAddThread = new PooledConnAddThread();
+            poolEntryAddThread.setDaemon(true);
+            poolEntryAddThread.setName("PooledEntryAdd");
+            poolEntryAddThread.start();
         } else {
             throw new ObjectException("Pool has initialized");
         }
-    }
-
-    /**
-     * check some proxy classes whether exists
-     */
-    private void checkProxyClasses() throws ObjectException {
-        try {
-            ClassLoader classLoader = getClass().getClassLoader();
-            Class.forName("cn.beeop.Borrower", true, classLoader);
-            Class.forName("cn.beeop.pool.PooledEntry", true, classLoader);
-            Class.forName("cn.beeop.pool.ProxyConnection", true, classLoader);
-            Class.forName("cn.beeop.pool.ProxyStatement", true, classLoader);
-            Class.forName("cn.beeop.pool.ProxyPsStatement", true, classLoader);
-            Class.forName("cn.beeop.pool.ProxyCsStatement", true, classLoader);
-            Class.forName("cn.beeop.pool.ProxyDatabaseMetaData", true, classLoader);
-            Class.forName("cn.beeop.pool.ProxyResultSet", true, classLoader);
-        } catch (ClassNotFoundException e) {
-            throw new ObjectException("Jdbc proxy classes missed", e);
-        }
-    }
-
-    ThreadPoolExecutor getNetworkTimeoutExecutor() {
-        return idleSchExecutor;
     }
 
     private boolean existBorrower() {
         return poolConfig.getBorrowSemaphoreSize() > borrowSemaphore.availablePermits() || borrowSemaphore.hasQueuedThreads();
     }
 
-    //create Pooled connection
-    private PooledEntry createPooledConn(int connState) throws ObjectException {
-        synchronized (connArrayLock) {
-            int arrayLen = connArray.length;
+    //create Pooled object
+    private PooledEntry createPooledEntry(int connState) throws ObjectException {
+        synchronized (entryArrayLock) {
+            int arrayLen = poolEntryArray.length;
             if (arrayLen < poolMaxSize) {
-                commonLog.debug("beeop({}))begin to create new pooled connection,state:{}", poolName, connState);
-                Object con = connFactory.create();
-                setDefaultOnRawConn(con);
-                PooledEntry pConn = new PooledEntry(con, connState, this, poolConfig);// add
-                commonLog.debug("beeop({}))has created new pooled connection:{},state:{}", poolName, pConn, connState);
+                commonLog.debug("BeeOP({}))begin to create new pooled object,state:{}", poolName, connState);
+                Object obj = objectFactory.create(createProperties);
+                objectFactory.setDefault(obj);
+                PooledEntry pConn = new PooledEntry(obj, connState, this, poolConfig);// add
+                commonLog.debug("BeeOP({}))has created new pooled object:{},state:{}", poolName, pConn, connState);
                 PooledEntry[] arrayNew = new PooledEntry[arrayLen + 1];
-                arraycopy(connArray, 0, arrayNew, 0, arrayLen);
+                arraycopy(poolEntryArray, 0, arrayNew, 0, arrayLen);
                 arrayNew[arrayLen] = pConn;// tail
-                connArray = arrayNew;
+                poolEntryArray = arrayNew;
                 return pConn;
             } else {
                 return null;
@@ -189,70 +171,67 @@ public final class ObjectPool {
         }
     }
 
-    //remove Pooled connection
-    private void removePooledConn(PooledEntry pConn, String removeType) {
-        commonLog.debug("beeop({}))begin to remove pooled connection:{},reason:{}", poolName, pConn, removeType);
-        pConn.state = CONNECTION_CLOSED;
+    //remove Pooled object
+    private void removePooledEntry(PooledEntry pEntry, String removeType) {
+        commonLog.debug("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, pEntry, removeType);
+        pEntry.state = OBJECT_CLOSED;
         // pConn.closeRawConn();
-        synchronized (connArrayLock) {
-            int oldLen = connArray.length;
+        synchronized (entryArrayLock) {
+            int oldLen = poolEntryArray.length;
             PooledEntry[] arrayNew = new PooledEntry[oldLen - 1];
             for (int i = 0; i < oldLen; i++) {
-                if (connArray[i] == pConn) {
-                    arraycopy(connArray, 0, arrayNew, 0, i);
+                if (poolEntryArray[i] == pEntry) {
+                    arraycopy(poolEntryArray, 0, arrayNew, 0, i);
                     int m = oldLen - i - 1;
-                    if (m > 0) arraycopy(connArray, i + 1, arrayNew, i, m);
+                    if (m > 0) arraycopy(poolEntryArray, i + 1, arrayNew, i, m);
                     break;
                 }
             }
 
-            commonLog.debug("beeop({}))has removed pooled connection:{},reason:{}", poolName, pConn, removeType);
-            connArray = arrayNew;
+            objectFactory.destroy(pEntry.object);
+            commonLog.debug("BeeOP({}))has removed pooled object:{},reason:{}", poolName, pEntry, removeType);
+            poolEntryArray = arrayNew;
         }
     }
 
-    //set default attribute on raw connection
-    private void setDefaultOnRawConn(Object rawConn) {
-
-    }
 
     /**
-     * check connection state
+     * check object state
      *
-     * @return if the checked connection is active then return true,otherwise
+     * @return if the checked object is active then return true,otherwise
      * false if false then close it
      */
-    private final boolean testOnBorrow(PooledEntry pConn) {
-        if (currentTimeMillis() - pConn.lastAccessTime - connectionTestInterval < 0 || testPolicy.isActive(pConn))
+    private final boolean testOnBorrow(PooledEntry pEntry) {
+        if (currentTimeMillis() - pEntry.lastAccessTime - objectTestInterval < 0 || objectFactory.isAlive(pEntry.object, poolConfig.getAliveTestTimeout()))
             return true;
 
-        removePooledConn(pConn, DESC_REMOVE_BAD);
+        removePooledEntry(pEntry, DESC_REMOVE_BAD);
         tryToCreateNewConnByAsyn();
         return false;
     }
 
     /**
-     * create initialization connections
+     * create initialization objects
      *
-     * @throws SQLException error occurred in creating connections
+     * @throws ObjectException error occurred in creating objects
      */
-    private void createInitConnections(int initSize) throws ObjectException {
+    private void createInitObjects(int initSize) throws ObjectException {
         try {
             for (int i = 0; i < initSize; i++)
-                createPooledConn(CONNECTION_IDLE);
+                createPooledEntry(OBJECT_IDLE);
         } catch (ObjectException e) {
-            for (PooledEntry pConn : connArray)
-                removePooledConn(pConn, DESC_REMOVE_INIT);
+            for (PooledEntry pConn : poolEntryArray)
+                removePooledEntry(pConn, DESC_REMOVE_INIT);
             throw e;
         }
     }
 
     /**
-     * borrow one connection from pool
+     * borrow one object from pool
      *
-     * @return If exists idle connection in pool,then return one;if not, waiting
+     * @return If exists idle object in pool,then return one;if not, waiting
      * until other borrower release
-     * @throws SQLException if pool is closed or waiting timeout,then throw exception
+     * @throws ObjectException if pool is closed or waiting timeout,then throw exception
      */
     public Object getConnection() throws ObjectException {
         if (poolState.get() == POOL_NORMAL) {
@@ -261,9 +240,11 @@ public final class ObjectPool {
             Borrower borrower = (ref != null) ? ref.get() : null;
             if (borrower != null) {
                 PooledEntry pConn = borrower.lastUsedEntry;
-                if (pConn != null && ConnStUpd.compareAndSet(pConn, CONNECTION_IDLE, CONNECTION_USING)) {
-                    if (testOnBorrow(pConn)) return null; //return createProxyConnection(pConn, borrower);
-
+                if (pConn != null && ObjStUpd.compareAndSet(pConn, OBJECT_IDLE, OBJECT_USING)) {
+                    if (testOnBorrow(pConn)) {
+                        borrower.lastUsedEntry = pConn;
+                        return new ProxyObject(pConn);
+                    }
                     borrower.lastUsedEntry = null;
                 }
             } else {
@@ -282,22 +263,24 @@ public final class ObjectPool {
 
             try {//borrowSemaphore acquired
                 //1:try to search one from array
-                PooledEntry[] tempArray = connArray;
+                PooledEntry[] tempArray = poolEntryArray;
                 int len = tempArray.length;
                 PooledEntry pConn;
                 for (int i = 0; i < len; i++) {
                     pConn = tempArray[i];
-                    if (ConnStUpd.compareAndSet(pConn, CONNECTION_IDLE, CONNECTION_USING) && testOnBorrow(pConn))
-                        return null;
-                    // return createProxyConnection(pConn, borrower);
+                    if (ObjStUpd.compareAndSet(pConn, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(pConn)) {
+                        borrower.lastUsedEntry = pConn;
+                        return new ProxyObject(pConn);
+                    }
                 }
 
                 //2:try to create one directly
-                if (connArray.length < poolMaxSize && (pConn = createPooledConn(CONNECTION_USING)) != null)
-                    return null;
-                // return createProxyConnection(pConn, borrower);
+                if (poolEntryArray.length < poolMaxSize && (pConn = createPooledEntry(OBJECT_USING)) != null) {
+                    borrower.lastUsedEntry = pConn;
+                    return new ProxyObject(pConn);
+                }
 
-                //3:try to get one transferred connection
+                //3:try to get one transferred object
                 boolean failed = false;
                 ObjectException failedCause = null;
                 borrower.state = BORROWER_NORMAL;
@@ -310,8 +293,8 @@ public final class ObjectPool {
                         pConn = (PooledEntry) state;
                         if (transferPolicy.tryCatch(pConn) && testOnBorrow(pConn)) {
                             waitQueue.remove(borrower);
-                            return null;
-                            //return createProxyConnection(pConn, borrower);
+                            borrower.lastUsedEntry = pConn;
+                            return new ProxyObject(pConn);
                         }
 
                         state = BORROWER_NORMAL;
@@ -352,26 +335,26 @@ public final class ObjectPool {
     }
 
     /**
-     * remove connection
+     * remove object
      *
-     * @param pConn target connection need release
+     * @param pConn target object need release
      */
     void abandonOnReturn(PooledEntry pConn) {
-        removePooledConn(pConn, DESC_REMOVE_BAD);
+        removePooledEntry(pConn, DESC_REMOVE_BAD);
         tryToCreateNewConnByAsyn();
     }
 
     /**
-     * return connection to pool
+     * return object to pool
      *
-     * @param pConn target connection need release
+     * @param pConn target object need release
      */
     public final void recycle(PooledEntry pConn) {
         transferPolicy.beforeTransfer(pConn);
 
         for (Borrower borrower : waitQueue)
             for (Object state = borrower.state; state == BORROWER_NORMAL || state == BORROWER_WAITING; state = borrower.state) {
-                if (pConn.state - this.conUnCatchStateCode != 0) return;
+                if (pConn.state - this.entryUnCatchStateCode != 0) return;
                 if (BwrStUpd.compareAndSet(borrower, state, pConn)) {
                     if (state == BORROWER_WAITING)
                         unpark(borrower.thread);
@@ -395,33 +378,35 @@ public final class ObjectPool {
     }
 
     /**
-     * inner timer will call the method to clear some idle timeout connections
-     * or dead connections,or long time not active connections in using state
+     * inner timer will call the method to clear some idle timeout objects
+     * or dead objects,or long time not active objects in using state
      */
     private void closeIdleTimeoutConnection() {
         if (poolState.get() == POOL_NORMAL) {
-            PooledEntry[] array = connArray;
+            PooledEntry[] array = poolEntryArray;
             for (int i = 0, len = array.length; i < len; i++) {
                 PooledEntry pConn = array[i];
                 int state = pConn.state;
-                if (state == CONNECTION_IDLE && !existBorrower()) {
+                if (state == OBJECT_IDLE && !existBorrower()) {
                     boolean isTimeoutInIdle = (currentTimeMillis() - pConn.lastAccessTime - poolConfig.getIdleTimeout() >= 0);
-                    if (isTimeoutInIdle && ConnStUpd.compareAndSet(pConn, state, CONNECTION_CLOSED)) {//need close idle
-                        removePooledConn(pConn, DESC_REMOVE_IDLE);
+                    if (isTimeoutInIdle && ObjStUpd.compareAndSet(pConn, state, OBJECT_CLOSED)) {//need close idle
+                        removePooledEntry(pConn, DESC_REMOVE_IDLE);
                         tryToCreateNewConnByAsyn();
                     }
-                } else if (state == CONNECTION_USING) {
+                } else if (state == OBJECT_USING) {
                     ProxyObject proxyConn = pConn.proxyConn;
                     boolean isHoldTimeoutInNotUsing = currentTimeMillis() - pConn.lastAccessTime - poolConfig.getHoldTimeout() >= 0;
-                    if (isHoldTimeoutInNotUsing && proxyConn != null) {//recycle connection
+                    if (isHoldTimeoutInNotUsing && proxyConn != null) {//recycle object
                         proxyConn.trySetAsClosed();
                     }
-                } else if (state == CONNECTION_CLOSED) {
-                    removePooledConn(pConn, DESC_REMOVE_CLOSED);
+                } else if (state == OBJECT_CLOSED) {
+                    removePooledEntry(pConn, DESC_REMOVE_CLOSED);
                     tryToCreateNewConnByAsyn();
                 }
             }
-            //commonLog.debug("beeop({})idle:{},using:{},semaphore-waiter:{},wait-transfer:{}", poolName, vo.getIdleSize(), vo.getUsingSize(), vo.getSemaphoreWaiterSize(), vo.getTransferWaiterSize());
+
+            PoolMonitorVo vo = this.getMonitorVo();
+            commonLog.debug("BeeOP({})idle:{},using:{},semaphore-waiter:{},wait-transfer:{}", poolName, vo.getIdleSize(), vo.getUsingSize(), vo.getSemaphoreWaiterSize(), vo.getTransferWaiterSize());
         }
     }
 
@@ -430,8 +415,8 @@ public final class ObjectPool {
         long parkNanoSeconds = SECONDS.toNanos(poolConfig.getWaitTimeToClearPool());
         while (true) {
             if (poolState.compareAndSet(POOL_NORMAL, POOL_CLOSED)) {
-                commonLog.info("beeop({})begin to shutdown", poolName);
-                removeAllConnections(poolConfig.isForceCloseConnection(), DESC_REMOVE_DESTROY);
+                commonLog.info("BeeOP({})begin to shutdown", poolName);
+                removeAllConnections(poolConfig.isForceClose(), DESC_REMOVE_DESTROY);
                 unregisterJMX();
                 shutdownCreateConnThread();
                 while (!idleCheckSchFuture.isCancelled() && !idleCheckSchFuture.isDone())
@@ -442,7 +427,7 @@ public final class ObjectPool {
                 } catch (Throwable e) {
                 }
 
-                commonLog.info("beeop({})has shutdown", poolName);
+                commonLog.info("BeeOP({})has shutdown", poolName);
                 break;
             } else if (poolState.get() == POOL_CLOSED) {
                 break;
@@ -456,22 +441,22 @@ public final class ObjectPool {
         return poolState.get() == POOL_CLOSED;
     }
 
-    // remove all connections
+    // remove all objects
     private void removeAllConnections(boolean force, String source) {
         while (existBorrower()) {
             transferException(PoolCloseException);
         }
 
         long parkNanoSeconds = SECONDS.toNanos(poolConfig.getWaitTimeToClearPool());
-        while (connArray.length > 0) {
-            PooledEntry[] array = connArray;
+        while (poolEntryArray.length > 0) {
+            PooledEntry[] array = poolEntryArray;
             for (int i = 0, len = array.length; i < len; i++) {
                 PooledEntry pConn = array[i];
-                if (ConnStUpd.compareAndSet(pConn, CONNECTION_IDLE, CONNECTION_CLOSED)) {
-                    removePooledConn(pConn, source);
-                } else if (pConn.state == CONNECTION_CLOSED) {
-                    removePooledConn(pConn, source);
-                } else if (pConn.state == CONNECTION_USING) {
+                if (ObjStUpd.compareAndSet(pConn, OBJECT_IDLE, OBJECT_CLOSED)) {
+                    removePooledEntry(pConn, source);
+                } else if (pConn.state == OBJECT_CLOSED) {
+                    removePooledEntry(pConn, source);
+                } else if (pConn.state == OBJECT_USING) {
                     ProxyObject proxyConn = pConn.proxyConn;
                     if (force) {
                         if (proxyConn != null) {
@@ -486,68 +471,68 @@ public final class ObjectPool {
                 }
             } // for
 
-            if (connArray.length > 0) parkNanos(parkNanoSeconds);
+            if (poolEntryArray.length > 0) parkNanos(parkNanoSeconds);
         } // while
         idleSchExecutor.getQueue().clear();
     }
 
-    // notify to create connections to pool
+    // notify to create objects to pool
     private void tryToCreateNewConnByAsyn() {
-        if (connArray.length + needAddConnSize.get() < poolMaxSize) {
-            synchronized (connNotifyLock) {
-                if (connArray.length + needAddConnSize.get() < poolMaxSize) {
+        if (poolEntryArray.length + needAddConnSize.get() < poolMaxSize) {
+            synchronized (entryAddNotifyLock) {
+                if (poolEntryArray.length + needAddConnSize.get() < poolMaxSize) {
                     needAddConnSize.incrementAndGet();
-                    if (createConnThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
-                        unpark(connAddThread);
+                    if (createObjThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
+                        unpark(poolEntryAddThread);
                 }
             }
         }
     }
 
-    // exit connection creation thread
+    // exit objects creation thread
     private void shutdownCreateConnThread() {
         int curSts;
         while (true) {
-            curSts = createConnThreadState.get();
-            if ((curSts == THREAD_WORKING || curSts == THREAD_WAITING) && createConnThreadState.compareAndSet(curSts, THREAD_DEAD)) {
-                if (curSts == THREAD_WAITING) unpark(connAddThread);
+            curSts = createObjThreadState.get();
+            if ((curSts == THREAD_WORKING || curSts == THREAD_WAITING) && createObjThreadState.compareAndSet(curSts, THREAD_DEAD)) {
+                if (curSts == THREAD_WAITING) unpark(poolEntryAddThread);
                 break;
             }
         }
     }
 
     /******************************** JMX **************************************/
-    // close all connections
+    // close all objects
     public void reset() {
-        reset(false);// wait borrower release connection,then close them
+        reset(false);// wait borrower release objects,then close them
     }
 
-    // close all connections
+    // close all objects
     public void reset(boolean force) {
         if (poolState.compareAndSet(POOL_NORMAL, POOL_RESTING)) {
-            commonLog.info("beeop({})begin to reset.", poolName);
+            commonLog.info("BeeOP({})begin to reset.", poolName);
             removeAllConnections(force, DESC_REMOVE_RESET);
-            commonLog.info("All pooledConn were cleared");
+            commonLog.info("All pooled objects were cleared");
             poolState.set(POOL_NORMAL);// restore state;
-            commonLog.info("beeop({})finished resetting", poolName);
+            commonLog.info("BeeOP({})finished resetting", poolName);
         }
     }
 
-    public int getConnTotalSize() {
-        return connArray.length;
+    public int getTotalSize() {
+        return poolEntryArray.length;
     }
 
-    public int getConnIdleSize() {
+    public int getIdleSize() {
         int idleConnections = 0;
-        for (PooledEntry pConn : this.connArray) {
-            if (pConn.state == CONNECTION_IDLE)
+        for (PooledEntry pConn : this.poolEntryArray) {
+            if (pConn.state == OBJECT_IDLE)
                 idleConnections++;
         }
         return idleConnections;
     }
 
-    public int getConnUsingSize() {
-        int active = connArray.length - getConnIdleSize();
+    public int getUsingSize() {
+        int active = poolEntryArray.length - getIdleSize();
         return (active > 0) ? active : 0;
     }
 
@@ -569,26 +554,26 @@ public final class ObjectPool {
         return size;
     }
 
-//    public ConnectionPoolMonitorVo getMonitorVo() {
-//        int totSize = getConnTotalSize();
-//        int idleSize = getConnIdleSize();
-//        monitorVo.setPoolName(poolName);
-//        monitorVo.setPoolMode(poolMode);
-//        monitorVo.setPoolState(poolState.get());
-//        monitorVo.setMaxActive(poolMaxSize);
-//        monitorVo.setIdleSize(idleSize);
-//        monitorVo.setUsingSize(totSize - idleSize);
-//        monitorVo.setSemaphoreWaiterSize(getSemaphoreWaitingSize());
-//        monitorVo.setTransferWaiterSize(getTransferWaitingSize());
-//        return monitorVo;
-//    }
+    public PoolMonitorVo getMonitorVo() {
+        int totSize = getTotalSize();
+        int idleSize = getIdleSize();
+        monitorVo.setPoolName(poolName);
+        monitorVo.setPoolMode(poolMode);
+        monitorVo.setPoolState(poolState.get());
+        monitorVo.setMaxActive(poolMaxSize);
+        monitorVo.setIdleSize(idleSize);
+        monitorVo.setUsingSize(totSize - idleSize);
+        monitorVo.setSemaphoreWaiterSize(getSemaphoreWaitingSize());
+        monitorVo.setTransferWaiterSize(getTransferWaitingSize());
+        return monitorVo;
+    }
 
     // register JMX
     private void registerJMX() {
         if (poolConfig.isEnableJMX()) {
             MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
-            registerJMXBean(mBeanServer, String.format("cn.beeop.pool.FastConnectionPool:type=beeop(%s)", poolName), this);
-            registerJMXBean(mBeanServer, String.format("cn.beeop.ObjectPoolConfig:type=beeop(%s)-config", poolName), poolConfig);
+            registerJMXBean(mBeanServer, String.format("cn.beeop.ObjectPool:type=beeop(%s)", poolName), this);
+            registerJMXBean(mBeanServer, String.format("cn.beeop.PoolConfig:type=beeop(%s)-config", poolName), poolConfig);
         }
     }
 
@@ -599,7 +584,7 @@ public final class ObjectPool {
                 mBeanServer.registerMBean(bean, jmxRegName);
             }
         } catch (Exception e) {
-            commonLog.warn("beeop({})failed to register jmx-bean:{}", poolName, regName, e);
+            commonLog.warn("BeeOP({})failed to register jmx-bean:{}", poolName, regName, e);
         }
     }
 
@@ -607,8 +592,8 @@ public final class ObjectPool {
     private void unregisterJMX() {
         if (poolConfig.isEnableJMX()) {
             MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
-            unregisterJMXBean(mBeanServer, String.format("cn.beeop.pool.FastConnectionPool:type=beeop(%s)", poolName));
-            unregisterJMXBean(mBeanServer, String.format("cn.beeop.ObjectPoolConfig:type=beeop(%s)-config", poolName));
+            unregisterJMXBean(mBeanServer, String.format("cn.beeop.ObjectPool:type=beeop(%s)", poolName));
+            unregisterJMXBean(mBeanServer, String.format("cn.beeop.PoolConfig:type=beeop(%s)-config", poolName));
         }
     }
 
@@ -619,13 +604,8 @@ public final class ObjectPool {
                 mBeanServer.unregisterMBean(jmxRegName);
             }
         } catch (Exception e) {
-            commonLog.warn("beeop({})failed to unregister jmx-bean:{}", poolName, regName, e);
+            commonLog.warn("BeeOP({})failed to unregister jmx-bean:{}", poolName, regName, e);
         }
-    }
-
-    // Connection check Policy
-    static interface ConnectionTestPolicy {
-        boolean isActive(PooledEntry pConn);
     }
 
     // Transfer Policy
@@ -656,32 +636,32 @@ public final class ObjectPool {
     //******************************** JMX **************************************/
     static final class CompeteTransferPolicy implements TransferPolicy {
         public final int getCheckStateCode() {
-            return CONNECTION_IDLE;
+            return OBJECT_IDLE;
         }
 
         public final boolean tryCatch(PooledEntry pConn) {
-            return ConnStUpd.compareAndSet(pConn, CONNECTION_IDLE, CONNECTION_USING);
+            return ObjStUpd.compareAndSet(pConn, OBJECT_IDLE, OBJECT_USING);
         }
 
         public final void onFailedTransfer(PooledEntry pConn) {
         }
 
         public final void beforeTransfer(PooledEntry pConn) {
-            pConn.state = CONNECTION_IDLE;
+            pConn.state = OBJECT_IDLE;
         }
     }
 
     static final class FairTransferPolicy implements TransferPolicy {
         public final int getCheckStateCode() {
-            return CONNECTION_USING;
+            return OBJECT_USING;
         }
 
         public final boolean tryCatch(PooledEntry pConn) {
-            return pConn.state == CONNECTION_USING;
+            return pConn.state == OBJECT_USING;
         }
 
         public final void onFailedTransfer(PooledEntry pConn) {
-            pConn.state = CONNECTION_IDLE;
+            pConn.state = OBJECT_IDLE;
         }
 
         public final void beforeTransfer(PooledEntry pConn) {
@@ -697,7 +677,7 @@ public final class ObjectPool {
                     needAddConnSize.decrementAndGet();
                     if (getTransferWaitingSize() > 0) {
                         try {
-                            if ((pConn = createPooledConn(CONNECTION_USING)) != null)
+                            if ((pConn = createPooledEntry(OBJECT_USING)) != null)
                                 recycle(pConn);
                         } catch (ObjectException e) {
                             transferException(e);
@@ -705,9 +685,9 @@ public final class ObjectPool {
                     }
                 }
 
-                if (needAddConnSize.get() == 0 && createConnThreadState.compareAndSet(THREAD_WORKING, THREAD_WAITING))
+                if (needAddConnSize.get() == 0 && createObjThreadState.compareAndSet(THREAD_WORKING, THREAD_WAITING))
                     park(this);
-                if (createConnThreadState.get() == THREAD_DEAD) break;
+                if (createObjThreadState.get() == THREAD_DEAD) break;
             }
         }
     }
@@ -715,12 +695,12 @@ public final class ObjectPool {
     /**
      * Hook when JVM exit
      */
-    private class ConnectionPoolHook extends Thread {
+    private class PoolHook extends Thread {
         public void run() {
             try {
                 ObjectPool.this.close();
             } catch (ObjectException e) {
-                commonLog.error("Error on closing connection pool,cause:", e);
+                commonLog.error("Error on closing pool,cause:", e);
             }
         }
     }

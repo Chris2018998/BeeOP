@@ -20,7 +20,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -32,12 +31,12 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * Connection pool configuration
+ * object pool configuration
  *
  * @author Chris.Liao
  * @version 1.0
  */
-public class PoolConfig {
+public class PoolConfig implements PoolConfigJmx {
     //borrower request timeout(milliseconds)
     protected long maxWait = SECONDS.toMillis(8);
     //indicator to not allow to modify configuration after initialization
@@ -51,76 +50,38 @@ public class PoolConfig {
     //pool allow max size
     private int maxActive = 10;
     //borrow Semaphore Size
-    private int borrowSemaphoreSize;
+    private int borrowSemaphoreSize = Math.min(maxActive / 2, Runtime.getRuntime().availableProcessors());
     //* minutes:max idle time for pooledConnection(milliseconds),default value: three minutes
     private long idleTimeout = MINUTES.toMillis(3);
     //max hold time in Unused(milliseconds),pool will release it by forced
     private long holdTimeout = MINUTES.toMillis(5);
-    //connection validate timeout:3 seconds
-    private int connectionTestTimeout = 3;
-    //milliseconds,max inactive time to check active for borrower
-    private long connectionTestInterval = 500L;
+    //object validate timeout:3 seconds
+    private int aliveTestTimeout = 3;
+    //milliseconds,max inactive time to check object active
+    private long aliveTestInterval = 500L;
     //close all connections in force when shutdown
-    private boolean forceCloseConnection;
+    private boolean forceClose;
     //seconds,wait for retry to clear all connections
     private long waitTimeToClearPool = 3;
     //milliseconds,idle Check Time Period
     private long idleCheckTimeInterval = MINUTES.toMillis(5);
-    //milliseconds,idle Check Time initialize delay
-    private long idleCheckTimeInitDelay = SECONDS.toMillis(1);
-    // Physical JDBC Connection factory class name
-    private String connectionFactoryClassName;
-    //Physical JDBC Connection factory
-    private ObjectFactory connectionFactory;
-    //connection extra properties
-    private Properties connectProperties = new Properties();
 
-    /**
-     * enableJMX
-     */
+    //object factory
+    private ObjectFactory objectFactory;
+    //object factory class name
+    private String objectFactoryClassName;
+    //object creating properties
+    private Properties createProperties = new Properties();
+    //enableJMXe
     private boolean enableJMX;
 
-    public PoolConfig() {
-        this(null, null, null, null);
-    }
-
-    public PoolConfig(String driver, String url, String user, String password) {
-
-        //fix issue:#19 Chris-2020-08-16 begin
-        borrowSemaphoreSize = Math.min(maxActive / 2, Runtime.getRuntime().availableProcessors());
-        //fix issue:#19 Chris-2020-08-16 end
+    public boolean isChecked() {
+        return checked;
     }
 
     void setAsChecked() {
         if (!this.checked)
             this.checked = true;
-    }
-
-    public long getMaxWait() {
-        return maxWait;
-    }
-
-    public void setMaxWait(long maxWait) {
-        this.maxWait = maxWait;
-    }
-
-
-    public String getConnectionFactoryClassName() {
-        return connectionFactoryClassName;
-    }
-
-    public void setConnectionFactoryClassName(String connectionFactoryClassName) {
-        if (!this.checked && !isBlank(connectionFactoryClassName))
-            this.connectionFactoryClassName = connectionFactoryClassName;
-    }
-
-    public ObjectFactory getObjectFactory() {
-        return connectionFactory;
-    }
-
-    public void setObjectFactory(ObjectFactory connectionFactory) {
-        if (!this.checked)
-            this.connectionFactory = connectionFactory;
     }
 
     public String getPoolName() {
@@ -157,27 +118,9 @@ public class PoolConfig {
     public void setMaxActive(int maxActive) {
         if (!this.checked && maxActive > 0) {
             this.maxActive = maxActive;
-            //fix issue:#19 Chris-2020-08-16 begin
             if (maxActive > 1)
                 this.borrowSemaphoreSize = Math.min(maxActive / 2, Runtime.getRuntime().availableProcessors());
-            //fix issue:#19 Chris-2020-08-16 end
         }
-    }
-
-    public long getIdleTimeout() {
-        return idleTimeout;
-    }
-
-    public void setIdleTimeout(long idleTimeout) {
-        this.idleTimeout = idleTimeout;
-    }
-
-    public long getHoldTimeout() {
-        return holdTimeout;
-    }
-
-    public void setHoldTimeout(long holdTimeout) {
-        this.holdTimeout = holdTimeout;
     }
 
     public int getBorrowSemaphoreSize() {
@@ -189,31 +132,58 @@ public class PoolConfig {
             this.borrowSemaphoreSize = borrowSemaphoreSize;
     }
 
-    public int getConnectionTestTimeout() {
-        return connectionTestTimeout;
+    public long getMaxWait() {
+        return maxWait;
     }
 
-    public void setConnectionTestTimeout(int connectionTestTimeout) {
-        if (!this.checked && connectionTestTimeout > 0)
-            this.connectionTestTimeout = connectionTestTimeout;
+    public void setMaxWait(long maxWait) {
+        if (!this.checked && maxWait > 0)
+            this.maxWait = maxWait;
     }
 
-    public long getConnectionTestInterval() {
-        return connectionTestInterval;
+    public long getIdleTimeout() {
+        return idleTimeout;
     }
 
-    public void setConnectionTestInterval(long connectionTestInterval) {
-        if (!this.checked && connectionTestInterval > 0)
-            this.connectionTestInterval = connectionTestInterval;
+    public void setIdleTimeout(long idleTimeout) {
+        if (!this.checked && idleTimeout > 0)
+            this.idleTimeout = idleTimeout;
     }
 
-    public boolean isForceCloseConnection() {
-        return forceCloseConnection;
+    public long getHoldTimeout() {
+        return holdTimeout;
     }
 
-    public void setForceCloseConnection(boolean forceCloseConnection) {
+    public void setHoldTimeout(long holdTimeout) {
+        if (!this.checked && holdTimeout > 0)
+            this.holdTimeout = holdTimeout;
+    }
+
+    public int getAliveTestTimeout() {
+        return aliveTestTimeout;
+    }
+
+    public void setAliveTestTimeout(int aliveTestTimeout) {
+        if (!this.checked && aliveTestTimeout > 0)
+            this.aliveTestTimeout = aliveTestTimeout;
+    }
+
+    public long getAliveTestInterval() {
+        return aliveTestInterval;
+    }
+
+    public void setAliveTestInterval(long aliveTestInterval) {
+        if (!this.checked && aliveTestInterval > 0)
+            this.aliveTestInterval = aliveTestInterval;
+    }
+
+    public boolean isForceClose() {
+        return forceClose;
+    }
+
+    public void setForceClose(boolean forceClose) {
         if (!this.checked)
-            this.forceCloseConnection = forceCloseConnection;
+            this.forceClose = forceClose;
     }
 
     public long getWaitTimeToClearPool() {
@@ -221,7 +191,7 @@ public class PoolConfig {
     }
 
     public void setWaitTimeToClearPool(long waitTimeToClearPool) {
-        if (!this.checked && waitTimeToClearPool >= 0)
+        if (!this.checked && waitTimeToClearPool > 0)
             this.waitTimeToClearPool = waitTimeToClearPool;
     }
 
@@ -230,28 +200,41 @@ public class PoolConfig {
     }
 
     public void setIdleCheckTimeInterval(long idleCheckTimeInterval) {
-        if (!this.checked && idleCheckTimeInterval >= 1000L)
+        if (!this.checked && idleCheckTimeInterval > 0)
             this.idleCheckTimeInterval = idleCheckTimeInterval;
     }
 
-    public long getIdleCheckTimeInitDelay() {
-        return idleCheckTimeInitDelay;
+    public ObjectFactory getObjectFactory() {
+        return objectFactory;
     }
 
-    public void setIdleCheckTimeInitDelay(long idleCheckTimeInitDelay) {
-        if (!this.checked && idleCheckTimeInitDelay >= 1000L)
-            this.idleCheckTimeInitDelay = idleCheckTimeInitDelay;
+    public void setObjectFactory(ObjectFactory objectFactory) {
+        if (!this.checked && objectFactory != null)
+            this.objectFactory = objectFactory;
     }
 
-    public void removeConnectProperty(String key) {
+    public String getObjectFactoryClassName() {
+        return objectFactoryClassName;
+    }
+
+    public void setObjectFactoryClassName(String objectFactoryClassName) {
+        if (!this.checked && !isBlank(objectFactoryClassName))
+            this.objectFactoryClassName = objectFactoryClassName;
+    }
+
+    Properties getCreateProperties() {
+        return createProperties;
+    }
+
+    public void removeProperty(String key) {
         if (!this.checked) {
-            connectProperties.remove(key);
+            createProperties.remove(key);
         }
     }
 
-    public void addConnectProperty(String key, String value) {
+    public void addProperty(String key, String value) {
         if (!this.checked) {
-            connectProperties.put(key, value);
+            createProperties.put(key, value);
         }
     }
 
@@ -290,50 +273,30 @@ public class PoolConfig {
             throw new ConfigException("Pool 'initialSize' must not be greater than 'maxActive'");
         if (this.borrowSemaphoreSize <= 0)
             throw new ConfigException("Pool 'borrowSemaphoreSize' must be greater than zero");
-        //fix issue:#19 Chris-2020-08-16 begin
-        //if (this.borrowConcurrentSize > maxActive)
-        //throw new ConfigException("Pool 'borrowConcurrentSize' must not be greater than pool max size");
-        //fix issue:#19 Chris-2020-08-16 end
 
         if (this.idleTimeout <= 0)
-            throw new ConfigException("Connection 'idleTimeout' must be greater than zero");
+            throw new ConfigException("Object 'idleTimeout' must be greater than zero");
         if (this.holdTimeout <= 0)
-            throw new ConfigException("Connection 'holdTimeout' must be greater than zero");
+            throw new ConfigException("Object 'holdTimeout' must be greater than zero");
         if (this.maxWait <= 0)
             throw new ConfigException("Borrower 'maxWait' must be greater than zero");
-    }
+        if (this.objectFactory == null && isBlank(objectFactoryClassName))
+            throw new ConfigException("must provide one of them:'objectFactory' or 'objectFactoryClassName'");
 
-    private void setDataSourceProperty(String propName, Object propValue, Object bean) throws Exception {
-        if (propName.endsWith(".")) return;
-        int index = propName.lastIndexOf('.');
-        if (index >= 0) propName = propName.substring(index + 1);
-
-        propName = propName.trim();
-        String methodName = "set" + propName.substring(0, 1).toUpperCase(Locale.US) + propName.substring(1);
-        Method[] methods = bean.getClass().getMethods();
-        Method targetMethod = null;
-        for (Method method : methods) {
-            if (method.getName().equals(methodName) && method.getParameterTypes().length == 1) {
-                targetMethod = method;
-                break;
-            }
-        }
-
-        if (targetMethod != null) {
-            Class paramType = targetMethod.getParameterTypes()[0];
-            if (paramType.isInstance(propValue)) {
-                targetMethod.invoke(bean, new Object[]{propValue});
-            } else if (propValue instanceof String) {
-                String value = (String) propValue;
-                if (paramType == String.class) {
-                    targetMethod.invoke(bean, new Object[]{propValue});
-                } else if (paramType == boolean.class || paramType == Boolean.class) {
-                    targetMethod.invoke(bean, new Object[]{Boolean.valueOf(value)});
-                } else if (paramType == int.class || paramType == Integer.class) {
-                    targetMethod.invoke(bean, new Object[]{Integer.valueOf(value)});
-                } else if (paramType == long.class || paramType == Long.class) {
-                    targetMethod.invoke(bean, new Object[]{Long.valueOf(value)});
+        if (objectFactory == null && !isBlank(this.objectFactoryClassName)) {
+            try {
+                Class<?> conFactClass = Class.forName(objectFactoryClassName, true, PoolConfig.class.getClassLoader());
+                if (ObjectFactory.class.isAssignableFrom(conFactClass)) {
+                    objectFactory = (ObjectFactory) conFactClass.newInstance();
+                } else {
+                    throw new ConfigException("Custom connection factory class must be implemented 'ObjectFactory' interface");
                 }
+            } catch (ClassNotFoundException e) {
+                throw new ConfigException("Class(" + objectFactoryClassName + ")not found ", e);
+            } catch (InstantiationException e) {
+                throw new ConfigException("Failed to instantiate connection factory class:" + objectFactoryClassName, e);
+            } catch (IllegalAccessException e) {
+                throw new ConfigException("Failed to instantiate connection factory class:" + objectFactoryClassName, e);
             }
         }
     }
@@ -353,12 +316,11 @@ public class PoolConfig {
             InputStream stream = null;
             try {
                 stream = Files.newInputStream(Paths.get(file.toURI()));
-                connectProperties.clear();
-                connectProperties.load(stream);
+                createProperties.clear();
+                createProperties.load(stream);
             } finally {
                 if (stream != null) stream.close();
             }
         }
     }
 }
-

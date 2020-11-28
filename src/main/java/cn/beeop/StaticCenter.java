@@ -31,9 +31,9 @@ public class StaticCenter {
     public static final int POOL_CLOSED = 3;
     public static final int POOL_RESTING = 4;
     //POOLED CONNECTION STATE
-    public static final int CONNECTION_IDLE = 1;
-    public static final int CONNECTION_USING = 2;
-    public static final int CONNECTION_CLOSED = 3;
+    public static final int OBJECT_IDLE = 1;
+    public static final int OBJECT_USING = 2;
+    public static final int OBJECT_CLOSED = 3;
     //ADD CONNECTION THREAD STATE
     public static final int THREAD_WORKING = 1;
     public static final int THREAD_WAITING = 2;
@@ -42,23 +42,10 @@ public class StaticCenter {
     public static final Object BORROWER_NORMAL = new Object();
     public static final Object BORROWER_WAITING = new Object();
 
-    //Connection reset pos in array
-    public static final int POS_AUTO = 0;
-    public static final int POS_TRANS = 1;
-    public static final int POS_READONLY = 2;
-    public static final int POS_CATALOG = 3;
-    public static final int POS_SCHEMA = 4;
-    public static final int POS_NETWORK = 5;
-
     public static final ObjectException RequestTimeoutException = new ObjectException("Request timeout");
     public static final ObjectException RequestInterruptException = new ObjectException("Request interrupt");
     public static final ObjectException PoolCloseException = new ObjectException("Pool has been closed or in resetting");
-    public static final ObjectException XaConnectionClosedException = new ObjectException("No operations allowed after connection closed.");
-    public static final ObjectException ConnectionClosedException = new ObjectException("No operations allowed after connection closed.");
-    public static final ObjectException StatementClosedException = new ObjectException("No operations allowed after statement closed.");
-    public static final ObjectException ResultSetClosedException = new ObjectException("No operations allowed after resultSet closed.");
-    public static final ObjectException AutoCommitChangeForbiddenException = new ObjectException("Execute 'commit' or 'rollback' before this operation");
-    public static final ObjectException DriverNotSupportNetworkTimeoutException = new ObjectException("Driver not support 'networkTimeout'");
+    public static final ObjectException ObjectClosedException = new ObjectException("No operations allowed after object closed.");
     public static final Logger commonLog = LoggerFactory.getLogger(StaticCenter.class);
 
     public static final boolean equals(String a, String b) {

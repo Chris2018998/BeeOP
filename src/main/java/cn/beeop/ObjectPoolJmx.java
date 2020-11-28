@@ -15,28 +15,27 @@
  */
 package cn.beeop;
 
-import java.util.Properties;
-
 /**
- * Object Factory
+ * pool jmx interface
  *
  * @author Chris.Liao
  * @version 1.0
  */
-public interface ObjectFactory {
-    //create object instance
-    public Object create(Properties prop) throws ObjectException;
+public interface ObjectPoolJmx {
 
-    //set default values
-    public void setDefault(Object obj) throws ObjectException;
+    int getTotalSize();
 
-    //set default values
-    public void reset(Object obj) throws ObjectException;
+    int getIdleSize();
 
-    //destroy  object
-    public void destroy(Object obj);
+    int getUsingSize();
 
-    //test object
-    public boolean isAlive(Object obj, long timeout);
+    int getSemaphoreAcquiredSize();
 
+    int getSemaphoreWaitingSize();
+
+    int getTransferWaitingSize();
+
+    void reset();
+
+    void reset(boolean force);
 }
