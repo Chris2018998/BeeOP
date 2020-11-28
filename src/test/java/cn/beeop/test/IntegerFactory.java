@@ -13,39 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.beeop;
+package cn.beeop.test;
+
+import cn.beeop.ObjectException;
+import cn.beeop.ObjectFactory;
 
 import java.util.Properties;
 
 /**
- * Object Factory
+ * ObjectFactory subclass
  *
- * @author Chris.Liao
- * @version 1.0
+ * @author chris.liao
  */
-public class ObjectFactory {
+public class IntegerFactory extends ObjectFactory {
+
     //create object instance
     public Object create(Properties prop) throws ObjectException {
-        return new Object();
-    }
-
-    //set default values
-    public void setDefault(Object obj) throws ObjectException {
-
-    }
-
-    //set default values
-    public void reset(Object obj) throws ObjectException {
-
-    }
-
-    //destroy  object
-    public void destroy(Object obj) {
-
-    }
-
-    //test object
-    public boolean isAlive(Object obj, long timeout) {
-        return true;
+        return new Integer(1);
     }
 }

@@ -13,39 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.beeop;
-
-import java.util.Properties;
+package cn.beeop.test;
 
 /**
- * Object Factory
- *
  * @author Chris.Liao
  * @version 1.0
  */
-public class ObjectFactory {
-    //create object instance
-    public Object create(Properties prop) throws ObjectException {
-        return new Object();
+public class TestUtil {
+    public static void assertError(String message) {
+        throw new AssertionError(message);
     }
 
-    //set default values
-    public void setDefault(Object obj) throws ObjectException {
-
-    }
-
-    //set default values
-    public void reset(Object obj) throws ObjectException {
-
-    }
-
-    //destroy  object
-    public void destroy(Object obj) {
-
-    }
-
-    //test object
-    public boolean isAlive(Object obj, long timeout) {
-        return true;
+    public static void assertError(String message, Object expect, Object current) {
+        throw new AssertionError(String.format(message, String.valueOf(expect), String.valueOf(current)));
     }
 }

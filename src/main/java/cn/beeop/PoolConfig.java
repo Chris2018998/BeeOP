@@ -59,15 +59,16 @@ public class PoolConfig implements PoolConfigJmx {
     private int aliveTestTimeout = 3;
     //milliseconds,max inactive time to check object active
     private long aliveTestInterval = 500L;
-    //close all connections in force when shutdown
+    //close all objects in force when shutdown
     private boolean forceClose;
-    //seconds,wait for retry to clear all connections
+    //seconds,wait for retry to clear all objects
     private long waitTimeToClearPool = 3;
     //milliseconds,idle Check Time Period
     private long idleCheckTimeInterval = MINUTES.toMillis(5);
-
+    
+    private static final ObjectFactory DefaultFactory=new ObjectFactory();
     //object factory
-    private ObjectFactory objectFactory;
+    private ObjectFactory objectFactory=DefaultFactory;
     //object factory class name
     private String objectFactoryClassName;
     //object creating properties
@@ -280,23 +281,23 @@ public class PoolConfig implements PoolConfigJmx {
             throw new ConfigException("Object 'holdTimeout' must be greater than zero");
         if (this.maxWait <= 0)
             throw new ConfigException("Borrower 'maxWait' must be greater than zero");
+        
         if (this.objectFactory == null && isBlank(objectFactoryClassName))
             throw new ConfigException("must provide one of them:'objectFactory' or 'objectFactoryClassName'");
-
-        if (objectFactory == null && !isBlank(this.objectFactoryClassName)) {
+        if (!isBlank(this.objectFactoryClassName)) {
             try {
                 Class<?> conFactClass = Class.forName(objectFactoryClassName, true, PoolConfig.class.getClassLoader());
                 if (ObjectFactory.class.isAssignableFrom(conFactClass)) {
                     objectFactory = (ObjectFactory) conFactClass.newInstance();
                 } else {
-                    throw new ConfigException("Custom connection factory class must be implemented 'ObjectFactory' interface");
+                    throw new ConfigException("Custom object factory class must be implemented 'ObjectFactory' interface");
                 }
             } catch (ClassNotFoundException e) {
                 throw new ConfigException("Class(" + objectFactoryClassName + ")not found ", e);
             } catch (InstantiationException e) {
-                throw new ConfigException("Failed to instantiate connection factory class:" + objectFactoryClassName, e);
+                throw new ConfigException("Failed to instantiate object factory class:" + objectFactoryClassName, e);
             } catch (IllegalAccessException e) {
-                throw new ConfigException("Failed to instantiate connection factory class:" + objectFactoryClassName, e);
+                throw new ConfigException("Failed to instantiate object factory class:" + objectFactoryClassName, e);
             }
         }
     }

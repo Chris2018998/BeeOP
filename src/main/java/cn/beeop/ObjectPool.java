@@ -349,7 +349,7 @@ public final class ObjectPool implements ObjectPoolJmx {
      *
      * @param pConn target object need release
      */
-    public final void recycle(PooledEntry pConn) {
+    final void recycle(PooledEntry pConn) {
         transferPolicy.beforeTransfer(pConn);
 
         for (Borrower borrower : waitQueue)

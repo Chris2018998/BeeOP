@@ -36,17 +36,11 @@ public class ProxyObject {
         pConn.proxyConn = this;
         this.delegate = pConn.object;
     }
-
-    public Object getDelegate() throws ObjectException {
-        checkClosed();
-        return delegate;
-    }
-
     public boolean isClosed() throws ObjectException {
         return isClosed;
     }
 
-    protected void checkClosed() throws ObjectException {
+    private void checkClosed() throws ObjectException {
         if (isClosed) throw ObjectClosedException;
     }
 
@@ -65,19 +59,19 @@ public class ProxyObject {
         }
     }
 
-    public Object call(String name,Class[]types,Object[] params) throws ObjectException {
+    public Object call(String name, Class[] types, Object[] params) throws ObjectException {
         checkClosed();
         try {
-            Method method=delegate.getClass().getMethod(name,types);
-            return method.invoke(delegate,params);
+            Method method = delegate.getClass().getMethod(name, types);
+            return method.invoke(delegate, params);
         } catch (NoSuchMethodException e) {
-           throw new ObjectException(e);
+            throw new ObjectException(e);
         } catch (IllegalAccessException e) {
             throw new ObjectException(e);
         } catch (InvocationTargetException e) {
-            if(e.getCause()!=null){
+            if (e.getCause() != null) {
                 throw new ObjectException(e.getCause());
-            }else{
+            } else {
                 throw new ObjectException(e);
             }
         }
