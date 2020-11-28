@@ -233,7 +233,7 @@ public final class ObjectPool implements ObjectPoolJmx {
      * until other borrower release
      * @throws ObjectException if pool is closed or waiting timeout,then throw exception
      */
-    public Object getConnection() throws ObjectException {
+    public ProxyObject getObject() throws ObjectException {
         if (poolState.get() == POOL_NORMAL) {
             //0:try to get from threadLocal cache
             WeakReference<Borrower> ref = threadLocal.get();

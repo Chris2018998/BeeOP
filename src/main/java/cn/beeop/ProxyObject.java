@@ -15,6 +15,9 @@
  */
 package cn.beeop;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 import static cn.beeop.StaticCenter.ObjectClosedException;
 
 /**
@@ -51,7 +54,6 @@ public class ProxyObject {
         synchronized (this) {//safe close
             if (isClosed) return;
             isClosed = true;
-            //delegate = CLOSED_CON;
         }
         pConn.recycleSelf();
     }
@@ -60,6 +62,24 @@ public class ProxyObject {
         try {
             close();
         } catch (ObjectException e) {
+        }
+    }
+
+    public Object call(String name,Class[]types,Object[] params) throws ObjectException {
+        checkClosed();
+        try {
+            Method method=delegate.getClass().getMethod(name,types);
+            return method.invoke(delegate,params);
+        } catch (NoSuchMethodException e) {
+           throw new ObjectException(e);
+        } catch (IllegalAccessException e) {
+            throw new ObjectException(e);
+        } catch (InvocationTargetException e) {
+            if(e.getCause()!=null){
+                throw new ObjectException(e.getCause());
+            }else{
+                throw new ObjectException(e);
+            }
         }
     }
 }
