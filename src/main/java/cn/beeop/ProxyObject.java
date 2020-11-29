@@ -28,14 +28,15 @@ import static cn.beeop.StaticCenter.ObjectClosedException;
  */
 public class ProxyObject {
     private Object delegate;
-    private PooledEntry pConn;
+    private PooledEntry pEntry;
     private boolean isClosed;
 
-    public ProxyObject(PooledEntry pConn) {
-        this.pConn = pConn;
-        pConn.proxyConn = this;
-        this.delegate = pConn.object;
+    public ProxyObject(PooledEntry pEntry) {
+        this.pEntry = pEntry;
+        pEntry.proxyConn = this;
+        this.delegate = pEntry.object;
     }
+
     public boolean isClosed() throws ObjectException {
         return isClosed;
     }
@@ -49,7 +50,7 @@ public class ProxyObject {
             if (isClosed) return;
             isClosed = true;
         }
-        pConn.recycleSelf();
+        pEntry.recycleSelf();
     }
 
     final void trySetAsClosed() {//called from FastConnectionPool
@@ -62,6 +63,7 @@ public class ProxyObject {
     public Object call(String name, Class[] types, Object[] params) throws ObjectException {
         checkClosed();
         try {
+            pEntry.updateAccessTime();
             Method method = delegate.getClass().getMethod(name, types);
             return method.invoke(delegate, params);
         } catch (NoSuchMethodException e) {

@@ -42,6 +42,10 @@ class PooledEntry {
         lastAccessTime = currentTimeMillis();//first time
     }
 
+    final void updateAccessTime() {//for update,insert.select,delete and so on DML
+        lastAccessTime = currentTimeMillis();
+    }
+
     final void recycleSelf() throws ObjectException {
         try {
             proxyConn = null;

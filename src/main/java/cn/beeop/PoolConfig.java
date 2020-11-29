@@ -37,6 +37,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * @version 1.0
  */
 public class PoolConfig implements PoolConfigJmx {
+    private static final ObjectFactory DefaultFactory = new ObjectFactory();
     //borrower request timeout(milliseconds)
     protected long maxWait = SECONDS.toMillis(8);
     //indicator to not allow to modify configuration after initialization
@@ -65,10 +66,8 @@ public class PoolConfig implements PoolConfigJmx {
     private long waitTimeToClearPool = 3;
     //milliseconds,idle Check Time Period
     private long idleCheckTimeInterval = MINUTES.toMillis(5);
-    
-    private static final ObjectFactory DefaultFactory=new ObjectFactory();
     //object factory
-    private ObjectFactory objectFactory=DefaultFactory;
+    private ObjectFactory objectFactory = DefaultFactory;
     //object factory class name
     private String objectFactoryClassName;
     //object creating properties
@@ -281,7 +280,7 @@ public class PoolConfig implements PoolConfigJmx {
             throw new ConfigException("Object 'holdTimeout' must be greater than zero");
         if (this.maxWait <= 0)
             throw new ConfigException("Borrower 'maxWait' must be greater than zero");
-        
+
         if (this.objectFactory == null && isBlank(objectFactoryClassName))
             throw new ConfigException("must provide one of them:'objectFactory' or 'objectFactoryClassName'");
         if (!isBlank(this.objectFactoryClassName)) {
