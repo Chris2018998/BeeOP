@@ -33,7 +33,7 @@ public class ProxyObject {
 
     public ProxyObject(PooledEntry pEntry) {
         this.pEntry = pEntry;
-        pEntry.proxyConn = this;
+        pEntry.proxyObject = this;
         this.delegate = pEntry.object;
     }
 
@@ -63,9 +63,10 @@ public class ProxyObject {
     public Object call(String name, Class[] types, Object[] params) throws ObjectException {
         checkClosed();
         try {
-            pEntry.updateAccessTime();
             Method method = delegate.getClass().getMethod(name, types);
-            return method.invoke(delegate, params);
+            Object v= method.invoke(delegate, params);
+            pEntry.updateAccessTime();
+            return v;
         } catch (NoSuchMethodException e) {
             throw new ObjectException(e);
         } catch (IllegalAccessException e) {

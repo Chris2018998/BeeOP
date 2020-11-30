@@ -158,13 +158,13 @@ public final class ObjectPool implements ObjectPoolJmx {
                 commonLog.debug("BeeOP({}))begin to create new pooled object,state:{}", poolName, connState);
                 Object obj = objectFactory.create(createProperties);
                 objectFactory.setDefault(obj);
-                PooledEntry pConn = new PooledEntry(obj, connState, this, poolConfig);// add
-                commonLog.debug("BeeOP({}))has created new pooled object:{},state:{}", poolName, pConn, connState);
+                PooledEntry pEntry = new PooledEntry(obj, connState, this, poolConfig);// add
+                commonLog.debug("BeeOP({}))has created new pooled object:{},state:{}", poolName, pEntry, connState);
                 PooledEntry[] arrayNew = new PooledEntry[arrayLen + 1];
                 arraycopy(poolEntryArray, 0, arrayNew, 0, arrayLen);
-                arrayNew[arrayLen] = pConn;// tail
+                arrayNew[arrayLen] = pEntry;// tail
                 poolEntryArray = arrayNew;
-                return pConn;
+                return pEntry;
             } else {
                 return null;
             }
@@ -175,7 +175,7 @@ public final class ObjectPool implements ObjectPoolJmx {
     private void removePooledEntry(PooledEntry pEntry, String removeType) {
         commonLog.debug("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, pEntry, removeType);
         pEntry.state = OBJECT_CLOSED;
-        // pConn.closeRawConn();
+        // pEntry.closeRawConn();
         synchronized (entryArrayLock) {
             int oldLen = poolEntryArray.length;
             PooledEntry[] arrayNew = new PooledEntry[oldLen - 1];
@@ -220,8 +220,8 @@ public final class ObjectPool implements ObjectPoolJmx {
             for (int i = 0; i < initSize; i++)
                 createPooledEntry(OBJECT_IDLE);
         } catch (ObjectException e) {
-            for (PooledEntry pConn : poolEntryArray)
-                removePooledEntry(pConn, DESC_REMOVE_INIT);
+            for (PooledEntry pEntry : poolEntryArray)
+                removePooledEntry(pEntry, DESC_REMOVE_INIT);
             throw e;
         }
     }
@@ -239,11 +239,11 @@ public final class ObjectPool implements ObjectPoolJmx {
             WeakReference<Borrower> ref = threadLocal.get();
             Borrower borrower = (ref != null) ? ref.get() : null;
             if (borrower != null) {
-                PooledEntry pConn = borrower.lastUsedEntry;
-                if (pConn != null && ObjStUpd.compareAndSet(pConn, OBJECT_IDLE, OBJECT_USING)) {
-                    if (testOnBorrow(pConn)) {
-                        borrower.lastUsedEntry = pConn;
-                        return new ProxyObject(pConn);
+                PooledEntry pEntry = borrower.lastUsedEntry;
+                if (pEntry != null && pEntry.state==OBJECT_IDLE&& ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING)) {
+                    if (testOnBorrow(pEntry)) {
+                        borrower.lastUsedEntry = pEntry;
+                        return new ProxyObject(pEntry);
                     }
                     borrower.lastUsedEntry = null;
                 }
@@ -265,19 +265,19 @@ public final class ObjectPool implements ObjectPoolJmx {
                 //1:try to search one from array
                 PooledEntry[] tempArray = poolEntryArray;
                 int len = tempArray.length;
-                PooledEntry pConn;
+                PooledEntry pEntry;
                 for (int i = 0; i < len; i++) {
-                    pConn = tempArray[i];
-                    if (ObjStUpd.compareAndSet(pConn, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(pConn)) {
-                        borrower.lastUsedEntry = pConn;
-                        return new ProxyObject(pConn);
+                    pEntry = tempArray[i];
+                    if ( pEntry.state==OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(pEntry)) {
+                        borrower.lastUsedEntry = pEntry;
+                        return new ProxyObject(pEntry);
                     }
                 }
 
                 //2:try to create one directly
-                if (poolEntryArray.length < poolMaxSize && (pConn = createPooledEntry(OBJECT_USING)) != null) {
-                    borrower.lastUsedEntry = pConn;
-                    return new ProxyObject(pConn);
+                if (poolEntryArray.length < poolMaxSize && (pEntry = createPooledEntry(OBJECT_USING)) != null) {
+                    borrower.lastUsedEntry = pEntry;
+                    return new ProxyObject(pEntry);
                 }
 
                 //3:try to get one transferred object
@@ -290,11 +290,11 @@ public final class ObjectPool implements ObjectPoolJmx {
                 while (true) {
                     Object state = borrower.state;
                     if (state instanceof PooledEntry) {
-                        pConn = (PooledEntry) state;
-                        if (transferPolicy.tryCatch(pConn) && testOnBorrow(pConn)) {
+                        pEntry = (PooledEntry) state;
+                        if (transferPolicy.tryCatch(pEntry) && testOnBorrow(pEntry)) {
                             waitQueue.remove(borrower);
-                            borrower.lastUsedEntry = pConn;
-                            return new ProxyObject(pConn);
+                            borrower.lastUsedEntry = pEntry;
+                            return new ProxyObject(pEntry);
                         }
 
                         state = BORROWER_NORMAL;
@@ -314,7 +314,8 @@ public final class ObjectPool implements ObjectPoolJmx {
                                 spinSize--;
                             } else if (timeout - spinForTimeoutThreshold > 0 && BwrStUpd.compareAndSet(borrower, state, BORROWER_WAITING)) {
                                 parkNanos(borrower, timeout);
-                                BwrStUpd.compareAndSet(borrower, BORROWER_WAITING, BORROWER_NORMAL);//reset to normal
+                                if(borrower.state==BORROWER_WAITING)
+                                   BwrStUpd.compareAndSet(borrower, BORROWER_WAITING, BORROWER_NORMAL);//reset to normal
                                 if (borrower.thread.isInterrupted()) {
                                     failed = true;
                                     failedCause = RequestInterruptException;
@@ -337,31 +338,31 @@ public final class ObjectPool implements ObjectPoolJmx {
     /**
      * remove object
      *
-     * @param pConn target object need release
+     * @param pEntry target object need release
      */
-    void abandonOnReturn(PooledEntry pConn) {
-        removePooledEntry(pConn, DESC_REMOVE_BAD);
+    void abandonOnReturn(PooledEntry pEntry) {
+        removePooledEntry(pEntry, DESC_REMOVE_BAD);
         tryToCreateNewConnByAsyn();
     }
 
     /**
      * return object to pool
      *
-     * @param pConn target object need release
+     * @param pEntry target object need release
      */
-    final void recycle(PooledEntry pConn) {
-        transferPolicy.beforeTransfer(pConn);
+    final void recycle(PooledEntry pEntry) {
+        transferPolicy.beforeTransfer(pEntry);
 
         for (Borrower borrower : waitQueue)
             for (Object state = borrower.state; state == BORROWER_NORMAL || state == BORROWER_WAITING; state = borrower.state) {
-                if (pConn.state - this.entryUnCatchStateCode != 0) return;
-                if (BwrStUpd.compareAndSet(borrower, state, pConn)) {
+                if (pEntry.state - this.entryUnCatchStateCode != 0) return;
+                if (BwrStUpd.compareAndSet(borrower, state, pEntry)) {
                     if (state == BORROWER_WAITING)
                         unpark(borrower.thread);
                     return;
                 }
             }
-        transferPolicy.onFailedTransfer(pConn);
+        transferPolicy.onFailedTransfer(pEntry);
     }
 
     /**
@@ -385,22 +386,22 @@ public final class ObjectPool implements ObjectPoolJmx {
         if (poolState.get() == POOL_NORMAL) {
             PooledEntry[] array = poolEntryArray;
             for (int i = 0, len = array.length; i < len; i++) {
-                PooledEntry pConn = array[i];
-                int state = pConn.state;
+                PooledEntry pEntry = array[i];
+                int state = pEntry.state;
                 if (state == OBJECT_IDLE && !existBorrower()) {
-                    boolean isTimeoutInIdle = (currentTimeMillis() - pConn.lastAccessTime - poolConfig.getIdleTimeout() >= 0);
-                    if (isTimeoutInIdle && ObjStUpd.compareAndSet(pConn, state, OBJECT_CLOSED)) {//need close idle
-                        removePooledEntry(pConn, DESC_REMOVE_IDLE);
+                    boolean isTimeoutInIdle = (currentTimeMillis() - pEntry.lastAccessTime - poolConfig.getIdleTimeout() >= 0);
+                    if (isTimeoutInIdle && ObjStUpd.compareAndSet(pEntry, state, OBJECT_CLOSED)) {//need close idle
+                        removePooledEntry(pEntry, DESC_REMOVE_IDLE);
                         tryToCreateNewConnByAsyn();
                     }
                 } else if (state == OBJECT_USING) {
-                    ProxyObject proxyConn = pConn.proxyConn;
-                    boolean isHoldTimeoutInNotUsing = currentTimeMillis() - pConn.lastAccessTime - poolConfig.getHoldTimeout() >= 0;
-                    if (isHoldTimeoutInNotUsing && proxyConn != null) {//recycle object
-                        proxyConn.trySetAsClosed();
+                    ProxyObject proxyObject = pEntry.proxyObject;
+                    boolean isHoldTimeoutInNotUsing = currentTimeMillis() - pEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0;
+                    if (isHoldTimeoutInNotUsing && proxyObject != null) {//recycle object
+                        proxyObject.trySetAsClosed();
                     }
                 } else if (state == OBJECT_CLOSED) {
-                    removePooledEntry(pConn, DESC_REMOVE_CLOSED);
+                    removePooledEntry(pEntry, DESC_REMOVE_CLOSED);
                     tryToCreateNewConnByAsyn();
                 }
             }
@@ -451,21 +452,21 @@ public final class ObjectPool implements ObjectPoolJmx {
         while (poolEntryArray.length > 0) {
             PooledEntry[] array = poolEntryArray;
             for (int i = 0, len = array.length; i < len; i++) {
-                PooledEntry pConn = array[i];
-                if (ObjStUpd.compareAndSet(pConn, OBJECT_IDLE, OBJECT_CLOSED)) {
-                    removePooledEntry(pConn, source);
-                } else if (pConn.state == OBJECT_CLOSED) {
-                    removePooledEntry(pConn, source);
-                } else if (pConn.state == OBJECT_USING) {
-                    ProxyObject proxyConn = pConn.proxyConn;
+                PooledEntry pEntry = array[i];
+                if (ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_CLOSED)) {
+                    removePooledEntry(pEntry, source);
+                } else if (pEntry.state == OBJECT_CLOSED) {
+                    removePooledEntry(pEntry, source);
+                } else if (pEntry.state == OBJECT_USING) {
+                    ProxyObject proxyObject = pEntry.proxyObject;
                     if (force) {
-                        if (proxyConn != null) {
-                            proxyConn.trySetAsClosed();
+                        if (proxyObject != null) {
+                            proxyObject.trySetAsClosed();
                         }
                     } else {
-                        boolean isTimeout = (currentTimeMillis() - pConn.lastAccessTime - poolConfig.getHoldTimeout() >= 0);
-                        if (isTimeout && proxyConn != null) {
-                            proxyConn.trySetAsClosed();
+                        boolean isTimeout = (currentTimeMillis() - pEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0);
+                        if (isTimeout && proxyObject != null) {
+                            proxyObject.trySetAsClosed();
                         }
                     }
                 }
@@ -524,8 +525,8 @@ public final class ObjectPool implements ObjectPoolJmx {
 
     public int getIdleSize() {
         int idleConnections = 0;
-        for (PooledEntry pConn : this.poolEntryArray) {
-            if (pConn.state == OBJECT_IDLE)
+        for (PooledEntry pEntry : this.poolEntryArray) {
+            if (pEntry.state == OBJECT_IDLE)
                 idleConnections++;
         }
         return idleConnections;
@@ -612,11 +613,11 @@ public final class ObjectPool implements ObjectPoolJmx {
     static interface TransferPolicy {
         int getCheckStateCode();
 
-        void beforeTransfer(PooledEntry pConn);
+        void beforeTransfer(PooledEntry pEntry);
 
-        boolean tryCatch(PooledEntry pConn);
+        boolean tryCatch(PooledEntry pEntry);
 
-        void onFailedTransfer(PooledEntry pConn);
+        void onFailedTransfer(PooledEntry pEntry);
     }
 
     static final class PoolThreadThreadFactory implements ThreadFactory {
@@ -639,15 +640,15 @@ public final class ObjectPool implements ObjectPoolJmx {
             return OBJECT_IDLE;
         }
 
-        public final boolean tryCatch(PooledEntry pConn) {
-            return ObjStUpd.compareAndSet(pConn, OBJECT_IDLE, OBJECT_USING);
+        public final boolean tryCatch(PooledEntry pEntry) {
+            return ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING);
         }
 
-        public final void onFailedTransfer(PooledEntry pConn) {
+        public final void onFailedTransfer(PooledEntry pEntry) {
         }
 
-        public final void beforeTransfer(PooledEntry pConn) {
-            pConn.state = OBJECT_IDLE;
+        public final void beforeTransfer(PooledEntry pEntry) {
+            pEntry.state = OBJECT_IDLE;
         }
     }
 
@@ -656,29 +657,29 @@ public final class ObjectPool implements ObjectPoolJmx {
             return OBJECT_USING;
         }
 
-        public final boolean tryCatch(PooledEntry pConn) {
-            return pConn.state == OBJECT_USING;
+        public final boolean tryCatch(PooledEntry pEntry) {
+            return pEntry.state == OBJECT_USING;
         }
 
-        public final void onFailedTransfer(PooledEntry pConn) {
-            pConn.state = OBJECT_IDLE;
+        public final void onFailedTransfer(PooledEntry pEntry) {
+            pEntry.state = OBJECT_IDLE;
         }
 
-        public final void beforeTransfer(PooledEntry pConn) {
+        public final void beforeTransfer(PooledEntry pEntry) {
         }
     }
 
     // create connection to pool
     private class PooledConnAddThread extends Thread {
         public void run() {
-            PooledEntry pConn;
+            PooledEntry pEntry;
             while (true) {
                 while (needAddConnSize.get() > 0) {
                     needAddConnSize.decrementAndGet();
                     if (getTransferWaitingSize() > 0) {
                         try {
-                            if ((pConn = createPooledEntry(OBJECT_USING)) != null)
-                                recycle(pConn);
+                            if ((pEntry = createPooledEntry(OBJECT_USING)) != null)
+                                recycle(pEntry);
                         } catch (ObjectException e) {
                             transferException(e);
                         }

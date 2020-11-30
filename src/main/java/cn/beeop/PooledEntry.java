@@ -26,20 +26,20 @@ import static java.lang.System.currentTimeMillis;
 class PooledEntry {
     volatile int state;
     Object object;
-    ProxyObject proxyConn;
+    ProxyObject proxyObject;
     ObjectFactory factory;
 
     volatile long lastAccessTime;
     volatile ObjectPool pool;
     PoolConfig config;
 
-    public PooledEntry(Object object, int connState, ObjectPool connPool, PoolConfig config) throws ObjectException {
-        pool = connPool;
-        state = connState;
+    public PooledEntry(Object object, int state, ObjectPool pool, PoolConfig config) throws ObjectException {
+        this.pool = pool;
+        this.state = state;
         this.object = object;
         this.config = config;
-        factory = config.getObjectFactory();
-        lastAccessTime = currentTimeMillis();//first time
+        this.factory = config.getObjectFactory();
+        this.lastAccessTime = currentTimeMillis();//first time
     }
 
     final void updateAccessTime() {//for update,insert.select,delete and so on DML
@@ -48,7 +48,7 @@ class PooledEntry {
 
     final void recycleSelf() throws ObjectException {
         try {
-            proxyConn = null;
+            proxyObject = null;
             factory.reset(object);
             pool.recycle(this);
         } catch (Exception e) {
