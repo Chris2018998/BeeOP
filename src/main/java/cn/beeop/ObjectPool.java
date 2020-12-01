@@ -234,104 +234,101 @@ public final class ObjectPool implements ObjectPoolJmx {
      * @throws ObjectException if pool is closed or waiting timeout,then throw exception
      */
     public ProxyObject getObject() throws ObjectException {
-        if (poolState.get() == POOL_NORMAL) {
-            //0:try to get from threadLocal cache
-            WeakReference<Borrower> ref = threadLocal.get();
-            Borrower borrower = (ref != null) ? ref.get() : null;
-            if (borrower != null) {
-                PooledEntry pEntry = borrower.lastUsedEntry;
-                if (pEntry != null && pEntry.state==OBJECT_IDLE&& ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING)) {
-                    if (testOnBorrow(pEntry)) {
-                        borrower.lastUsedEntry = pEntry;
-                        return new ProxyObject(pEntry);
-                    }
-                    borrower.lastUsedEntry = null;
-                }
-            } else {
-                borrower = new Borrower();
-                threadLocal.set(new WeakReference<Borrower>(borrower));
-            }
+        if (poolState.get() != POOL_NORMAL)throw PoolCloseException;
 
-
-            final long deadline = nanoTime() + defaultMaxWaitNanos;
-            try {
-                if (!borrowSemaphore.tryAcquire(this.defaultMaxWaitNanos, NANOSECONDS))
-                    throw RequestTimeoutException;
-            } catch (InterruptedException e) {
-                throw RequestInterruptException;
-            }
-
-            try {//borrowSemaphore acquired
-                //1:try to search one from array
-                PooledEntry[] tempArray = poolEntryArray;
-                int len = tempArray.length;
-                PooledEntry pEntry;
-                for (int i = 0; i < len; i++) {
-                    pEntry = tempArray[i];
-                    if ( pEntry.state==OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(pEntry)) {
-                        borrower.lastUsedEntry = pEntry;
-                        return new ProxyObject(pEntry);
-                    }
-                }
-
-                //2:try to create one directly
-                if (poolEntryArray.length < poolMaxSize && (pEntry = createPooledEntry(OBJECT_USING)) != null) {
+        //0:try to get from threadLocal cache
+        WeakReference<Borrower> ref = threadLocal.get();
+        Borrower borrower = (ref != null) ? ref.get() : null;
+        if (borrower != null) {
+            PooledEntry pEntry = borrower.lastUsedEntry;
+            if (pEntry != null && pEntry.state==OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING)) {
+                if (testOnBorrow(pEntry)) {
                     borrower.lastUsedEntry = pEntry;
                     return new ProxyObject(pEntry);
                 }
-
-                //3:try to get one transferred object
-                boolean failed = false;
-                ObjectException failedCause = null;
-                borrower.state = BORROWER_NORMAL;
-                waitQueue.offer(borrower);
-                int spinSize = (waitQueue.peek() == borrower) ? maxTimedSpins : 0;
-
-                while (true) {
-                    Object state = borrower.state;
-                    if (state instanceof PooledEntry) {
-                        pEntry = (PooledEntry) state;
-                        if (transferPolicy.tryCatch(pEntry) && testOnBorrow(pEntry)) {
-                            waitQueue.remove(borrower);
-                            borrower.lastUsedEntry = pEntry;
-                            return new ProxyObject(pEntry);
-                        }
-
-                        state = BORROWER_NORMAL;
-                        borrower.state = state;
-                        yield();
-                    } else if (state instanceof ObjectException) {
-                        waitQueue.remove(borrower);
-                        throw (ObjectException) state;
-                    }
-
-                    if (failed) {
-                        BwrStUpd.compareAndSet(borrower, state, failedCause);
-                    } else {
-                        long timeout = deadline - nanoTime();
-                        if (timeout > 0L) {
-                            if (spinSize > 0) {
-                                spinSize--;
-                            } else if (timeout - spinForTimeoutThreshold > 0 && BwrStUpd.compareAndSet(borrower, state, BORROWER_WAITING)) {
-                                parkNanos(borrower, timeout);
-                                if(borrower.state==BORROWER_WAITING)
-                                   BwrStUpd.compareAndSet(borrower, BORROWER_WAITING, BORROWER_NORMAL);//reset to normal
-                                if (borrower.thread.isInterrupted()) {
-                                    failed = true;
-                                    failedCause = RequestInterruptException;
-                                }
-                            }
-                        } else {//timeout
-                            failed = true;
-                            failedCause = RequestTimeoutException;
-                        }
-                    }
-                }//while
-            } finally {
-                borrowSemaphore.release();
+                borrower.lastUsedEntry = null;
             }
         } else {
-            throw PoolCloseException;
+            borrower = new Borrower();
+            threadLocal.set(new WeakReference<Borrower>(borrower));
+        }
+
+
+        final long deadline = nanoTime() + defaultMaxWaitNanos;
+        try {
+            if (!borrowSemaphore.tryAcquire(this.defaultMaxWaitNanos, NANOSECONDS))
+                throw RequestTimeoutException;
+        } catch (InterruptedException e) {
+            throw RequestInterruptException;
+        }
+
+        try {//borrowSemaphore acquired
+            //1:try to search one from array
+            PooledEntry[] tempArray = poolEntryArray;
+            for (PooledEntry pEntry:tempArray ) {
+                if (pEntry.state==OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(pEntry)) {
+                    borrower.lastUsedEntry = pEntry;
+                    return new ProxyObject(pEntry);
+                }
+            }
+
+            //2:try to create one directly
+            PooledEntry pEntry;
+            if (poolEntryArray.length < poolMaxSize && (pEntry = createPooledEntry(OBJECT_USING)) != null) {
+                borrower.lastUsedEntry = pEntry;
+                return new ProxyObject(pEntry);
+            }
+
+            //3:try to get one transferred object
+            boolean failed = false;
+            ObjectException failedCause = null;
+            borrower.state = BORROWER_NORMAL;
+            waitQueue.offer(borrower);
+            int spinSize = (waitQueue.peek() == borrower) ? maxTimedSpins : 0;
+
+            while (true) {
+                Object state = borrower.state;
+                if (state instanceof PooledEntry) {
+                    pEntry = (PooledEntry) state;
+                    if (transferPolicy.tryCatch(pEntry) && testOnBorrow(pEntry)) {
+                        waitQueue.remove(borrower);
+                        borrower.lastUsedEntry = pEntry;
+                        return new ProxyObject(pEntry);
+                    }
+
+                    state = BORROWER_NORMAL;
+                    borrower.state = state;
+                    yield();
+                } else if (state instanceof ObjectException) {
+                    waitQueue.remove(borrower);
+                    throw (ObjectException) state;
+                }
+
+                if (failed) {
+                    BwrStUpd.compareAndSet(borrower, state, failedCause);
+                } else {
+                    long timeout = deadline - nanoTime();
+                    if (timeout > 0L) {
+                        if (spinSize > 0) {
+                            spinSize--;
+                        } else if (timeout - spinForTimeoutThreshold > 0 && BwrStUpd.compareAndSet(borrower, state, BORROWER_WAITING)) {
+                            parkNanos(borrower, timeout);
+                            if (borrower.thread.isInterrupted()) {
+                                failed = true;
+                                failedCause = RequestInterruptException;
+                            }
+                            if(borrower.state==BORROWER_WAITING)
+                                BwrStUpd.compareAndSet(borrower, BORROWER_WAITING, failed?failedCause:BORROWER_NORMAL);//reset to norma
+                        }
+                    } else {//timeout
+                        failed = true;
+                        failedCause = RequestTimeoutException;
+                        BwrStUpd.compareAndSet(borrower,state,failedCause);
+                    }
+                }
+            }//while
+        } finally {
+            borrowSemaphore.release();
         }
     }
 
