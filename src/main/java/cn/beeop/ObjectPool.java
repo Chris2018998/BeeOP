@@ -234,14 +234,14 @@ public final class ObjectPool implements ObjectPoolJmx {
      * @throws ObjectException if pool is closed or waiting timeout,then throw exception
      */
     public ProxyObject getObject() throws ObjectException {
-        if (poolState.get() != POOL_NORMAL)throw PoolCloseException;
+        if (poolState.get() != POOL_NORMAL) throw PoolCloseException;
 
         //0:try to get from threadLocal cache
         WeakReference<Borrower> ref = threadLocal.get();
         Borrower borrower = (ref != null) ? ref.get() : null;
         if (borrower != null) {
             PooledEntry pEntry = borrower.lastUsedEntry;
-            if (pEntry != null && pEntry.state==OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING)) {
+            if (pEntry != null && pEntry.state == OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING)) {
                 if (testOnBorrow(pEntry)) {
                     borrower.lastUsedEntry = pEntry;
                     return new ProxyObject(pEntry);
@@ -264,16 +264,17 @@ public final class ObjectPool implements ObjectPoolJmx {
 
         try {//borrowSemaphore acquired
             //1:try to search one from array
+            PooledEntry pEntry;
             PooledEntry[] tempArray = poolEntryArray;
-            for (PooledEntry pEntry:tempArray ) {
-                if (pEntry.state==OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(pEntry)) {
+            for (int i = 0, l = tempArray.length; i < l; i++) {
+                pEntry = tempArray[i];
+                if (pEntry.state == OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(pEntry)) {
                     borrower.lastUsedEntry = pEntry;
                     return new ProxyObject(pEntry);
                 }
             }
 
             //2:try to create one directly
-            PooledEntry pEntry;
             if (poolEntryArray.length < poolMaxSize && (pEntry = createPooledEntry(OBJECT_USING)) != null) {
                 borrower.lastUsedEntry = pEntry;
                 return new ProxyObject(pEntry);
@@ -282,6 +283,7 @@ public final class ObjectPool implements ObjectPoolJmx {
             //3:try to get one transferred object
             boolean failed = false;
             ObjectException failedCause = null;
+            Thread cThread = borrower.thread;
             borrower.state = BORROWER_NORMAL;
             waitQueue.offer(borrower);
             int spinSize = (waitQueue.peek() == borrower) ? maxTimedSpins : 0;
@@ -313,17 +315,17 @@ public final class ObjectPool implements ObjectPoolJmx {
                             spinSize--;
                         } else if (timeout - spinForTimeoutThreshold > 0 && BwrStUpd.compareAndSet(borrower, state, BORROWER_WAITING)) {
                             parkNanos(borrower, timeout);
-                            if (borrower.thread.isInterrupted()) {
+                            if (cThread.isInterrupted()) {
                                 failed = true;
                                 failedCause = RequestInterruptException;
                             }
-                            if(borrower.state==BORROWER_WAITING)
-                                BwrStUpd.compareAndSet(borrower, BORROWER_WAITING, failed?failedCause:BORROWER_NORMAL);//reset to norma
+                            if (borrower.state == BORROWER_WAITING)
+                                BwrStUpd.compareAndSet(borrower, BORROWER_WAITING, failed ? failedCause : BORROWER_NORMAL);//reset to norma
                         }
                     } else {//timeout
                         failed = true;
                         failedCause = RequestTimeoutException;
-                        BwrStUpd.compareAndSet(borrower,state,failedCause);
+                        BwrStUpd.compareAndSet(borrower, state, failedCause);
                     }
                 }
             }//while
