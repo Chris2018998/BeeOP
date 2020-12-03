@@ -50,7 +50,6 @@ public final class ObjectPool implements ObjectPoolJmx {
     private static final String DESC_REMOVE_DESTROY = "destroy";
     private static final AtomicInteger poolNameIndex = new AtomicInteger(1);
     private final Object entryArrayLock = new Object();
-    private final Object entryAddNotifyLock = new Object();
     private final PoolMonitorVo monitorVo = new PoolMonitorVo();
     private final ThreadLocal<WeakReference<Borrower>> threadLocal = new ThreadLocal<WeakReference<Borrower>>();
 
@@ -478,13 +477,14 @@ public final class ObjectPool implements ObjectPoolJmx {
 
     // notify to create objects to pool
     private void tryToCreateNewConnByAsyn() {
-        if (poolEntryArray.length + needAddConnSize.get() < poolMaxSize) {
-            synchronized (entryAddNotifyLock) {
-                if (poolEntryArray.length + needAddConnSize.get() < poolMaxSize) {
-                    needAddConnSize.incrementAndGet();
-                    if (createObjThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
-                        unpark(poolEntryAddThread);
-                }
+        while (true) {
+            int curAddSize = needAddConnSize.get();
+            int updAddSize = curAddSize + 1;
+            if (poolEntryArray.length + updAddSize > poolMaxSize) return;
+            if (needAddConnSize.compareAndSet(curAddSize, updAddSize)) {
+                if (createObjThreadState.get() == THREAD_WAITING && createObjThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
+                    unpark(poolEntryAddThread);
+                return;
             }
         }
     }
