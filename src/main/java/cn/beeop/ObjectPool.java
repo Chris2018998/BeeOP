@@ -42,7 +42,7 @@ public final class ObjectPool implements ObjectPoolJmx {
     private static final int maxTimedSpins = (Runtime.getRuntime().availableProcessors() < 2) ? 0 : 32;
     private static final AtomicIntegerFieldUpdater<PooledEntry> ObjStUpd = AtomicIntegerFieldUpdater.newUpdater(PooledEntry.class, "state");
     private static final AtomicReferenceFieldUpdater<Borrower, Object> BwrStUpd = AtomicReferenceFieldUpdater.newUpdater(Borrower.class, Object.class, "state");
-    private static final String DESC_REMOVE_PREINIT="pre-init";
+    private static final String DESC_REMOVE_PREINIT = "pre-init";
     private static final String DESC_REMOVE_INIT = "init";
     private static final String DESC_REMOVE_BAD = "bad";
     private static final String DESC_REMOVE_IDLE = "idle";
@@ -114,7 +114,7 @@ public final class ObjectPool implements ObjectPoolJmx {
 
             exitHook = new PoolHook();
             Runtime.getRuntime().addShutdownHook(exitHook);
-            borrowSemaphoreSize=poolConfig.getBorrowSemaphoreSize();
+            borrowSemaphoreSize = poolConfig.getBorrowSemaphoreSize();
             borrowSemaphore = new Semaphore(borrowSemaphoreSize, poolConfig.isFairMode());
             idleSchExecutor.setKeepAliveTime(15, SECONDS);
             idleSchExecutor.allowCoreThreadTimeOut(true);
@@ -217,11 +217,19 @@ public final class ObjectPool implements ObjectPoolJmx {
      * @throws ObjectException error occurred in creating objects
      */
     private void createInitObjects(int initSize) throws ObjectException {
-        if(initSize==0){//try to create one
-            try{
-                removePooledEntry(createPooledEntry(OBJECT_IDLE),DESC_REMOVE_PREINIT);
-            }catch (Throwable e){}
-        }else {
+        if (initSize == 0) {//try to create one
+            Object object = null;
+            try {
+                object = objectFactory.create(createProperties);
+                objectFactory.setDefault(object);
+            } catch (Throwable e) {
+            } finally {
+                if (object != null) try {
+                    objectFactory.destroy(object);
+                } catch (Throwable e) {
+                }
+            }
+        } else {
             try {
                 for (int i = 0; i < initSize; i++)
                     createPooledEntry(OBJECT_IDLE);
