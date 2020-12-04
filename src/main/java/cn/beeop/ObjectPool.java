@@ -42,6 +42,7 @@ public final class ObjectPool implements ObjectPoolJmx {
     private static final int maxTimedSpins = (Runtime.getRuntime().availableProcessors() < 2) ? 0 : 32;
     private static final AtomicIntegerFieldUpdater<PooledEntry> ObjStUpd = AtomicIntegerFieldUpdater.newUpdater(PooledEntry.class, "state");
     private static final AtomicReferenceFieldUpdater<Borrower, Object> BwrStUpd = AtomicReferenceFieldUpdater.newUpdater(Borrower.class, Object.class, "state");
+    private static final String DESC_REMOVE_PREINIT="pre-init";
     private static final String DESC_REMOVE_INIT = "init";
     private static final String DESC_REMOVE_BAD = "bad";
     private static final String DESC_REMOVE_IDLE = "idle";
@@ -64,6 +65,7 @@ public final class ObjectPool implements ObjectPoolJmx {
 
     private PoolHook exitHook;
     private PoolConfig poolConfig;
+    private int borrowSemaphoreSize;
     private Semaphore borrowSemaphore;
     private TransferPolicy transferPolicy;
     private ConcurrentLinkedQueue<Borrower> waitQueue = new ConcurrentLinkedQueue<Borrower>();
@@ -112,8 +114,8 @@ public final class ObjectPool implements ObjectPoolJmx {
 
             exitHook = new PoolHook();
             Runtime.getRuntime().addShutdownHook(exitHook);
-
-            borrowSemaphore = new Semaphore(poolConfig.getBorrowSemaphoreSize(), poolConfig.isFairMode());
+            borrowSemaphoreSize=poolConfig.getBorrowSemaphoreSize();
+            borrowSemaphore = new Semaphore(borrowSemaphoreSize, poolConfig.isFairMode());
             idleSchExecutor.setKeepAliveTime(15, SECONDS);
             idleSchExecutor.allowCoreThreadTimeOut(true);
             idleCheckSchFuture = idleSchExecutor.scheduleAtFixedRate(new Runnable() {
@@ -130,7 +132,7 @@ public final class ObjectPool implements ObjectPoolJmx {
                     poolMode,
                     poolEntryArray.length,
                     config.getMaxActive(),
-                    poolConfig.getBorrowSemaphoreSize(),
+                    borrowSemaphoreSize,
                     poolConfig.getMaxWait()
             );
 
@@ -145,8 +147,8 @@ public final class ObjectPool implements ObjectPoolJmx {
         }
     }
 
-    private boolean existBorrower() {
-        return poolConfig.getBorrowSemaphoreSize() > borrowSemaphore.availablePermits() || borrowSemaphore.hasQueuedThreads();
+    private final boolean existBorrower() {
+        return borrowSemaphoreSize > borrowSemaphore.availablePermits();
     }
 
     //create Pooled object
@@ -215,13 +217,19 @@ public final class ObjectPool implements ObjectPoolJmx {
      * @throws ObjectException error occurred in creating objects
      */
     private void createInitObjects(int initSize) throws ObjectException {
-        try {
-            for (int i = 0; i < initSize; i++)
-                createPooledEntry(OBJECT_IDLE);
-        } catch (ObjectException e) {
-            for (PooledEntry pEntry : poolEntryArray)
-                removePooledEntry(pEntry, DESC_REMOVE_INIT);
-            throw e;
+        if(initSize==0){//try to create one
+            try{
+                removePooledEntry(createPooledEntry(OBJECT_IDLE),DESC_REMOVE_PREINIT);
+            }catch (Throwable e){}
+        }else {
+            try {
+                for (int i = 0; i < initSize; i++)
+                    createPooledEntry(OBJECT_IDLE);
+            } catch (ObjectException e) {
+                for (PooledEntry pEntry : poolEntryArray)
+                    removePooledEntry(pEntry, DESC_REMOVE_INIT);
+                throw e;
+            }
         }
     }
 
