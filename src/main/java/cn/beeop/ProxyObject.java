@@ -19,6 +19,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import static cn.beeop.StaticCenter.ObjectClosedException;
+import static cn.beeop.StaticCenter.ObjectMethodMap;
 
 /**
  * Object Proxy
@@ -53,7 +54,7 @@ public class ProxyObject {
         pEntry.recycleSelf();
     }
 
-    final void trySetAsClosed() {//called from FastConnectionPool
+    final void trySetAsClosed() {//called from ObjectPool
         try {
             close();
         } catch (ObjectException e) {
@@ -63,8 +64,14 @@ public class ProxyObject {
     public Object call(String name, Class[] types, Object[] params) throws ObjectException {
         checkClosed();
         try {
-            Method method = delegate.getClass().getMethod(name, types);
-            Object v= method.invoke(delegate, params);
+            MethodCallKey key = new MethodCallKey(name, types);
+            Method method = ObjectMethodMap.get(key);
+            if (method == null) {
+                method = delegate.getClass().getMethod(name, types);
+                ObjectMethodMap.put(key, method);
+            }
+
+            Object v = method.invoke(delegate, params);
             pEntry.updateAccessTime();
             return v;
         } catch (NoSuchMethodException e) {

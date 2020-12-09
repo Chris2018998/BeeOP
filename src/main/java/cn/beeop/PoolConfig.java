@@ -52,7 +52,7 @@ public class PoolConfig implements PoolConfigJmx {
     private int maxActive = 10;
     //borrow Semaphore Size
     private int borrowSemaphoreSize = Math.min(maxActive / 2, Runtime.getRuntime().availableProcessors());
-    //* minutes:max idle time for pooledConnection(milliseconds),default value: three minutes
+    //* minutes:max idle time for pooledEntry(milliseconds),default value: three minutes
     private long idleTimeout = MINUTES.toMillis(3);
     //max hold time in Unused(milliseconds),pool will release it by forced
     private long holdTimeout = MINUTES.toMillis(5);

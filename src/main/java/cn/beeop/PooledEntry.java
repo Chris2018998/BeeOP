@@ -18,7 +18,7 @@ package cn.beeop;
 import static java.lang.System.currentTimeMillis;
 
 /**
- * Pooled Connection
+ * Pooled Entry
  *
  * @author Chris.Liao
  * @version 1.0
@@ -27,11 +27,11 @@ class PooledEntry {
     volatile int state;
     Object object;
     ProxyObject proxyObject;
-    ObjectFactory factory;
 
+    private ObjectFactory factory;
     volatile long lastAccessTime;
-    volatile ObjectPool pool;
-    PoolConfig config;
+    private ObjectPool pool;
+    private PoolConfig config;
 
     public PooledEntry(Object object, int state, ObjectPool pool, PoolConfig config) throws ObjectException {
         this.pool = pool;

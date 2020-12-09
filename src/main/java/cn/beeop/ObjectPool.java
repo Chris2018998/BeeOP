@@ -50,6 +50,7 @@ public final class ObjectPool implements ObjectPoolJmx {
     private static final String DESC_REMOVE_RESET = "reset";
     private static final String DESC_REMOVE_DESTROY = "destroy";
     private static final AtomicInteger poolNameIndex = new AtomicInteger(1);
+
     private final Object entryArrayLock = new Object();
     private final PoolMonitorVo monitorVo = new PoolMonitorVo();
     private final ThreadLocal<WeakReference<Borrower>> threadLocal = new ThreadLocal<WeakReference<Borrower>>();
@@ -74,7 +75,7 @@ public final class ObjectPool implements ObjectPoolJmx {
     private PooledConnAddThread poolEntryAddThread;
     private volatile PooledEntry[] poolEntryArray = new PooledEntry[0];
     private ScheduledFuture<?> idleCheckSchFuture;
-    private ScheduledThreadPoolExecutor idleSchExecutor = new ScheduledThreadPoolExecutor(2, new PoolThreadThreadFactory("IdleConnectionScan"));
+    private ScheduledThreadPoolExecutor idleSchExecutor = new ScheduledThreadPoolExecutor(2, new PoolThreadThreadFactory("IdleObjectScan"));
     private AtomicInteger poolState = new AtomicInteger(POOL_UNINIT);
     private AtomicInteger createObjThreadState = new AtomicInteger(THREAD_WORKING);
     private AtomicInteger needAddConnSize = new AtomicInteger(0);
@@ -120,7 +121,7 @@ public final class ObjectPool implements ObjectPoolJmx {
             idleSchExecutor.allowCoreThreadTimeOut(true);
             idleCheckSchFuture = idleSchExecutor.scheduleAtFixedRate(new Runnable() {
                                                                          public void run() {// check idle object
-                                                                             closeIdleTimeoutConnection();
+                                                                             closeIdleTimeoutObject();
                                                                          }
                                                                      }, 1000,
                     config.getIdleCheckTimeInterval(),
@@ -396,7 +397,7 @@ public final class ObjectPool implements ObjectPoolJmx {
      * inner timer will call the method to clear some idle timeout objects
      * or dead objects,or long time not active objects in using state
      */
-    private void closeIdleTimeoutConnection() {
+    private void closeIdleTimeoutObject() {
         if (poolState.get() == POOL_NORMAL) {
             PooledEntry[] array = poolEntryArray;
             for (int i = 0, len = array.length; i < len; i++) {
@@ -431,7 +432,7 @@ public final class ObjectPool implements ObjectPoolJmx {
         while (true) {
             if (poolState.compareAndSet(POOL_NORMAL, POOL_CLOSED)) {
                 commonLog.info("BeeOP({})begin to shutdown", poolName);
-                removeAllConnections(poolConfig.isForceClose(), DESC_REMOVE_DESTROY);
+                removeAllObjects(poolConfig.isForceClose(), DESC_REMOVE_DESTROY);
                 unregisterJMX();
                 shutdownCreateConnThread();
                 while (!idleCheckSchFuture.isCancelled() && !idleCheckSchFuture.isDone())
@@ -457,7 +458,7 @@ public final class ObjectPool implements ObjectPoolJmx {
     }
 
     // remove all objects
-    private void removeAllConnections(boolean force, String source) {
+    private void removeAllObjects(boolean force, String source) {
         while (existBorrower()) {
             transferException(PoolCloseException);
         }
@@ -527,7 +528,7 @@ public final class ObjectPool implements ObjectPoolJmx {
     public void reset(boolean force) {
         if (poolState.compareAndSet(POOL_NORMAL, POOL_RESTING)) {
             commonLog.info("BeeOP({})begin to reset.", poolName);
-            removeAllConnections(force, DESC_REMOVE_RESET);
+            removeAllObjects(force, DESC_REMOVE_RESET);
             commonLog.info("All pooled objects were cleared");
             poolState.set(POOL_NORMAL);// restore state;
             commonLog.info("BeeOP({})finished resetting", poolName);
@@ -539,12 +540,12 @@ public final class ObjectPool implements ObjectPoolJmx {
     }
 
     public int getIdleSize() {
-        int idleConnections = 0;
+        int idleObjects = 0;
         for (PooledEntry pEntry : this.poolEntryArray) {
             if (pEntry.state == OBJECT_IDLE)
-                idleConnections++;
+                idleObjects++;
         }
-        return idleConnections;
+        return idleObjects;
     }
 
     public int getUsingSize() {
@@ -684,7 +685,7 @@ public final class ObjectPool implements ObjectPoolJmx {
         }
     }
 
-    // create connection to pool
+    // create object to pool
     private class PooledConnAddThread extends Thread {
         public void run() {
             PooledEntry pEntry;
