@@ -323,13 +323,14 @@ public final class ObjectPool implements ObjectPoolJmx {
                 }
 
                 if (failed) {
-                    BwrStUpd.compareAndSet(borrower, state, failedCause);
+                    if(borrower.state==state)
+                         BwrStUpd.compareAndSet(borrower, state, failedCause);
                 } else {
                     long timeout = deadline - nanoTime();
                     if (timeout > 0L) {
                         if (spinSize > 0) {
                             spinSize--;
-                        } else if (timeout - spinForTimeoutThreshold > 0 && BwrStUpd.compareAndSet(borrower, state, BORROWER_WAITING)) {
+                        } else if (timeout - spinForTimeoutThreshold > 0 && borrower.state==state && BwrStUpd.compareAndSet(borrower, state, BORROWER_WAITING)) {
                             parkNanos(borrower, timeout);
                             if (cThread.isInterrupted()) {
                                 failed = true;
@@ -341,7 +342,8 @@ public final class ObjectPool implements ObjectPoolJmx {
                     } else {//timeout
                         failed = true;
                         failedCause = RequestTimeoutException;
-                        BwrStUpd.compareAndSet(borrower, state, failedCause);
+                        if(borrower.state==state)
+                          BwrStUpd.compareAndSet(borrower, state, failedCause);
                     }
                 }
             }//while
