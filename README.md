@@ -6,6 +6,6 @@ High Performance Object Pool
 <dependency>
    <groupId>com.github.chris2018998</groupId>
    <artifactId>beeop</artifactId>
-   <version>0.2</version>
+   <version>0.3</version>
 </dependency>
 ```
