@@ -42,7 +42,7 @@ public final class ObjectPool implements ObjectPoolJmx {
     private static final int maxTimedSpins = (Runtime.getRuntime().availableProcessors() < 2) ? 0 : 32;
     private static final AtomicIntegerFieldUpdater<PooledEntry> ObjStUpd = AtomicIntegerFieldUpdater.newUpdater(PooledEntry.class, "state");
     private static final AtomicReferenceFieldUpdater<Borrower, Object> BwrStUpd = AtomicReferenceFieldUpdater.newUpdater(Borrower.class, Object.class, "state");
-    private static final String DESC_REMOVE_PREINIT = "pre-init";
+    private static final String DESC_REMOVE_PRE_INIT = "pre_init";
     private static final String DESC_REMOVE_INIT = "init";
     private static final String DESC_REMOVE_BAD = "bad";
     private static final String DESC_REMOVE_IDLE = "idle";
@@ -219,14 +219,13 @@ public final class ObjectPool implements ObjectPoolJmx {
      */
     private void createInitObjects(int initSize) throws ObjectException {
         if (initSize == 0) {//try to create one
-            Object object = null;
+            PooledEntry pEntry = null;
             try {
-                object = objectFactory.create(createProperties);
-                objectFactory.setDefault(object);
+                pEntry =createPooledEntry(OBJECT_IDLE);
             } catch (Throwable e) {
             } finally {
-                if (object != null) try {
-                    objectFactory.destroy(object);
+                if (pEntry != null) try {
+                    removePooledEntry(pEntry,DESC_REMOVE_PRE_INIT);
                 } catch (Throwable e) {
                 }
             }
