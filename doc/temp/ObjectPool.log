@@ -1,0 +1,84 @@
+[INFO]2020-12-19 18:03:15-Pool[Apache -- Multiple thread borrow] -- Begin{1000threads X 1000iterate}
+[INFO]2020-12-19 18:03:19-Pool[Apache -- Multiple thread borrow] -- Execution count:1000000,total time:2677456ms,avg time:2.677456ms,min time:0ms,max time:1691ms
+[INFO]2020-12-19 18:03:19-success count       :1000000
+[INFO]2020-12-19 18:03:19-fail count          :0
+[INFO]2020-12-19 18:03:19-avr(ms)             :2.677456
+[INFO]2020-12-19 18:03:19-min(ms)             :0
+[INFO]2020-12-19 18:03:19-max(ms)             :1691
+[INFO]2020-12-19 18:03:19-time==0ms           :966517
+[INFO]2020-12-19 18:03:19-1ms=<time<=10ms     :10410
+[INFO]2020-12-19 18:03:19-10ms<time<=50ms     :11129
+[INFO]2020-12-19 18:03:19-50ms<time<=100ms    :5855
+[INFO]2020-12-19 18:03:19-100ms<time<=200ms   :3728
+[INFO]2020-12-19 18:03:19-200ms<time<=500ms   :1415
+[INFO]2020-12-19 18:03:19-500ms<time<=1000ms  :323
+[INFO]2020-12-19 18:03:19-1000ms<time<=2000ms :623
+[INFO]2020-12-19 18:03:19-2000ms<time<=8000ms :0
+[INFO]2020-12-19 18:03:19-time>8000ms         :0
+[INFO]2020-12-19 18:03:19-
+
+[INFO]2020-12-19 18:03:24-BeeOP(FastPool-1)starting....
+[INFO]2020-12-19 18:03:25-BeeOP(FastPool-1)has startup{mode:fair,init size:10,max size:10,semaphore size:4,max wait:8000ms}
+[INFO]2020-12-19 18:03:25-Pool[Bee_F -- Multiple thread borrow] -- Begin{1000threads X 1000iterate}
+[INFO]2020-12-19 18:03:25-Pool[Bee_F -- Multiple thread borrow] -- Execution count:1000000,total time:347ms,avg time:0.000347ms,min time:0ms,max time:11ms
+[INFO]2020-12-19 18:03:25-success count       :1000000
+[INFO]2020-12-19 18:03:25-fail count          :0
+[INFO]2020-12-19 18:03:25-avr(ms)             :0.000347
+[INFO]2020-12-19 18:03:25-min(ms)             :0
+[INFO]2020-12-19 18:03:25-max(ms)             :11
+[INFO]2020-12-19 18:03:25-time==0ms           :999993
+[INFO]2020-12-19 18:03:25-1ms=<time<=10ms     :6
+[INFO]2020-12-19 18:03:25-10ms<time<=50ms     :1
+[INFO]2020-12-19 18:03:25-50ms<time<=100ms    :0
+[INFO]2020-12-19 18:03:25-100ms<time<=200ms   :0
+[INFO]2020-12-19 18:03:25-200ms<time<=500ms   :0
+[INFO]2020-12-19 18:03:25-500ms<time<=1000ms  :0
+[INFO]2020-12-19 18:03:25-1000ms<time<=2000ms :0
+[INFO]2020-12-19 18:03:25-2000ms<time<=8000ms :0
+[INFO]2020-12-19 18:03:25-time>8000ms         :0
+[INFO]2020-12-19 18:03:25-
+
+[INFO]2020-12-19 18:03:25-BeeOP(FastPool-1)begin to shutdown
+[INFO]2020-12-19 18:03:25-BeeOP(FastPool-1)has shutdown
+[INFO]2020-12-19 18:03:30-BeeOP(FastPool-2)starting....
+[INFO]2020-12-19 18:03:30-BeeOP(FastPool-2)has startup{mode:compete,init size:10,max size:10,semaphore size:4,max wait:8000ms}
+[INFO]2020-12-19 18:03:30-Pool[Bee_C -- Multiple thread borrow] -- Begin{1000threads X 1000iterate}
+[INFO]2020-12-19 18:03:30-Pool[Bee_C -- Multiple thread borrow] -- Execution count:1000000,total time:187ms,avg time:0.000187ms,min time:0ms,max time:11ms
+[INFO]2020-12-19 18:03:30-success count       :1000000
+[INFO]2020-12-19 18:03:30-fail count          :0
+[INFO]2020-12-19 18:03:30-avr(ms)             :0.000187
+[INFO]2020-12-19 18:03:30-min(ms)             :0
+[INFO]2020-12-19 18:03:30-max(ms)             :11
+[INFO]2020-12-19 18:03:30-time==0ms           :999998
+[INFO]2020-12-19 18:03:30-1ms=<time<=10ms     :1
+[INFO]2020-12-19 18:03:30-10ms<time<=50ms     :1
+[INFO]2020-12-19 18:03:30-50ms<time<=100ms    :0
+[INFO]2020-12-19 18:03:30-100ms<time<=200ms   :0
+[INFO]2020-12-19 18:03:30-200ms<time<=500ms   :0
+[INFO]2020-12-19 18:03:30-500ms<time<=1000ms  :0
+[INFO]2020-12-19 18:03:30-1000ms<time<=2000ms :0
+[INFO]2020-12-19 18:03:30-2000ms<time<=8000ms :0
+[INFO]2020-12-19 18:03:30-time>8000ms         :0
+[INFO]2020-12-19 18:03:30-
+
+[INFO]2020-12-19 18:03:30-BeeOP(FastPool-2)begin to shutdown
+[INFO]2020-12-19 18:03:30-BeeOP(FastPool-2)has shutdown
+[INFO]2020-12-19 18:03:35-[Multiple thread borrow]Performance analysis:Bee_C(0.000187) > Bee_F(0.000347) > Apache(2.677456)
+[INFO]2020-12-19 18:03:35-|Sumary|Apache|Bee_F|Bee_C|
+[INFO]2020-12-19 18:03:35-| --- | --- | --- | --- |
+[INFO]2020-12-19 18:03:35-|success Count|1000000|1000000|1000000|
+[INFO]2020-12-19 18:03:35-|fail count|0|0|0|
+[INFO]2020-12-19 18:03:35-|avr(ms)|2.677456|0.000347|0.000187|
+[INFO]2020-12-19 18:03:35-|min(ms)|0|0|0|
+[INFO]2020-12-19 18:03:35-|max(ms)|1691|11|11|
+[INFO]2020-12-19 18:03:35-|time=0ms|966517|999993|999998|
+[INFO]2020-12-19 18:03:35-|1ms=<time<=10ms|10410|6|1|
+[INFO]2020-12-19 18:03:35-|10ms<time<=50ms|11129|1|1|
+[INFO]2020-12-19 18:03:35-|50ms<time<=100ms|5855|0|0|
+[INFO]2020-12-19 18:03:35-|100ms<time<=200ms|3728|0|0|
+[INFO]2020-12-19 18:03:35-|200ms<time<=500ms|1415|0|0|
+[INFO]2020-12-19 18:03:35-|500ms<time<=1000ms|323|0|0|
+[INFO]2020-12-19 18:03:35-|1000ms<time<=2000ms|623|0|0|
+[INFO]2020-12-19 18:03:35-|2000ms<time<=800ms|0|0|0|
+[INFO]2020-12-19 18:03:35-|8000ms<time|0|0|0||
+[INFO]2020-12-19 18:03:35-
