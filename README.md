@@ -66,7 +66,7 @@ class StringFactory extends ObjectFactory {
 ```
 
 
-五：版本下载
+四：版本下载
 ---
 **Java7**
 ```xml
@@ -79,7 +79,7 @@ class StringFactory extends ObjectFactory {
 *友情提示：建议使用最新版本*
 
 
-六：功能支持
+五：功能支持
 ---
 ```java
 1：请求超时支持
@@ -102,7 +102,7 @@ class StringFactory extends ObjectFactory {
 
 ```
 
-七：配置项说明
+六：配置项说明
 ---
 |  配置项          |   描述                        |   备注                            |
 | ----------------| ---------------------------  | ------------------------          |
