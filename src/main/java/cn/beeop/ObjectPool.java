@@ -160,7 +160,7 @@ public final class ObjectPool implements ObjectPoolJmx {
                 commonLog.debug("BeeOP({}))begin to create new pooled object,state:{}", poolName, connState);
                 Object obj = objectFactory.create(createProperties);
                 objectFactory.setDefault(obj);
-                PooledEntry pEntry = new PooledEntry(obj, connState, this, poolConfig);// add
+                PooledEntry pEntry = new PooledEntry(obj, connState, this, poolConfig.getObjectFactory());// add
                 commonLog.debug("BeeOP({}))has created new pooled object:{},state:{}", poolName, pEntry, connState);
                 PooledEntry[] arrayNew = new PooledEntry[arrayLen + 1];
                 arraycopy(poolEntryArray, 0, arrayNew, 0, arrayLen);
@@ -221,11 +221,11 @@ public final class ObjectPool implements ObjectPoolJmx {
         if (initSize == 0) {//try to create one
             PooledEntry pEntry = null;
             try {
-                pEntry =createPooledEntry(OBJECT_IDLE);
+                pEntry = createPooledEntry(OBJECT_IDLE);
             } catch (Throwable e) {
             } finally {
                 if (pEntry != null) try {
-                    removePooledEntry(pEntry,DESC_REMOVE_PRE_INIT);
+                    removePooledEntry(pEntry, DESC_REMOVE_PRE_INIT);
                 } catch (Throwable e) {
                 }
             }
@@ -257,10 +257,9 @@ public final class ObjectPool implements ObjectPoolJmx {
         if (borrower != null) {
             PooledEntry pEntry = borrower.lastUsedEntry;
             if (pEntry != null && pEntry.state == OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING)) {
-                if (testOnBorrow(pEntry)) {
-                    borrower.lastUsedEntry = pEntry;
-                    return new ProxyObject(pEntry);
-                }
+                if (testOnBorrow(pEntry))
+                    return createProxyObject(pEntry, borrower);
+
                 borrower.lastUsedEntry = null;
             }
         } else {
@@ -284,16 +283,14 @@ public final class ObjectPool implements ObjectPoolJmx {
             for (int i = 0, l = tempArray.length; i < l; i++) {
                 pEntry = tempArray[i];
                 if (pEntry.state == OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(pEntry)) {
-                    borrower.lastUsedEntry = pEntry;
-                    return new ProxyObject(pEntry);
+                    return createProxyObject(pEntry, borrower);
                 }
             }
 
             //2:try to create one directly
-            if (poolEntryArray.length < poolMaxSize && (pEntry = createPooledEntry(OBJECT_USING)) != null) {
-                borrower.lastUsedEntry = pEntry;
-                return new ProxyObject(pEntry);
-            }
+            if (poolEntryArray.length < poolMaxSize && (pEntry = createPooledEntry(OBJECT_USING)) != null)
+                return createProxyObject(pEntry, borrower);
+
 
             //3:try to get one transferred object
             boolean failed = false;
@@ -309,8 +306,7 @@ public final class ObjectPool implements ObjectPoolJmx {
                     pEntry = (PooledEntry) state;
                     if (transferPolicy.tryCatch(pEntry) && testOnBorrow(pEntry)) {
                         waitQueue.remove(borrower);
-                        borrower.lastUsedEntry = pEntry;
-                        return new ProxyObject(pEntry);
+                        return createProxyObject(pEntry, borrower);
                     }
 
                     state = BORROWER_NORMAL;
@@ -323,7 +319,7 @@ public final class ObjectPool implements ObjectPoolJmx {
 
                 if (failed) {
                     if (borrower.state == state)
-                       BwrStUpd.compareAndSet(borrower, state, failedCause);
+                        BwrStUpd.compareAndSet(borrower, state, failedCause);
                 } else {
                     long timeout = deadline - nanoTime();
                     if (timeout > 0L) {
@@ -342,7 +338,7 @@ public final class ObjectPool implements ObjectPoolJmx {
                         failed = true;
                         failedCause = RequestTimeoutException;
                         if (borrower.state == state)
-                          BwrStUpd.compareAndSet(borrower, state, failedCause);
+                            BwrStUpd.compareAndSet(borrower, state, failedCause);
                     }
                 }
             }//while

@@ -27,23 +27,24 @@ class PooledEntry {
     volatile int state;
     Object object;
     ProxyObject proxyObject;
-
-    private ObjectFactory factory;
     volatile long lastAccessTime;
+    private ObjectFactory factory;
     private ObjectPool pool;
-    private PoolConfig config;
 
-    public PooledEntry(Object object, int state, ObjectPool pool, PoolConfig config) throws ObjectException {
+    public PooledEntry(Object object, int state, ObjectPool pool, ObjectFactory factory) throws ObjectException {
         this.pool = pool;
         this.state = state;
         this.object = object;
-        this.config = config;
-        this.factory = config.getObjectFactory();
+        this.factory = factory;
         this.lastAccessTime = currentTimeMillis();//first time
     }
 
-    final void updateAccessTime() {//for update,insert.select,delete and so on DML
+    final void updateAccessTime() {
         lastAccessTime = currentTimeMillis();
+    }
+
+    public String toString() {
+        return object.toString();
     }
 
     final void recycleSelf() throws ObjectException {

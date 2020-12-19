@@ -42,8 +42,8 @@ public class ProxyObject {
         return isClosed;
     }
 
-    private void checkClosed() throws ObjectException {
-        if (isClosed) throw ObjectClosedException;
+    public String toString() {
+        return pEntry.toString();
     }
 
     public final void close() throws ObjectException {
@@ -61,9 +61,9 @@ public class ProxyObject {
         }
     }
 
-    public Object call(String name, Class[] types, Object[] params) throws ObjectException {
-        checkClosed();
+    public final Object call(String name, Class[] types, Object[] params) throws ObjectException {
         try {
+            if (isClosed) throw ObjectClosedException;
             MethodCallKey key = new MethodCallKey(name, types);
             Method method = ObjectMethodMap.get(key);
             if (method == null) {

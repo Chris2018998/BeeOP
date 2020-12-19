@@ -47,7 +47,7 @@ class StaticCenter {
 
     public static final ConcurrentHashMap<MethodCallKey, Method> ObjectMethodMap = new ConcurrentHashMap<MethodCallKey, Method>();
     public static final ObjectException RequestTimeoutException = new ObjectException("Request timeout");
-    public static final ObjectException RequestInterruptException = new ObjectException("Request interrupt");
+    public static final ObjectException RequestInterruptException = new ObjectException("Request interrupted");
     public static final ObjectException PoolCloseException = new ObjectException("Pool has been closed or in resetting");
     public static final ObjectException ObjectClosedException = new ObjectException("No operations allowed after object closed.");
     public static final Logger commonLog = LoggerFactory.getLogger(StaticCenter.class);
@@ -60,10 +60,14 @@ class StaticCenter {
         if (str == null) return true;
         int strLen = str.length();
         for (int i = 0; i < strLen; ++i) {
-            if (!Character.isWhitespace(str.charAt(i))) {
+            if (!Character.isWhitespace(str.charAt(i)))
                 return false;
-            }
         }
         return true;
+    }
+
+    public static final ProxyObject createProxyObject(PooledEntry pEntry, Borrower borrower) {
+        borrower.lastUsedEntry = pEntry;
+        return new ProxyObject(pEntry);
     }
 }
