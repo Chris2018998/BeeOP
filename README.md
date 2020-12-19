@@ -2,7 +2,7 @@
 
 一：介绍 <img height="50px" width="50px" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img>
 ---
-小蜜蜂对象池：一款轻量级高性能Java对象池
+小蜜蜂对象池：一款轻量高性能Java对象池
 
 <a href="https://github.com/Chris2018998/BeeOP/blob/master/README.md">English</a>
 
