@@ -51,7 +51,7 @@ class StringFactory extends ObjectFactory {
         return true;
     }
  }
-....
+```
 
 ```java
   PoolConfig config = new PoolConfig();
@@ -63,7 +63,6 @@ class StringFactory extends ObjectFactory {
   ProxyObject proxyObj = pool.getObject();
   .........
   proxyObj.close();
-}
 ```
 
 
