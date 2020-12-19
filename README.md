@@ -15,7 +15,7 @@
 | PC       | I5-4210M(2.6hz),12G内存  |
 | JDK      | JAVA8_64 |
 | Pool     | 初始10，最大10 |
-| 测试目标  |100万次借用/归还1000线程 x1000次）|
+| 测试目标  |100万次借用/归还(1000线程 x1000次）|
 | 期待结果  | 获取时间分布，平均时间 |
 | 时间单位  | 毫秒 |
 
@@ -108,17 +108,17 @@ class StringFactory extends ObjectFactory {
 |  配置项          |   描述                        |   备注                            |
 | ----------------| ---------------------------  | ------------------------          |
 | poolName        | 连接池名                       |                                   |
-| fairMode        | 连接池是否公平模式               | 公平锁,等待者优先获取连接            |
+| fairMode        | 连接池是否公平模式               | 默认false,竞争模式                 |
 | initialSize     | 连接池初始大小                  |                                   |
 | maxActive       | 连接池最大个数                  |                                   | 
-| borrowConcurrentSize  | 信号量请求并发数（借用者线程数）| 不允许大于对象最大数                 |
-| maxWait           |对象借用等待最大时间(毫秒)       | 默认8秒，对象请求最大等待时间           |
-| idleTimeout       |对象闲置最大时间(毫秒)          | 默认3分钟，超时会被清理                 |  
-| holdTimeout       |对象被持有不用的最大时间(毫秒)    | 默认5分钟，超时会被清理                 |  
+| borrowConcurrentSize  | 信号量请求并发数（借用者线程数）| 不允许大于对象最大数              |
+| maxWait           |对象借用等待最大时间(毫秒)       | 默认8秒，对象请求最大等待时间         |
+| idleTimeout       |对象闲置最大时间(毫秒)          | 默认3分钟，超时会被清理               |  
+| holdTimeout       |对象被持有不用的最大时间(毫秒)    | 默认5分钟，超时会被清理              |  
 | forceCloseConnection   |是否需要暴力关闭对象         |默认false;true:直接关闭使用中对象，false:等待处于使用中归还后再关闭|
 | waitTimeToClearPool    |延迟清理的时候时间（秒）      |默认3秒，非暴力清理池下，还存在使用中的对象，延迟等待时间再清理|      
 | idleCheckTimeInterval  |闲置扫描线程间隔时间(毫秒)             |                     |
 | idleCheckTimeInitDelay |闲置扫描线程延迟时间再执行第一次扫描(毫秒)|                    |
-| connectionFactoryClassName|自定义的JDBC连接工作类名            | 默认为空             |
-| enableJMX                 |JMX监控支持开关                    |                    | |
+| objectFactoryClassName |自定义的对象工厂类名            | 默认为空                    |
+| enableJMX              |JMX监控支持开关                |   默认false                 | 
 
