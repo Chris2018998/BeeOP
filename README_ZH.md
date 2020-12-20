@@ -12,7 +12,7 @@ Maven坐标（Java7)
 ```
 ----------------------------------------
 ##### 性能测试
-<strong>电脑:</strong>I5-4210M(2.6赫兹，双核4线程),12G内存 <strong>Java版本</strong>:</b> JAVA8_64 <strong>对象池设置</strong> :初始10，最大10 
+<strong><font color=green>电脑:</font></strong>I5-4210M(2.6赫兹，双核4线程),12G内存  <strong><font color=green>Java版本:</font></strong>JAVA8_64 <strong><font color=green>对象池设置:</font></strong>初始10，最大10 
  
    
 
