@@ -1,6 +1,6 @@
-<img height="50px" width="50px" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img> <a href="https://github.com/Chris2018998/BeeOP/blob/main/README_ZH.md">English</a>
+<img height="50px" width="50px" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img> <a href="https://github.com/Chris2018998/BeeOP/blob/main/README_ZH.md">中文</a>
 
-BeeOP： A light high performance java object pool
+BeeOP：A light high performance java object pool
 
 Maven artifactId（Java7)
 ```xml
