@@ -43,7 +43,8 @@ class Book{
      return number;
    }
 }
-
+```
+ 
 ```java
 class BookFactory extends ObjectFactory {
      public Object create(Properties prop) throws ObjectException {
@@ -57,6 +58,7 @@ class BookFactory extends ObjectFactory {
     }
  }
  ```
+ 
  ```java
  public class TestPool{
    public static void main(String[]){
