@@ -94,7 +94,7 @@ class BookFactory extends ObjectFactory {
 
 8：Pool can be reset
 
-9：Jmx used in pool with indicator
+9：Jmx support
 
  
 ---
