@@ -1,3 +1,7 @@
+[![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
+
+<img height="50px" width="50px" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png">
+
 小蜜蜂对象池：一款轻量高性能Java对象池  &nbsp;&nbsp;<a href="https://github.com/Chris2018998/BeeOP/blob/master/README.md">English</a>
 
 ----------------------------------------------------
