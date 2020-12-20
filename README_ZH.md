@@ -88,7 +88,7 @@ class BookFactory extends ObjectFactory {
 
 5：闲置超时和持有超时处理
 
-6: 若对象发生异常，池自动增补
+6：若对象发生异常，池自动增补
 
 7：对象回收时重置
 
