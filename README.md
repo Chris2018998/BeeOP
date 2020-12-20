@@ -13,7 +13,7 @@ Maven artifactId(Java7)
 ---
 
 ##### Performance 
-1 million borrowing / returning (1000 threads x 1000 times)
+1 million borrow/return (1000 threads x 1000 times)
 |       Pool       |commons-pool2-2.9.0  | BeeOP0.3_Fair      | BeeOP0.3_Compet   |
 | -----------------|----------------     | -------------------| ----------------- |  
 | Average time(ms) | 2.677456            | 0.000347           |  0.000187         |
@@ -82,7 +82,7 @@ class BookFactory extends ObjectFactory {
 
 2：Fair mode and compete mode for borrowing 
 
-3：Proxy object safe close when returning 
+3：Proxy object safe close when return
 
 4：Pooled object cleared when network bad,pooled object recreate when network restore OK
 
@@ -90,7 +90,7 @@ class BookFactory extends ObjectFactory {
 
 6：Pooled object closed when exception,then create new one and transfer it to waiter
 
-7：Pooled object reset when returning
+7：Pooled object reset when return
 
 8：Pool can be reset
 
