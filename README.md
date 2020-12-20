@@ -2,7 +2,7 @@
 
 BeeOP：A light high-performance java object pool
 
-Maven artifactId（Java7)
+Maven artifactId(Java7)
 ```xml
 <dependency>
    <groupId>com.github.chris2018998</groupId>
@@ -88,7 +88,7 @@ class BookFactory extends ObjectFactory {
 
 5：Idle timeout and hold timeout(long time inactively hold by borrower)
 
-6：Pooled object closed when exception,then create new one transfer to waiter
+6：Pooled object closed when exception,then create new one and transfer it to waiter
 
 7：Pooled object reset when returning
 
@@ -98,14 +98,14 @@ class BookFactory extends ObjectFactory {
 
  
 ---
-##### 配置项说明
+##### configuration
 
-|             配置项      |   描述                          |   备注                                                      |
-| ---------------------  | ----------------------------    | -----------------------------------------------------------|
-| fairMode               |是否公平模式                       |默认false,竞争模式                                            |
-| initialSize            |池初始创建对象数                   | 默认为0                                                      |
-| maxActive              |池最大创建对象数                   | 默认为10个                                                   | 
-| borrowSemaphoreSize    |对象借线程最大并行数                |默认取最大对象数/2与cpu核心数的最小值                            |
+| configuration field name|       Description                              |   Remark                                                    |
+| ---------------------  | ------------------------------------------------| -----------------------------------------------------------|
+| fairMode               |boolean indicator for borrow fair mode           |true:fair mode,false:comepete mode;default is false         |
+| initialSize            |pooled object creation size when pool initialized|default is 0                                                    |
+| maxActive              |max size for pooled object instances in pool     |default is 10                                                    | 
+| borrowSemaphoreSize    |对象借线程最大并行数                                |默认取最大对象数/2与cpu核心数的最小值                            |
 | maxWait                |对象借用等待最大时间(毫秒)           |默认8秒，对象请求最大等待时间                                   |
 | idleTimeout            |对象闲置最大时间(毫秒)              |默认3分钟，超时会被清理                                         |  
 | holdTimeout            |对象被持有不用最大时间(毫秒)         |默认5分钟，超时会被清理                                         |  
