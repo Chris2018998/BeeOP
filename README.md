@@ -14,9 +14,9 @@ Maven artifactId（Java7)
 
 ##### Performance 
 1 million borrowing / returning (1000 threads x 1000 times)
-|                  | commons-pool2-2.9.0 | BeeOP0.3_F         | BeeOP0.3_C  |
-| -----------------|----------------     | -------------------| -------------|  
-| Average time(ms) | 2.677456            | 0.000347           |  0.000187    |
+|       Pool       |commons-pool2-2.9.0  | BeeOP0.3_Fair      | BeeOP0.3_Compet   |
+| -----------------|----------------     | -------------------| ----------------- |  
+| Average time(ms) | 2.677456            | 0.000347           |  0.000187         |
 
 PC:I5-4210M(2.6Hz，dual core4threads),12G memory Java:JAVA8_64 Pool:init-size10,max-size:10
 
