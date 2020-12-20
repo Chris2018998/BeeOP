@@ -4,7 +4,7 @@
 ---
 小蜜蜂对象池：一款轻量高性能Java对象池
 
-<a href="https://github.com/Chris2018998/BeeOP/blob/master/README.md">English</a>
+<a href="https://github.com/Chris2018998/BeeOP/blob/master/README_ZH.md">English</a>
 
 
 二：性能
