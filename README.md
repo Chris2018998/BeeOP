@@ -99,19 +99,16 @@ class BookFactory extends ObjectFactory {
  
 ---
 ##### configuration
-
-| configuration field name|       Description                              |   Remark                                                    |
+|     field name         |       Description                               |   Remark                                                    |
 | ---------------------  | ------------------------------------------------| -----------------------------------------------------------|
-| fairMode               |boolean indicator for borrow fair mode           |true:fair mode,false:comepete mode;default is false         |
-| initialSize            |pooled object creation size when pool initialized|default is 0                                                    |
-| maxActive              |max size for pooled object instances in pool     |default is 10                                                    | 
-| borrowSemaphoreSize    |对象借线程最大并行数                                |默认取最大对象数/2与cpu核心数的最小值                            |
-| maxWait                |对象借用等待最大时间(毫秒)           |默认8秒，对象请求最大等待时间                                   |
-| idleTimeout            |对象闲置最大时间(毫秒)              |默认3分钟，超时会被清理                                         |  
-| holdTimeout            |对象被持有不用最大时间(毫秒)         |默认5分钟，超时会被清理                                         |  
-| forceCloseObject       |是否需要暴力关闭对象                |池关闭或重置，使用，默认false;true:直接关闭使用中对象，false:等待处于使用中归还后再关闭|
-| waitTimeToClearPool    |延迟清理的时候时间（秒）             |默认3秒，非暴力清理池下，还存在使用中的对象，延迟等待时间再清理     |      
-| idleCheckTimeInterval  |对象闲置扫描线程间隔时间(毫秒)       |默认5分钟                                                   |
-| objectFactoryClassName |自定义的对象工厂类名                |默认为空                                                    |
-| enableJMX              |JMX监控支持开关                    |默认false                                                  |
+|fairMode               |boolean indicator for borrow fair mode           |true:fair mode,false:comepete mode;default is false         |
+|initialSize            |pooled object creation size when pool initialized|default is 0                                                |
+|maxActive              |max size for pooled object instances in pool     |default is 10                                               | 
+|borrowSemaphoreSize    |borrow concurrent thread size                    |default val=min(maxActive/2,cpu size)                       |                       
+|maxWait                |max wait time to borrow one object instance      |time unit is ms,default is 8000 ms                          |                       
+|idleTimeout            |max idle time of object instance in pool         |time unit is ms,default is 18000 ms                         |  
+|holdTimeout            |max inactive time hold by borrower               |time unit is ms,default is 300000 ms                        |  
+|forceCloseObject       |object close indicator when pool closing or reseting|true:close;false:wait object return, default is false    |            |waitTimeToClearPool     |park time to clear when checked object is in using state|effected  when forceCloseObject==true               |                              |idleCheckTimeInterval   |scan thread time interval to check idle object |time unit is ms,default is 300000 ms                         |
+|objectFactoryClassName  |object factory class name                      |default is null                                              |
+|enableJMX               |JMX boolean indicator for pool                 |default is false                                             |
 
