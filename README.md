@@ -78,7 +78,7 @@ class BookFactory extends ObjectFactory {
 ---
 ##### Features
 
-1：Borrowing timeout
+1：Borrow timeout
 
 2：Fair mode and compete mode for borrowing 
 
