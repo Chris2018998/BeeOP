@@ -60,7 +60,7 @@ class BookFactory extends ObjectFactory {
  ```
  
  ```java
- public class TestPool{
+ public class TestBookPool{
    public static void main(String[]){
      PoolConfig config = new PoolConfig();
      config.setObjectFactory(new StringFactory());
@@ -78,9 +78,9 @@ class BookFactory extends ObjectFactory {
 ---
 ##### 功能支持
 
-1：请求超时支持
+1：对象借用超时
 
-2：两种模式：公平与竞争
+2：对象借用支持公平与竞争模式
 
 3：支持对象安全关闭
 
@@ -88,30 +88,30 @@ class BookFactory extends ObjectFactory {
 
 5：闲置超时和持有超时处理
 
-6:若对象出现问题，池自动补充
+6: 若对象发生异常，池自动增补
 
-7：支持池重置
+7：对象回收时重置
 
-8：支持对象回收前，属性重置
+8：对象池重置
 
 9：支持JMX
 
  
-
-六：配置项说明
 ---
+##### 配置项说明
+
 |             配置项      |   描述                          |   备注                                                      |
 | ---------------------  | ----------------------------    | -----------------------------------------------------------|
 | fairMode               |是否公平模式                       |默认false,竞争模式                                            |
-| initialSize            |池初始创建对象数                   |                                                            |
-| maxActive              |池最大创建对象数                  |                                                            | 
-| borrowSemaphoreSize    |对象借线程最大并行数               |小于或等于最大对象数                                          |
-| maxWait                |对象借用等待最大时间(毫秒)          |默认8秒，对象请求最大等待时间                                  |
-| idleTimeout            |对象闲置最大时间(毫秒)             |默认3分钟，超时会被清理                                       |  
-| holdTimeout            |对象被持有不用最大时间(毫秒)        |默认5分钟，超时会被清理                                       |  
-| forceCloseObject       |是否需要暴力关闭对象               |池关闭或重置，使用，默认false;true:直接关闭使用中对象，false:等待处于使用中归还后再关闭|
-| waitTimeToClearPool    |延迟清理的时候时间（秒）            |默认3秒，非暴力清理池下，还存在使用中的对象，延迟等待时间再清理     |      
-| idleCheckTimeInterval  |对象闲置扫描线程间隔时间(毫秒)      |默认5分钟                                                   |
-| objectFactoryClassName |自定义的对象工厂类名               |默认为空                                                    |
-| enableJMX              |JMX监控支持开关                   |默认false                                                  |
+| initialSize            |池初始创建对象数                   | 默认为0                                                      |
+| maxActive              |池最大创建对象数                   | 默认为10个                                                   | 
+| borrowSemaphoreSize    |对象借线程最大并行数                |默认取最大对象数/2与cpu核心数的最小值                            |
+| maxWait                |对象借用等待最大时间(毫秒)           |默认8秒，对象请求最大等待时间                                   |
+| idleTimeout            |对象闲置最大时间(毫秒)              |默认3分钟，超时会被清理                                         |  
+| holdTimeout            |对象被持有不用最大时间(毫秒)         |默认5分钟，超时会被清理                                         |  
+| forceCloseObject       |是否需要暴力关闭对象                |池关闭或重置，使用，默认false;true:直接关闭使用中对象，false:等待处于使用中归还后再关闭|
+| waitTimeToClearPool    |延迟清理的时候时间（秒）             |默认3秒，非暴力清理池下，还存在使用中的对象，延迟等待时间再清理     |      
+| idleCheckTimeInterval  |对象闲置扫描线程间隔时间(毫秒)       |默认5分钟                                                   |
+| objectFactoryClassName |自定义的对象工厂类名                |默认为空                                                    |
+| enableJMX              |JMX监控支持开关                    |默认false                                                  |
 
