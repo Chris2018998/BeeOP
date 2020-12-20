@@ -1,10 +1,20 @@
-[![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
+<img height="50px" width="50px" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img>
+---
+小蜜蜂对象池：一款轻量高性能Java对象池
 
-<img height="50px" width="50px" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png">
+<a href="https://github.com/Chris2018998/BeeOP/blob/master/README.md">English</a>
 
-小蜜蜂对象池：一款轻量高性能Java对象池  &nbsp;&nbsp;<a href="https://github.com/Chris2018998/BeeOP/blob/master/README.md">English</a>
+Maven坐标（Java7)
+```xml
+<dependency>
+   <groupId>com.github.chris2018998</groupId>
+   <artifactId>beeop</artifactId>
+   <version>0.3</version>
+</dependency>
+```
+*友情提示：建议使用最新版本*
 
-----------------------------------------------------
+
 
 二：性能
 ---
@@ -68,14 +78,7 @@ class StringFactory extends ObjectFactory {
 四：版本下载
 ---
 **Java7**
-```xml
-<dependency>
-   <groupId>com.github.chris2018998</groupId>
-   <artifactId>beeop</artifactId>
-   <version>0.3</version>
-</dependency>
-```
-*友情提示：建议使用最新版本*
+
 
 
 五：功能支持
