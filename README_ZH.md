@@ -44,6 +44,7 @@ class Book{
    }
 }
 
+```java
 class BookFactory extends ObjectFactory {
      public Object create(Properties prop) throws ObjectException {
          return new Book("Java核心技术·卷1",System.currentTimeMillis());
@@ -55,7 +56,8 @@ class BookFactory extends ObjectFactory {
         return true;
     }
  }
- 
+ ```
+ ```java
  public class TestPool{
    public static void main(String[]){
      PoolConfig config = new PoolConfig();
@@ -71,21 +73,9 @@ class BookFactory extends ObjectFactory {
  }
  
 ```
-
-```java
-
-```
-
-
-四：版本下载
 ---
-**Java7**
+##### 功能支持
 
-
-
-五：功能支持
----
-```java
 1：请求超时支持
 
 2：两种模式：公平与竞争
@@ -104,7 +94,7 @@ class BookFactory extends ObjectFactory {
 
 9：支持JMX
 
-```
+ 
 
 六：配置项说明
 ---
