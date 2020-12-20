@@ -61,7 +61,7 @@ public class PoolConfig implements PoolConfigJmx {
     //milliseconds,max inactive time to check object active
     private long aliveTestInterval = 500L;
     //close all objects in force when shutdown
-    private boolean forceClose;
+    private boolean forceCloseObject;
     //seconds,wait for retry to clear all objects
     private long waitTimeToClearPool = 3;
     //milliseconds,idle Check Time Period
@@ -177,13 +177,13 @@ public class PoolConfig implements PoolConfigJmx {
             this.aliveTestInterval = aliveTestInterval;
     }
 
-    public boolean isForceClose() {
-        return forceClose;
+    public boolean isForceCloseObject() {
+        return forceCloseObject;
     }
 
-    public void setForceClose(boolean forceClose) {
+    public void setForceCloseObject(boolean forceCloseObject) {
         if (!this.checked)
-            this.forceClose = forceClose;
+            this.forceCloseObject = forceCloseObject;
     }
 
     public long getWaitTimeToClearPool() {

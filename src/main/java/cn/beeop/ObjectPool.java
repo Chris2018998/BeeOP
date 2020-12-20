@@ -429,7 +429,7 @@ public final class ObjectPool implements ObjectPoolJmx {
         while (true) {
             if (poolState.compareAndSet(POOL_NORMAL, POOL_CLOSED)) {
                 commonLog.info("BeeOP({})begin to shutdown", poolName);
-                removeAllObjects(poolConfig.isForceClose(), DESC_REMOVE_DESTROY);
+                removeAllObjects(poolConfig.isForceCloseObject(), DESC_REMOVE_DESTROY);
                 unregisterJMX();
                 shutdownCreateConnThread();
                 while (!idleCheckSchFuture.isCancelled() && !idleCheckSchFuture.isDone())
