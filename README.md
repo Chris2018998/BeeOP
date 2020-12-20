@@ -1,6 +1,6 @@
 <img height="50px" width="50px" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img> <a href="https://github.com/Chris2018998/BeeOP/blob/main/README_ZH.md">中文</a>
 
-BeeOP：A light high performance java object pool
+BeeOP：A light high-performance java object pool
 
 Maven artifactId（Java7)
 ```xml
@@ -76,25 +76,25 @@ class BookFactory extends ObjectFactory {
  
 ```
 ---
-##### 功能支持
+##### Features
 
-1：对象借用超时
+1：Borrowing timeout
 
-2：对象借用支持公平与竞争模式
+2：Fair mode and compete mode for borrowing 
 
-3：支持对象安全关闭
+3：Proxy object safe close when returning 
 
-4：断网对象池自动恢复
+4：Pooled object cleared when network bad,pooled object recreate when network restore OK
 
-5：闲置超时和持有超时处理
+5：Idle timeout and hold timeout(long time inactively hold by borrower)
 
-6：若对象发生异常，池自动增补
+6：Pooled object closed when exception,then create new one transfer to waiter
 
-7：对象回收时重置
+7：Pooled object reset when returning
 
-8：对象池重置
+8：Pool can be reset
 
-9：支持JMX
+9：Jmx used in pool with indicator
 
  
 ---
