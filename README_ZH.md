@@ -1,8 +1,6 @@
-<img height="50px" width="50px" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img>
----
-小蜜蜂对象池：一款轻量高性能Java对象池
+<img height="50px" width="50px" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img> <a href="https://github.com/Chris2018998/BeeOP/blob/master/README.md">English</a>
 
-<a href="https://github.com/Chris2018998/BeeOP/blob/master/README.md">English</a>
+小蜜蜂对象池：一款轻量高性能Java对象池 
 
 Maven坐标（Java7)
 ```xml
