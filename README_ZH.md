@@ -10,7 +10,8 @@ Maven坐标（Java7)
    <version>0.3</version>
 </dependency>
 ```
-----------------------------------------
+---
+
 ##### 性能测试
 100万次借用/归还(1000线程 x1000次),获取时间分布,平均时间
 | 时间(ms)     | commons-pool2-2.9.0 | BeeOP0.3_F         | BeeOP0.3_C  |
@@ -23,40 +24,56 @@ Maven坐标（Java7)
 
 日志文件：[https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/ObjectPool.log](https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/ObjectPool.log)
  
-
-三：参考Demo
 ---
 
+##### 范例
+
 ```java
-class StringFactory extends ObjectFactory {
-     //create object instance
+class Book{
+   private String name;
+   private long number;
+   public Book(String name,long number){
+      this.name=name;
+      this.number=number;
+   }
+   pulbic long getName(){
+     return name;
+   }
+   pulbic String getNumber(){
+     return number;
+   }
+}
+
+class BookFactory extends ObjectFactory {
      public Object create(Properties prop) throws ObjectException {
-         return new String(""+System.currentTimeMillis());
+         return new Book("Java核心技术·卷1",System.currentTimeMillis());
      }
-     
-    //@Override method
     public void setDefault(Object obj) throws ObjectException {}
-    //@Override method
     public void reset(Object obj) throws ObjectException {}
-    //@Override method
     public void destroy(Object obj) {}
-    //@Override method
     public boolean isAlive(Object obj, long timeout) {
         return true;
     }
  }
+ 
+ public class TestPool{
+   public static void main(String[]){
+     PoolConfig config = new PoolConfig();
+     config.setObjectFactory(new StringFactory());
+     config.setMaxActive(10);
+     config.setInitialSize(10);
+     config.setMaxWait(8000);
+     ObjectPool pool= new ObjectPool(config);
+     ProxyObject proxyObj= pool.getObject();
+     String name=(String)proxyObj.call("getName",new Class[0],new Object[0]);
+     proxyObj.close();
+   }
+ }
+ 
 ```
 
 ```java
-  PoolConfig config = new PoolConfig();
-  config.setObjectFactory(new StringFactory());
-  config.setMaxActive(10);
-  config.setInitialSize(10);
-  config.setMaxWait(8000);
-  ObjectPool pool= new ObjectPool(config);
-  ProxyObject proxyObj = pool.getObject();
-  .........
-  proxyObj.close();
+
 ```
 
 
