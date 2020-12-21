@@ -101,6 +101,7 @@ class BookFactory extends ObjectFactory {
 ##### configuration
 |     field name         |       Description                               |   Remark                                                    |
 | ---------------------  | ------------------------------------------------| -----------------------------------------------------------|
+|poolName               |pool name                                         | name auto generated when not set                          |
 |fairMode               |boolean indicator for borrow fair mode           |true:fair mode,false:comepete mode;default is false         |
 |initialSize            |pooled object creation size when pool initialized|default is 0                                                |
 |maxActive              |max size for pooled object instances in pool     |default is 10                                               | 
