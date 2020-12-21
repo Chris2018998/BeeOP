@@ -13,7 +13,7 @@ Maven artifactId(Java7)
 ---
 
 ##### Performance 
-1 million borrow/return (1000 threads x 1000 times)
+One million borrow/return (1000 threads x 1000 times)
 |    Pool type     |commons-pool2-2.9.0  |  BeeOP-0.3_Fair    | BeeOP-0.3_Compete |
 | -----------------|---------------------| -------------------| ----------------- |  
 | Average time(ms) | 2.677456            | 0.000347           |  0.000187         |
