@@ -99,7 +99,7 @@ class BookFactory extends ObjectFactory {
  
 ---
 ##### configuration
-|     field name         |       Description                               |   Remark                                                    |
+|     Field name         |       Description                               |   Remark                                                    |
 | ---------------------  | ------------------------------------------------| -----------------------------------------------------------|
 |poolName               |pool name                                         | name auto generated when not set                          |
 |fairMode               |boolean indicator for borrow fair mode           |true:fair mode,false:comepete mode;default is false         |
