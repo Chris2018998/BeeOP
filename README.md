@@ -29,17 +29,17 @@ Test source：[https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/BeeOP_Te
 ##### Example
 
 ```java
-class Book{
+public class Book{
    private String name;
    private long number;
    public Book(String name,long number){
       this.name=name;
       this.number=number;
    }
-   pulbic long getName(){
+   public String getName(){
      return name;
    }
-   pulbic String getNumber(){
+   public long getNumber(){
      return number;
    }
 }
