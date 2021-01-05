@@ -75,7 +75,7 @@ public final class ObjectPool implements ObjectPoolJmx {
     private PooledConnAddThread poolEntryAddThread;
     private volatile PooledEntry[] poolEntryArray = new PooledEntry[0];
     private ScheduledFuture<?> idleCheckSchFuture;
-    private ScheduledThreadPoolExecutor idleSchExecutor = new ScheduledThreadPoolExecutor(2, new PoolThreadThreadFactory("IdleObjectScan"));
+    private ScheduledThreadPoolExecutor idleSchExecutor = new ScheduledThreadPoolExecutor(1, new PoolThreadThreadFactory("IdleObjectScan"));
     private AtomicInteger poolState = new AtomicInteger(POOL_UNINIT);
     private AtomicInteger createObjThreadState = new AtomicInteger(THREAD_WORKING);
     private AtomicInteger needAddConnSize = new AtomicInteger(0);
@@ -117,6 +117,7 @@ public final class ObjectPool implements ObjectPoolJmx {
             Runtime.getRuntime().addShutdownHook(exitHook);
             borrowSemaphoreSize = poolConfig.getBorrowSemaphoreSize();
             borrowSemaphore = new Semaphore(borrowSemaphoreSize, poolConfig.isFairMode());
+            idleSchExecutor.setMaximumPoolSize(1);
             idleSchExecutor.setKeepAliveTime(15, SECONDS);
             idleSchExecutor.allowCoreThreadTimeOut(true);
             idleCheckSchFuture = idleSchExecutor.scheduleAtFixedRate(new Runnable() {
@@ -196,7 +197,6 @@ public final class ObjectPool implements ObjectPoolJmx {
         }
     }
 
-
     /**
      * check object state
      *
@@ -204,13 +204,18 @@ public final class ObjectPool implements ObjectPoolJmx {
      * false if false then close it
      */
     private final boolean testOnBorrow(PooledEntry pEntry) {
-        if (currentTimeMillis() - pEntry.lastAccessTime - objectTestInterval < 0 || objectFactory.isAlive(pEntry.object, poolConfig.getAliveTestTimeout()))
+        if (currentTimeMillis() - pEntry.lastAccessTime - objectTestInterval < 0 ) {
             return true;
+        }else if(objectFactory.isAlive(pEntry.object, poolConfig.getAliveTestTimeout())){
+            pEntry.updateAccessTime();
+        }
 
         removePooledEntry(pEntry, DESC_REMOVE_BAD);
         tryToCreateNewConnByAsyn();
         return false;
     }
+
+
 
     /**
      * create initialization objects
