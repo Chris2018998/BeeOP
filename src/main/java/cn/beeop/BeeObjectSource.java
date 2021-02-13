@@ -68,12 +68,9 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
                     pool = createPool(this);
                     inited = true;
                 }
-            } catch (BeeObjectException e) {
-                failedCause = e;
-                throw e;
-            } catch (Throwable e) {
-                failedCause = new BeeObjectException(e);
-                throw e;
+            } catch (Throwable e) {//why?
+                failedCause=(e instanceof BeeObjectException)?(BeeObjectException)e:new BeeObjectException(e);
+                throw failedCause;
             } finally {
                 writeLock.unlock();
             }
