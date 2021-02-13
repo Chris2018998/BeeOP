@@ -15,55 +15,55 @@
  */
 package cn.beeop.test.base;
 
-import cn.beeop.ObjectException;
-import cn.beeop.ObjectPool;
-import cn.beeop.PoolConfig;
-import cn.beeop.ProxyObject;
+import cn.beeop.BeeObjectException;
+import cn.beeop.BeeObjectSource;
+import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.pool.PoolMonitorVo;
+import cn.beeop.pool.ProxyObject;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-
 public class ObjectHoldTimeoutTest extends TestCase {
-    private ObjectPool pool;
+    private BeeObjectSource obs;
 
     public void setUp() throws Throwable {
-        PoolConfig config = new PoolConfig();
+        BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setInitialSize(0);
         config.setHoldTimeout(1000);// hold and not using connection;
         config.setIdleCheckTimeInterval(1000L);// two seconds interval
-        config.setWaitTimeToClearPool(0);
-        pool = new ObjectPool(config);
+        config.setDelayTimeForNextClear(1);
+        obs = new BeeObjectSource(config);
     }
 
     public void tearDown() throws Throwable {
-        pool.close();
+        obs.close();
     }
 
     public void test() throws InterruptedException, Exception {
         ProxyObject proxy = null;
         try {
-            proxy = pool.getObject();
-            if (pool.getTotalSize() != 1)
+            proxy = obs.getObject();
+            PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
+
+            if (monitorVo.getIdleSize() + monitorVo.getUsingSize() != 1)
                 TestUtil.assertError("Total connections not as expected 1");
-            if (pool.getUsingSize() != 1)
+            if (monitorVo.getUsingSize() != 1)
                 TestUtil.assertError("Using connections not as expected 1");
 
             Thread.sleep(4000);
-            if (pool.getUsingSize() != 0)
+            if (monitorVo.getUsingSize() != 0)
                 TestUtil.assertError("Using connections not as expected 0 after hold timeout");
 
             try {
-                proxy.call("toString",new Class[0],new Object[0]);
+                proxy.call("toString", new Class[0], new Object[0]);
                 TestUtil.assertError("must throw closed exception");
-            } catch (ObjectException e) {
+            } catch (BeeObjectException e) {
                 System.out.println(e);
             }
 
             Thread.sleep(4000);
         } finally {
-            if (proxy != null)proxy.close();
+            if (proxy != null) proxy.close();
         }
     }
 }

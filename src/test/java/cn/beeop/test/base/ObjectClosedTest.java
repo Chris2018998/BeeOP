@@ -15,40 +15,35 @@
  */
 package cn.beeop.test.base;
 
-import cn.beeop.ObjectException;
-import cn.beeop.ObjectPool;
-import cn.beeop.PoolConfig;
-import cn.beeop.ProxyObject;
+import cn.beeop.BeeObjectException;
+import cn.beeop.BeeObjectSource;
+import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.pool.ProxyObject;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
-import java.sql.CallableStatement;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.Statement;
-
 public class ObjectClosedTest extends TestCase {
-    private ObjectPool pool;
+    private BeeObjectSource obs;
 
     public void setUp() throws Throwable {
-        PoolConfig config = new PoolConfig();
+        BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setInitialSize(5);
         config.setIdleTimeout(3000);
-        pool = new ObjectPool(config);
+        obs = new BeeObjectSource(config);
     }
 
     public void tearDown() throws Throwable {
-        pool.close();
+        obs.close();
     }
 
     public void test() throws InterruptedException, Exception {
         ProxyObject proxy = null;
         try {
-            proxy = pool.getObject();
+            proxy = obs.getObject();
             proxy.close();
             proxy.call("toString", new Class[0], new Object[0]);
             TestUtil.assertError("Closed test failed");
-        }catch(ObjectException e){
+        } catch (BeeObjectException e) {
         } finally {
             if (proxy != null)
                 proxy.close();

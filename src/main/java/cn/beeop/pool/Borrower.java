@@ -13,22 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.beeop.test;
-
-import cn.beeop.BeeObjectException;
-import cn.beeop.BeeObjectFactory;
-
-import java.util.Properties;
+package cn.beeop.pool;
 
 /**
- * ObjectFactory subclass
+ * Pooled object borrower
  *
- * @author chris.liao
+ * @author Chris.Liao
+ * @version 1.0
  */
-public class IntegerFactory extends BeeObjectFactory {
-
-    //create object instance
-    public Object create(Properties prop) throws BeeObjectException {
-        return new Integer(1);
-    }
+final class Borrower {
+    volatile Object state;
+    PooledEntry lastUsedEntry;
+    Thread thread = Thread.currentThread();
 }

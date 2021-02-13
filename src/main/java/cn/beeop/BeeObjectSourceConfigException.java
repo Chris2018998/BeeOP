@@ -13,22 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.beeop.test;
-
-import cn.beeop.BeeObjectException;
-import cn.beeop.BeeObjectFactory;
-
-import java.util.Properties;
+package cn.beeop;
 
 /**
- * ObjectFactory subclass
+ * configuration exception
  *
- * @author chris.liao
+ * @author Chris.Liao
+ * @version 1.0
  */
-public class IntegerFactory extends BeeObjectFactory {
+public class BeeObjectSourceConfigException extends RuntimeException {
 
-    //create object instance
-    public Object create(Properties prop) throws BeeObjectException {
-        return new Integer(1);
+    public BeeObjectSourceConfigException() {
+        super();
+    }
+
+    public BeeObjectSourceConfigException(String s) {
+        super(s);
+    }
+
+    public BeeObjectSourceConfigException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public BeeObjectSourceConfigException(Throwable cause) {
+        super(cause);
     }
 }

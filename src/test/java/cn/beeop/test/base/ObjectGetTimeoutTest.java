@@ -15,34 +15,33 @@
  */
 package cn.beeop.test.base;
 
-import cn.beeop.ObjectException;
-import cn.beeop.ObjectPool;
-import cn.beeop.PoolConfig;
-import cn.beeop.ProxyObject;
+import cn.beeop.BeeObjectException;
+import cn.beeop.BeeObjectSource;
+import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.pool.ProxyObject;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
 import java.util.concurrent.CountDownLatch;
 
 public class ObjectGetTimeoutTest extends TestCase {
-    private ObjectPool pool;
+    private BeeObjectSource obs;
 
     public void setUp() throws Throwable {
-        PoolConfig config = new PoolConfig();
-        config.setMaxWait(3000);
+        BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setMaxActive(1);
-        config.setBorrowSemaphoreSize(1);
-        pool = new ObjectPool(config);
+        config.setMaxWait(3000);
+        obs = new BeeObjectSource(config);
     }
 
     public void tearDown() throws Throwable {
-        pool.close();
+        obs.close();
     }
 
     public void test() throws InterruptedException, Exception {
         ProxyObject proxy = null;
         try {
-            proxy = pool.getObject();
+            proxy = obs.getObject();
             CountDownLatch lacth = new CountDownLatch(1);
             TestThread testTh = new TestThread(lacth);
             testTh.start();
@@ -59,7 +58,7 @@ public class ObjectGetTimeoutTest extends TestCase {
     }
 
     class TestThread extends Thread {
-        ObjectException e = null;
+        BeeObjectException e = null;
         CountDownLatch lacth;
 
         TestThread(CountDownLatch lacth) {
@@ -69,16 +68,16 @@ public class ObjectGetTimeoutTest extends TestCase {
         public void run() {
             ProxyObject proxy = null;
             try {
-                proxy = pool.getObject();
-            } catch (ObjectException e) {
+                proxy = obs.getObject();
+            } catch (BeeObjectException e) {
                 this.e = e;
             } finally {
-           if (proxy != null)
-               try {
-                   proxy.close();
-               } catch (ObjectException e1) {
-                   e1.printStackTrace();
-               }
+                if (proxy != null)
+                    try {
+                        proxy.close();
+                    } catch (BeeObjectException e1) {
+                        e1.printStackTrace();
+                    }
             }
             lacth.countDown();
         }

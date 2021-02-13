@@ -15,36 +15,46 @@
  */
 package cn.beeop.test.base;
 
-import cn.beeop.ObjectPool;
-import cn.beeop.PoolConfig;
+import cn.beeop.BeeObjectSource;
+import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.pool.PoolMonitorVo;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
 public class PoolRestTest extends TestCase {
-    private ObjectPool pool;
+    private BeeObjectSource obs;
     private int initSize = 5;
 
     public void setUp() throws Throwable {
-        PoolConfig config = new PoolConfig();
+        BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setInitialSize(initSize);
-        pool = new ObjectPool(config);
+        obs = new BeeObjectSource(config);
     }
 
     public void tearDown() throws Throwable {
-        pool.close();
+        obs.close();
     }
 
     public void test() throws InterruptedException, Exception {
-        if (pool.getTotalSize() != initSize)
-            TestUtil.assertError("Total size expected:%s,current is:%s", initSize, pool.getTotalSize());
-        if (pool.getIdleSize() != initSize)
-            TestUtil.assertError("idle expected:%s,current is:%s", initSize, pool.getIdleSize());
+        PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
+        int usingSize = monitorVo.getUsingSize();
+        int idleSize = monitorVo.getIdleSize();
+        int totalSize = usingSize + idleSize;
 
-        pool.reset();
+        if (totalSize != initSize)
+            TestUtil.assertError("Total size expected:%s,current is:%s", initSize, totalSize);
+        if (idleSize != initSize)
+            TestUtil.assertError("idle expected:%s,current is:%s", initSize, idleSize);
 
-        if (pool.getTotalSize() != 0)
-            TestUtil.assertError("Total size not as expected 0,but current is:%s", pool.getTotalSize(), "");
-        if (pool.getIdleSize() != 0)
-            TestUtil.assertError("Idle size not as expected 0,but current is:%s", pool.getIdleSize(), "");
+        obs.clearAllObjects();
+
+        monitorVo = obs.getPoolMonitorVo();
+        usingSize = monitorVo.getUsingSize();
+        idleSize = monitorVo.getIdleSize();
+        totalSize = usingSize + idleSize;
+        if (totalSize != 0)
+            TestUtil.assertError("Total size not as expected 0,but current is:%s", totalSize, "");
+        if (idleSize != 0)
+            TestUtil.assertError("Idle size not as expected 0,but current is:%s", idleSize, "");
     }
 }

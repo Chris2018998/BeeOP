@@ -15,32 +15,37 @@
  */
 package cn.beeop.test.base;
 
-import cn.beeop.ObjectPool;
-import cn.beeop.PoolConfig;
-import cn.beeop.ProxyObject;
+import cn.beeop.BeeObjectException;
+import cn.beeop.BeeObjectSource;
+import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.pool.ProxyObject;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
 public class ObjectGetTest extends TestCase {
-    private ObjectPool pool;
+    private BeeObjectSource obs;
 
     public void setUp() throws Throwable {
-        PoolConfig config = new PoolConfig();
-        pool = new ObjectPool(config);
+        BeeObjectSourceConfig config = new BeeObjectSourceConfig();
+        config.setInitialSize(5);
+        config.setIdleTimeout(3000);
+        obs = new BeeObjectSource(config);
     }
 
     public void tearDown() throws Throwable {
-        pool.close();
+        obs.close();
     }
 
     public void test() throws InterruptedException, Exception {
         ProxyObject proxy = null;
         try {
-            proxy = pool.getObject();
+            proxy = obs.getObject();
             if (proxy == null)
                 TestUtil.assertError("Failed to get object");
+        } catch (BeeObjectException e) {
         } finally {
-             if(proxy!=null)proxy.close();
+            if (proxy != null)
+                proxy.close();
         }
     }
 }

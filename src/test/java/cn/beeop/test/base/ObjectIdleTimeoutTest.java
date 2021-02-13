@@ -15,36 +15,48 @@
  */
 package cn.beeop.test.base;
 
-import cn.beeop.ObjectPool;
-import cn.beeop.PoolConfig;
-import cn.beeop.ProxyObject;
+import cn.beeop.BeeObjectSource;
+import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.pool.PoolMonitorVo;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
 public class ObjectIdleTimeoutTest extends TestCase {
-    private ObjectPool pool;
+    private BeeObjectSource obs;
     private int initSize = 5;
 
     public void setUp() throws Throwable {
-        PoolConfig config = new PoolConfig();
+        BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setInitialSize(initSize);
-        config.setIdleTimeout(3000);
-        pool = new ObjectPool(config);
+        config.setMaxActive(initSize);
+        config.setIdleTimeout(2000);
+        config.setIdleCheckTimeInterval(1000L);// two seconds interval
+        config.setDelayTimeForNextClear(1);
+        obs = new BeeObjectSource(config);
     }
 
     public void tearDown() throws Throwable {
-        pool.close();
+        obs.close();
     }
 
     public void test() throws InterruptedException, Exception {
-        if (pool.getTotalSize() != initSize) TestUtil.assertError("Total object not as expected:" + initSize);
-        if (pool.getIdleSize() != initSize) TestUtil.assertError("Idle object not as expected:" + initSize);
+        PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
+        int usingSize = monitorVo.getUsingSize();
+        int idleSize = monitorVo.getIdleSize();
+        int totalSize = usingSize + idleSize;
 
-        ProxyObject proxy = pool.getObject();
-        if (pool.getUsingSize() != 1) TestUtil.assertError("Idle object not as expected:" + (initSize - 1));
-        proxy.close();
+        if (totalSize != initSize)
+            TestUtil.assertError("Total object not as expected:" + initSize);
+        if (idleSize != initSize) TestUtil.assertError("Idle object not as expected:" + initSize);
 
-        if (pool.getTotalSize() != initSize) TestUtil.assertError("Total object not as expected:" + initSize);
-        if (pool.getIdleSize() != initSize) TestUtil.assertError("Idle object not a sexpected:" + initSize);
+        Thread.sleep(5000);
+        monitorVo = obs.getPoolMonitorVo();
+        usingSize = monitorVo.getUsingSize();
+        idleSize = monitorVo.getIdleSize();
+        totalSize = usingSize + idleSize;
+
+        if (totalSize != 0)
+            TestUtil.assertError("Total size not expected:" + 0);
+        if (idleSize != 0) TestUtil.assertError("Idle size not expected:" + 0);
     }
 }
