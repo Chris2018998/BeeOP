@@ -18,8 +18,6 @@ package cn.beeop;
 import cn.beeop.pool.ObjectPool;
 import cn.beeop.pool.PoolMonitorVo;
 import cn.beeop.pool.ProxyObject;
-
-import java.sql.SQLException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static cn.beeop.pool.StaticCenter.commonLog;
@@ -56,7 +54,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
      *
      * @return If exists idle object in pool,then return one;if not, waiting
      * until other borrower release
-     * @throws SQLException if pool is closed or waiting timeout,then throw exception
+     * @throws BeeObjectException if pool is closed or waiting timeout,then throw exception
      */
     public ProxyObject getObject() throws BeeObjectException {
         if (inited) return pool.getObject();
@@ -102,7 +100,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
 
     /**
      * @return pool monitor vo
-     * @throws SQLException if pool not be initialized
+     * @throws BeeObjectException if pool not be initialized
      */
     public PoolMonitorVo getPoolMonitorVo() throws BeeObjectException {
         if (pool == null) throw new BeeObjectException("Object pool not initialized");
@@ -112,7 +110,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     /**
      * clear all pooled objects from pool
      *
-     * @throws SQLException if pool under datasource not be initialized
+     * @throws BeeObjectException if pool under datasource not be initialized
      */
     public void clearAllObjects() throws BeeObjectException {
         this.clearAllObjects(false);
@@ -122,7 +120,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
      * clear all pooled objects from pool
      *
      * @param force close using object directly
-     * @throws SQLException if pool under object source not be initialized
+     * @throws BeeObjectException if pool under object source not be initialized
      */
     public void clearAllObjects(boolean force) throws BeeObjectException {
         if (pool == null) throw new BeeObjectException("Object pool not initialized");

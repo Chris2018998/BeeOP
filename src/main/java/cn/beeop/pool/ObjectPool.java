@@ -32,7 +32,7 @@ public interface ObjectPool {
      * initialize pool with configuration
      *
      * @param config data source configuration
-     * @throws SQLException check configuration fail or to create initiated objects
+     * @throws BeeObjectException check configuration fail or to create initiated objects
      */
     void init(BeeObjectSourceConfig config) throws BeeObjectException;
 
@@ -40,7 +40,7 @@ public interface ObjectPool {
      * borrow a object from pool
      *
      * @return If exists idle object in pool,then return one;if not, waiting until other borrower release
-     * @throws SQLException if pool is closed or waiting timeout,then throw exception
+     * @throws BeeObjectException if pool is closed or waiting timeout,then throw exception
      */
     ProxyObject getObject() throws BeeObjectException;
 
@@ -61,7 +61,7 @@ public interface ObjectPool {
     /**
      * close pool
      *
-     * @throws SQLException if fail to close
+     * @throws BeeObjectException if fail to close
      */
     void close() throws BeeObjectException;
 
