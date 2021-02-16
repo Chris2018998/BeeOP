@@ -18,6 +18,7 @@ package cn.beeop.test.base;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.PoolMonitorVo;
+import cn.beeop.test.Book;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
@@ -28,6 +29,7 @@ public class PoolRestTest extends TestCase {
     public void setUp() throws Throwable {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setInitialSize(initSize);
+        config.setObjectClassName(Book.class.getName());
         obs = new BeeObjectSource(config);
     }
 

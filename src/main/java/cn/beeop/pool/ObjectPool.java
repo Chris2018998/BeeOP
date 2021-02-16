@@ -18,8 +18,6 @@ package cn.beeop.pool;
 import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectSourceConfig;
 
-import java.sql.SQLException;
-
 /**
  * object pool interface
  *

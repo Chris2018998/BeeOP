@@ -15,6 +15,8 @@
  */
 package cn.beeop;
 
+import cn.beeop.pool.FastPool;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -37,8 +39,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * @version 1.0
  */
 public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
-    //Default pool implementation class name
-    static final String DefaultImplementClassName = "cn.beeop.pool.FastPool";
     //pool name
     private String poolName;
     //true:first arrive first take
@@ -66,14 +66,18 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //milliseconds:delay time for next clear pooled entry when exists using entry and 'forceCloseUsingOnClear' is false
     private long delayTimeForNextClear = 3000L;
 
+    //object class
+    private Class objectClass;
+    //object class name
+    private String objectClassName;
     //object factory
     private BeeObjectFactory objectFactory;
     //object factory class name
-    private String objectFactoryClassName = BeeObjectFactory.class.getName();
+    private String objectFactoryClassName;
     //object create properties
     private Properties createProperties = new Properties();
     //pool implementation class name
-    private String poolImplementClassName = DefaultImplementClassName;
+    private String poolImplementClassName = FastPool.class.getName();
     //indicator,whether register datasource to jmx
     private boolean enableJmx;
 
@@ -211,6 +215,24 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             this.delayTimeForNextClear = delayTimeForNextClear;
     }
 
+
+    public Class getObjectClass() {
+        return objectClass;
+    }
+
+    public void setObjectClass(Class objectClass) {
+        this.objectClass = objectClass;
+    }
+
+    public String getObjectClassName() {
+        return objectClassName;
+    }
+
+    public void setObjectClassName(String objectClassName) {
+        if (!isBlank(objectClassName))
+            this.objectClassName = objectClassName.trim();
+    }
+
     public BeeObjectFactory getObjectFactory() {
         return objectFactory;
     }
@@ -326,22 +348,33 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
     private final BeeObjectFactory tryCreateObjectFactory() throws BeeObjectSourceConfigException {
         if (objectFactory != null) return objectFactory;
-        if (isBlank(objectFactoryClassName))
-            throw new BeeObjectSourceConfigException("objectFactoryClassName can't be null");
-
-        try {
-            Class<?> conFactClass = Class.forName(objectFactoryClassName, true, BeeObjectSourceConfig.class.getClassLoader());
-            if (BeeObjectFactory.class.isAssignableFrom(conFactClass)) {
-                return (BeeObjectFactory) conFactClass.newInstance();
-            } else {
-                throw new BeeObjectSourceConfigException("Error object factory class,must implement '" + BeeObjectFactory.class.getName() + "' interface");
+        if (!isBlank(objectFactoryClassName)) {
+            try {
+                Class<?> conFactClass = Class.forName(objectFactoryClassName, true, BeeObjectSourceConfig.class.getClassLoader());
+                if (BeeObjectFactory.class.isAssignableFrom(conFactClass)) {
+                    return (BeeObjectFactory) conFactClass.newInstance();
+                } else {
+                    throw new BeeObjectSourceConfigException("Error object factory class,must implement '" + BeeObjectFactory.class.getName() + "' interface");
+                }
+            } catch (ClassNotFoundException e) {
+                throw new BeeObjectSourceConfigException("Not found object factory class:" + objectFactoryClassName);
+            } catch (InstantiationException e) {
+                throw new BeeObjectSourceConfigException("Failed to instantiate object factory class:" + objectFactoryClassName, e);
+            } catch (IllegalAccessException e) {
+                throw new BeeObjectSourceConfigException("Failed to instantiate object factory class:" + objectFactoryClassName, e);
             }
-        } catch (ClassNotFoundException e) {
-            throw new BeeObjectSourceConfigException("Not found object factory class:" + objectFactoryClassName);
-        } catch (InstantiationException e) {
-            throw new BeeObjectSourceConfigException("Failed to instantiate object factory class:" + objectFactoryClassName, e);
-        } catch (IllegalAccessException e) {
-            throw new BeeObjectSourceConfigException("Failed to instantiate object factory class:" + objectFactoryClassName, e);
+        } else {
+            if (objectClass != null) return new ClassObjectFactory(objectClass);
+            if (!isBlank(objectClassName)) {
+                try {
+                    objectClass = Class.forName(objectClassName, true, BeeObjectSourceConfig.class.getClassLoader());
+                    return new ClassObjectFactory(objectClass);
+                } catch (ClassNotFoundException e) {
+                    throw new BeeObjectSourceConfigException("Not found object class:" + objectClassName);
+                }
+            } else {
+                throw new BeeObjectSourceConfigException("objectClassName can't be null");
+            }
         }
     }
 }

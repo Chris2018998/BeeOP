@@ -47,7 +47,7 @@ public class StaticCenter {
     public static final Object BORROWER_WAITING = new Object();
     public static final BeeObjectException RequestTimeoutException = new BeeObjectException("Request timeout");
     public static final BeeObjectException RequestInterruptException = new BeeObjectException("Request interrupted");
-    public static final BeeObjectException PoolCloseException = new BeeObjectException("Pool has been closed or in resetting");
+    public static final BeeObjectException PoolCloseException = new BeeObjectException("Pool has shut down or in clearing");
     public static final BeeObjectException ObjectClosedException = new BeeObjectException("No operations allowed after object closed.");
     public static final Logger commonLog = LoggerFactory.getLogger(StaticCenter.class);
     static final ConcurrentHashMap<MethodCallKey, Method> ObjectMethodMap = new ConcurrentHashMap<MethodCallKey, Method>();

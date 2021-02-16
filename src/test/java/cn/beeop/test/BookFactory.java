@@ -13,30 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.beeop;
+package cn.beeop.test;
+
+import cn.beeop.BeeObjectException;
+import cn.beeop.BeeObjectFactory;
 
 import java.util.Properties;
 
 /**
- * Bee Object factory
+ * ObjectFactory subclass
  *
- * @author Chris
- * @version 1.0
+ * @author chris.liao
  */
-public interface BeeObjectFactory {
+public class BookFactory implements BeeObjectFactory {
+    public Object create(Properties prop) throws BeeObjectException {
+        return new Book("Java核心技术·卷1", System.currentTimeMillis());
+    }
 
-    //create object instance
-    public Object create(Properties prop) throws BeeObjectException;
+    public void setDefault(Object obj) throws BeeObjectException {
+    }
 
-    //set default values
-    public void setDefault(Object obj) throws BeeObjectException;
+    public void reset(Object obj) throws BeeObjectException {
+    }
 
-    //set default values
-    public void reset(Object obj) throws BeeObjectException;
+    public void destroy(Object obj) {
+    }
 
-    //test object
-    public boolean isAlive(Object obj, long timeout);
-
-    //destroy  object
-    public void destroy(Object obj);
+    public boolean isAlive(Object obj, long timeout) {
+        return true;
+    }
 }

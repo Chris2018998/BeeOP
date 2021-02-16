@@ -15,9 +15,11 @@
  */
 package cn.beeop;
 
+import cn.beeop.pool.FastPool;
 import cn.beeop.pool.ObjectPool;
 import cn.beeop.pool.PoolMonitorVo;
 import cn.beeop.pool.ProxyObject;
+
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static cn.beeop.pool.StaticCenter.commonLog;
@@ -67,7 +69,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
                     inited = true;
                 }
             } catch (Throwable e) {//why?
-                failedCause=(e instanceof BeeObjectException)?(BeeObjectException)e:new BeeObjectException(e);
+                failedCause = (e instanceof BeeObjectException) ? (BeeObjectException) e : new BeeObjectException(e);
                 throw failedCause;
             } finally {
                 writeLock.unlock();
@@ -130,8 +132,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     //try to create pool instance by config
     private final ObjectPool createPool(BeeObjectSourceConfig config) throws BeeObjectException {
         String poolImplementClassName = config.getPoolImplementClassName();
-        if (isBlank(poolImplementClassName)) poolImplementClassName = BeeObjectSourceConfig.DefaultImplementClassName;
-
+        if (isBlank(poolImplementClassName)) poolImplementClassName = FastPool.class.getName();
         try {
             Class<?> poolClass = Class.forName(poolImplementClassName, true, getClass().getClassLoader());
             if (ObjectPool.class.isAssignableFrom(poolClass)) {

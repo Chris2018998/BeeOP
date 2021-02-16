@@ -19,6 +19,7 @@ import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.ProxyObject;
+import cn.beeop.test.BookFactory;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
@@ -29,6 +30,7 @@ public class ObjectClosedTest extends TestCase {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setInitialSize(5);
         config.setIdleTimeout(3000);
+        config.setObjectFactory(new BookFactory());
         obs = new BeeObjectSource(config);
     }
 

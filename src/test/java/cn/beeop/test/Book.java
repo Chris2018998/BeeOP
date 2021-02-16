@@ -13,30 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.beeop;
+package cn.beeop.test;
 
-import java.util.Properties;
+public class Book {
+    private String name;
+    private long number;
 
-/**
- * Bee Object factory
- *
- * @author Chris
- * @version 1.0
- */
-public interface BeeObjectFactory {
+    public Book() {
+        this("Java核心技术·卷2", System.currentTimeMillis());
+    }
 
-    //create object instance
-    public Object create(Properties prop) throws BeeObjectException;
+    public Book(String name, long number) {
+        this.name = name;
+        this.number = number;
+    }
 
-    //set default values
-    public void setDefault(Object obj) throws BeeObjectException;
+    public String getName() {
+        return name;
+    }
 
-    //set default values
-    public void reset(Object obj) throws BeeObjectException;
-
-    //test object
-    public boolean isAlive(Object obj, long timeout);
-
-    //destroy  object
-    public void destroy(Object obj);
+    public long getNumber() {
+        return number;
+    }
 }
