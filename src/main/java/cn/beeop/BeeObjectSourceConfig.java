@@ -78,7 +78,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     private Properties createProperties = new Properties();
     //pool implementation class name
     private String poolImplementClassName = FastPool.class.getName();
-    //indicator,whether register datasource to jmx
+    //indicator,whether register pool to jmx
     private boolean enableJmx;
 
     @Override
@@ -368,6 +368,13 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             if (!isBlank(objectClassName)) {
                 try {
                     objectClass = Class.forName(objectClassName, true, BeeObjectSourceConfig.class.getClassLoader());
+                    if (Modifier.isAbstract(objectClass.getModifiers()))
+                        throw new BeeObjectSourceConfigException("Object class is abstract,can't be instantiated");
+                    try {
+                        objectClass.getConstructor(new Class[0]);
+                    } catch (NoSuchMethodException e) {
+                        throw new BeeObjectSourceConfigException("Missed no parameter constructor in object class:" + objectClassName);
+                    }
                     return new ClassObjectFactory(objectClass);
                 } catch (ClassNotFoundException e) {
                     throw new BeeObjectSourceConfigException("Not found object class:" + objectClassName);
