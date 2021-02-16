@@ -87,8 +87,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setPoolName(String poolName) {
-        if (!isBlank(poolName))
-            this.poolName = poolName.trim();
+        this.poolName = (poolName != null) ? poolName.trim() : poolName;
     }
 
     @Override
@@ -118,11 +117,8 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     public void setMaxActive(int maxActive) {
         if (maxActive > 0) {
             this.maxActive = maxActive;
-
-            //fix issue:#19 Chris-2020-08-16 begin
             if (maxActive > 1)
                 this.borrowSemaphoreSize = Math.min(maxActive / 2, Runtime.getRuntime().availableProcessors());
-            //fix issue:#19 Chris-2020-08-16 end
         }
     }
 
@@ -229,8 +225,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setObjectClassName(String objectClassName) {
-        if (!isBlank(objectClassName))
-            this.objectClassName = objectClassName.trim();
+        this.objectClassName = objectClassName.trim();
     }
 
     public BeeObjectFactory getObjectFactory() {
@@ -247,8 +242,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setObjectFactoryClassName(String objectFactoryClassName) {
-        if (!isBlank(objectFactoryClassName))
-            this.objectFactoryClassName = objectFactoryClassName.trim();
+        this.objectFactoryClassName = (objectFactoryClassName != null) ? objectFactoryClassName.trim() : objectFactoryClassName;
     }
 
     public void removeCreateProperties(String key) {
@@ -269,8 +263,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setPoolImplementClassName(String poolImplementClassName) {
-        if (!isBlank(poolImplementClassName))
-            this.poolImplementClassName = poolImplementClassName.trim();
+        this.poolImplementClassName = (poolImplementClassName != null) ? poolImplementClassName.trim() : poolImplementClassName;
     }
 
     @Override
