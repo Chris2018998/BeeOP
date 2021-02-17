@@ -91,7 +91,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
             try {
                 pool.close();
             } catch (BeeObjectException e) {
-                commonLog.error("Error on closing pool,cause:", e);
+                commonLog.error("Error at closing pool,cause:", e);
             }
         }
     }

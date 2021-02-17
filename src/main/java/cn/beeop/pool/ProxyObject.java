@@ -28,23 +28,23 @@ import static cn.beeop.pool.StaticCenter.ObjectMethodMap;
  * @author Chris.Liao
  * @version 1.0
  */
-public final class ProxyObject {
+public class ProxyObject {
     private Object delegate;
     private PooledEntry pEntry;
     private boolean isClosed;
 
-    public ProxyObject(PooledEntry pEntry) {
+    void setPooledEntry(PooledEntry pEntry) {
         this.pEntry = pEntry;
         pEntry.proxyObject = this;
         this.delegate = pEntry.object;
     }
 
-    public boolean isClosed() throws BeeObjectException {
-        return isClosed;
-    }
-
     public String toString() {
         return pEntry.toString();
+    }
+
+    public boolean isClosed() throws BeeObjectException {
+        return isClosed;
     }
 
     public final void close() throws BeeObjectException {
