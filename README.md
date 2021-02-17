@@ -109,7 +109,7 @@ class BookFactory extends ObjectFactory {
 |maxWait                |max wait time to borrow one object instance      |time unit is ms,default is 8000 ms                          |                       
 |idleTimeout            |max idle time of object instance in pool         |time unit is ms,default is 18000 ms                         |  
 |holdTimeout            |max inactive time hold by borrower               |time unit is ms,default is 300000 ms                        |  
-|forceCloseObject       |object close indicator when pool closing or reseting|true:close;false:wait object return, default is false    |            |waitTimeToClearPool     |park time to clear when checked object is in using state|effected  when forceCloseObject==true               |                              |idleCheckTimeInterval   |scan thread time interval to check idle object |time unit is ms,default is 300000 ms                         |
+|forceCloseUsingOnClear |object close indicator when pool closing or reseting|true:close;false:wait object return, default is false    |            |delayTimeForNextClear   |park time to clear when checked object is in using state|effected  when forceCloseObject==true               |                              |idleCheckTimeInterval   |scan thread time interval to check idle object |time unit is ms,default is 300000 ms                         |
 |objectFactoryClassName  |object factory class name                      |default is null                                              |
-|enableJMX               |JMX boolean indicator for pool                 |default is false                                             |
+|enableJmx               |JMX boolean indicator for pool                 |default is false                                             |
 
