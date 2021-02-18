@@ -329,7 +329,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             throw new BeeObjectSourceConfigException("maxWait must be greater than zero");
 
         //1:load object implemented interfaces,if config
-        Class[]objectInterfaces = loadObjectInterfaces();
+        Class[] objectInterfaces = loadObjectInterfaces();
 
         //2:try to create object factory
         BeeObjectFactory objectFactory = tryCreateObjectFactory();
@@ -365,14 +365,16 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
     private Class[] loadObjectInterfaces() throws BeeObjectSourceConfigException {
         if (objectInterfaces != null) return this.objectInterfaces;
-        if (objectInterfaceNames!=null) {
-            Class[]interfaces=new Class[objectInterfaceNames.length];
-            ClassLoader loader=BeeObjectSourceConfig.class.getClassLoader();
-            for(int i=0,l=interfaces.length;i<l;i++) {
+        if (objectInterfaceNames != null) {
+            Class[] interfaces = new Class[objectInterfaceNames.length];
+            ClassLoader loader = BeeObjectSourceConfig.class.getClassLoader();
+            for (int i = 0, l = interfaces.length; i < l; i++) {
                 try {
-                    if(isBlank(objectInterfaceNames[i]))throw new BeeObjectSourceConfigException("objectInterfaceNames["+i+"]is empty");
-                    interfaces[i] = Class.forName(objectInterfaceNames[i],true, loader);
-                    if(!interfaces[i].isInterface())throw new BeeObjectSourceConfigException("objectInterfaceNames["+i+"]is not an interface");
+                    if (isBlank(objectInterfaceNames[i]))
+                        throw new BeeObjectSourceConfigException("objectInterfaceNames[" + i + "]is empty");
+                    interfaces[i] = Class.forName(objectInterfaceNames[i], true, loader);
+                    if (!interfaces[i].isInterface())
+                        throw new BeeObjectSourceConfigException("objectInterfaceNames[" + i + "]is not an interface");
                 } catch (ClassNotFoundException e) {
                     throw new BeeObjectSourceConfigException("Not found object interface:" + objectInterfaceNames[i]);
                 }
@@ -420,8 +422,6 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             }
         }
     }
-
-
 
 
 }

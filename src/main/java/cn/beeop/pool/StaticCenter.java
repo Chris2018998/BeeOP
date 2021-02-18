@@ -65,9 +65,4 @@ public class StaticCenter {
         }
         return true;
     }
-
-    static final Object createProxyObject(PooledEntry pEntry, Borrower borrower) {
-        borrower.lastUsedEntry = pEntry;
-        return new ProxyObject(pEntry);
-    }
 }

@@ -13,30 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.beeop;
+package cn.beeop.pool;
 
-import java.util.Properties;
+import cn.beeop.BeeObjectException;
 
 /**
- * Bee raw object factory
+ * object proxy factory
  *
- * @author Chris
+ * @author Chris.Liao
  * @version 1.0
  */
-public interface BeeObjectFactory {
-
-    //create object instance
-    public Object create(Properties prop) throws BeeObjectException;
-
-    //set default values
-    public void setDefault(Object obj) throws BeeObjectException;
-
-    //set default values
-    public void reset(Object obj) throws BeeObjectException;
-
-    //test object
-    public boolean isAlive(Object obj, long timeout);
-
-    //destroy  object
-    public void destroy(Object obj);
+class ProxyObjectFactory {
+    public ProxyObject createObjectProxy(PooledEntry pEntry, Borrower borrower) throws BeeObjectException {
+        ProxyObject proxyObject = new ProxyObject(pEntry);
+        borrower.lastUsedEntry = pEntry;
+        return proxyObject;
+    }
 }

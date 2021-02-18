@@ -23,17 +23,17 @@ import java.lang.reflect.Method;
 import static cn.beeop.pool.StaticCenter.ObjectMethodMap;
 
 /**
- * Object object
+ * Object base proxy
  *
  * @author Chris.Liao
  * @version 1.0
  */
-public final class ProxyObject {
-    private Object delegate;
-    private PooledEntry pEntry;
-    private boolean isClosed;
+public class ProxyObject {
+    protected Object delegate;
+    protected PooledEntry pEntry;
+    protected boolean isClosed;
 
-    void setPooledEntry(PooledEntry pEntry) {
+    public ProxyObject(PooledEntry pEntry) {
         this.pEntry = pEntry;
         pEntry.proxyObject = this;
         this.delegate = pEntry.object;

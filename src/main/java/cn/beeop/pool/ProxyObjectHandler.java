@@ -13,30 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.beeop;
+package cn.beeop.pool;
 
-import java.util.Properties;
+import cn.beeop.BeeObjectException;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
 
 /**
- * Bee raw object factory
+ * Proxy reflect handler
  *
- * @author Chris
+ * @author Chris.Liao
  * @version 1.0
  */
-public interface BeeObjectFactory {
+public class ProxyObjectHandler extends ProxyObject implements InvocationHandler {
+    public ProxyObjectHandler(PooledEntry pEntry) {
+        super(pEntry);
+    }
 
-    //create object instance
-    public Object create(Properties prop) throws BeeObjectException;
-
-    //set default values
-    public void setDefault(Object obj) throws BeeObjectException;
-
-    //set default values
-    public void reset(Object obj) throws BeeObjectException;
-
-    //test object
-    public boolean isAlive(Object obj, long timeout);
-
-    //destroy  object
-    public void destroy(Object obj);
+    public Object invoke(Object proxy, Method method, Object[] args)
+            throws Throwable {
+        if (isClosed) throw new BeeObjectException();
+        return method.invoke(delegate, args);
+    }
 }
+
