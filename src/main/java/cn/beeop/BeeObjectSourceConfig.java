@@ -70,6 +70,10 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     private Class objectClass;
     //object class name
     private String objectClassName;
+    //object implements interfaces
+    private Class[] objectInterfaces;
+    //object implements interface names
+    private String[] objectInterfaceNames;
     //object factory
     private BeeObjectFactory objectFactory;
     //object factory class name
@@ -228,6 +232,22 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         this.objectClassName = objectClassName.trim();
     }
 
+    public Class[] getObjectInterfaces() {
+        return objectInterfaces;
+    }
+
+    public void setObjectInterfaces(Class[] objectInterfaces) {
+        this.objectInterfaces = objectInterfaces;
+    }
+
+    public String[] getObjectInterfaceNames() {
+        return objectInterfaceNames;
+    }
+
+    public void setObjectInterfaceNames(String[] objectInterfaceNames) {
+        this.objectInterfaceNames = objectInterfaceNames;
+    }
+
     public BeeObjectFactory getObjectFactory() {
         return objectFactory;
     }
@@ -308,12 +328,16 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         if (this.maxWait <= 0)
             throw new BeeObjectSourceConfigException("maxWait must be greater than zero");
 
-        //try to create object factory
+        //1:load object implemented interfaces,if config
+        Class[]objectInterfaces = loadObjectInterfaces();
+
+        //2:try to create object factory
         BeeObjectFactory objectFactory = tryCreateObjectFactory();
 
         BeeObjectSourceConfig configCopy = new BeeObjectSourceConfig();
         this.copyTo(configCopy);
         configCopy.setObjectFactory(objectFactory);
+        configCopy.setObjectInterfaces(objectInterfaces);
         return configCopy;
     }
 
@@ -337,6 +361,25 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         } finally {
             if (stream != null) stream.close();
         }
+    }
+
+    private Class[] loadObjectInterfaces() throws BeeObjectSourceConfigException {
+        if (objectInterfaces != null) return this.objectInterfaces;
+        if (objectInterfaceNames!=null) {
+            Class[]interfaces=new Class[objectInterfaceNames.length];
+            ClassLoader loader=BeeObjectSourceConfig.class.getClassLoader();
+            for(int i=0,l=interfaces.length;i<l;i++) {
+                try {
+                    if(isBlank(objectInterfaceNames[i]))throw new BeeObjectSourceConfigException("objectInterfaceNames["+i+"]is empty");
+                    interfaces[i] = Class.forName(objectInterfaceNames[i],true, loader);
+                    if(!interfaces[i].isInterface())throw new BeeObjectSourceConfigException("objectInterfaceNames["+i+"]is not an interface");
+                } catch (ClassNotFoundException e) {
+                    throw new BeeObjectSourceConfigException("Not found object interface:" + objectInterfaceNames[i]);
+                }
+            }
+            return interfaces;
+        }
+        return null;
     }
 
     private final BeeObjectFactory tryCreateObjectFactory() throws BeeObjectSourceConfigException {
@@ -377,5 +420,9 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             }
         }
     }
+
+
+
+
 }
 

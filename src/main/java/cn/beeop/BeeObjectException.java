@@ -31,11 +31,12 @@ public class BeeObjectException extends Exception {
         super(s);
     }
 
+    public BeeObjectException(Throwable cause) {
+        super(cause);
+    }
+
     public BeeObjectException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public BeeObjectException(Throwable cause) {
-        super(cause);
-    }
 }

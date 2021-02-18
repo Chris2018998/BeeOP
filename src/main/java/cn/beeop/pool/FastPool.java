@@ -76,7 +76,6 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     private TransferPolicy transferPolicy;
     private ConcurrentLinkedQueue<Borrower> waitQueue = new ConcurrentLinkedQueue<Borrower>();
 
-
     private PooledConnAddThread poolEntryAddThread;
     private volatile PooledEntry[] poolEntryArray = new PooledEntry[0];
     private ScheduledFuture<?> idleCheckSchFuture;
