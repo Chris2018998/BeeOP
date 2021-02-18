@@ -114,5 +114,5 @@ class BookFactory implements ObjectFactory {
 | waitTimeToClearPool    |延迟清理的时候时间（秒）             |默认3秒，非暴力清理池下，还存在使用中的对象，延迟等待时间再清理     |      
 | idleCheckTimeInterval  |对象闲置扫描线程间隔时间(毫秒)       |默认5分钟                                                   |
 | objectFactoryClassName |自定义的对象工厂类名                |默认为空                                                    |
-| enableJMX              |JMX监控支持开关                    |默认false                                                  |
+| enableJmx              |JMX监控支持开关                    |默认false                                                  |
 
