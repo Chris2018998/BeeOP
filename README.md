@@ -46,7 +46,7 @@ public class Book{
 ```
  
 ```java
-class BookFactory extends ObjectFactory {
+class BookFactory implements BeeObjectFactory {
      public Object create(Properties prop) throws ObjectException {
          return new Book("Java核心技术·卷1",System.currentTimeMillis());
      }
