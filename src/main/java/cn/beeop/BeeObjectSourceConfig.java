@@ -39,6 +39,13 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * @version 1.0
  */
 public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
+    //user name
+    private String username;
+    //password
+    private String password;
+    //server url
+    private String serverUrl;
+
     //pool name
     private String poolName;
     //true:first arrive first take
@@ -84,6 +91,30 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     private String poolImplementClassName = FastPool.class.getName();
     //indicator,whether register pool to jmx
     private boolean enableJmx;
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = (username != null) ? username.trim() : username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = (password != null) ? password.trim() : password;
+    }
+
+    public String getServerUrl() {
+        return serverUrl;
+    }
+
+    public void setServerUrl(String jdbcUrl) {
+        this.serverUrl = (serverUrl != null) ? serverUrl.trim() : serverUrl;
+    }
 
     @Override
     public String getPoolName() {
@@ -338,6 +369,13 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         this.copyTo(configCopy);
         configCopy.setObjectFactory(objectFactory);
         configCopy.setObjectInterfaces(objectInterfaces);
+
+        if (!isBlank(password))
+            configCopy.addCreateProperties("user", username);
+        if (!isBlank(password))
+            configCopy.addCreateProperties("password", password);
+        if (!isBlank(serverUrl))
+            configCopy.addCreateProperties("serverUrl", serverUrl);
         return configCopy;
     }
 
@@ -422,7 +460,5 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             }
         }
     }
-
-
 }
 
