@@ -50,7 +50,7 @@ public class StaticCenter {
     public static final BeeObjectException PoolCloseException = new BeeObjectException("Pool has shut down or in clearing");
     public static final BeeObjectException ObjectClosedException = new BeeObjectException("No operations allowed after object closed.");
     public static final Logger commonLog = LoggerFactory.getLogger(StaticCenter.class);
-    static final ConcurrentHashMap<MethodCallKey, Method> ObjectMethodMap = new ConcurrentHashMap<MethodCallKey, Method>();
+    static final ConcurrentHashMap<MethodKey, Method> ObjectMethodMap = new ConcurrentHashMap<MethodKey, Method>();
 
     public static final boolean equals(String a, String b) {
         return a == null ? b == null : a.equals(b);

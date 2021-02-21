@@ -23,6 +23,7 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Proxy;
 import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -66,7 +67,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     private int objectTestTimeout;//seconds
     private long objectTestInterval;//milliseconds
     private BeeObjectFactory objectFactory;
-    private ProxyObjectFactory proxyFactory;
+    private ProxyHandleFactory proxyFactory;
     private Properties createProperties;
 
     private PoolHook exitHook;
@@ -107,7 +108,14 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
 
             createInitObjects(poolConfig.getInitialSize());
             Class[] objectInterfaces = poolConfig.getObjectInterfaces();
-            proxyFactory = (objectInterfaces != null) ? new ProxyObjectHandlerFactory(objectInterfaces) : new ProxyObjectFactory();
+            if (objectInterfaces != null && objectInterfaces.length > 0) {
+                Class[] interfaces = new Class[objectInterfaces.length + 1];
+                System.arraycopy(objectInterfaces, 0, interfaces, 0, objectInterfaces.length);
+                interfaces[objectInterfaces.length] = ProxyHandle.class;
+                proxyFactory = new ProxyReflectFactory(interfaces);
+            } else {
+                proxyFactory = new ProxyWrapperFactory();
+            }
 
             if (poolConfig.isFairMode()) {
                 poolMode = "fair";
@@ -196,7 +204,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                 }
             }
 
-            objectFactory.destroy(pEntry.object);
+            objectFactory.destroy(pEntry.rawObject);
             commonLog.debug("BeeOP({}))has removed pooled object:{},reason:{}", poolName, pEntry, removeType);
             poolEntryArray = arrayNew;
         }
@@ -211,7 +219,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     private final boolean testOnBorrow(PooledEntry pEntry) {
         if (currentTimeMillis() - pEntry.lastAccessTime - objectTestInterval < 0) {
             return true;
-        } else if (objectFactory.isAlive(pEntry.object, poolConfig.getObjectTestTimeout())) {
+        } else if (objectFactory.isAlive(pEntry.rawObject, poolConfig.getObjectTestTimeout())) {
             pEntry.updateAccessTime();
         }
 
@@ -256,7 +264,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
      * until other borrower release
      * @throws BeeObjectException if pool is closed or waiting timeout,then throw exception
      */
-    public ProxyObject getObject() throws BeeObjectException {
+    public ProxyHandle getObject() throws BeeObjectException {
         if (poolState.get() != POOL_NORMAL) throw PoolCloseException;
 
         //0:try to get from threadLocal cache
@@ -266,7 +274,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
             PooledEntry pEntry = borrower.lastUsedEntry;
             if (pEntry != null && pEntry.state == OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING)) {
                 if (testOnBorrow(pEntry))
-                    return proxyFactory.createObjectProxy(pEntry, borrower);
+                    return proxyFactory.createProxyHandle(pEntry, borrower);
 
                 borrower.lastUsedEntry = null;
             }
@@ -291,13 +299,13 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
             for (int i = 0, l = tempArray.length; i < l; i++) {
                 pEntry = tempArray[i];
                 if (pEntry.state == OBJECT_IDLE && ObjStUpd.compareAndSet(pEntry, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(pEntry)) {
-                    return proxyFactory.createObjectProxy(pEntry, borrower);
+                    return proxyFactory.createProxyHandle(pEntry, borrower);
                 }
             }
 
             //2:try to create one directly
             if (poolEntryArray.length < poolMaxSize && (pEntry = createPooledEntry(OBJECT_USING)) != null)
-                return proxyFactory.createObjectProxy(pEntry, borrower);
+                return proxyFactory.createProxyHandle(pEntry, borrower);
 
             //3:try to get one transferred object
             boolean failed = false;
@@ -313,7 +321,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                     pEntry = (PooledEntry) state;
                     if (transferPolicy.tryCatch(pEntry) && testOnBorrow(pEntry)) {
                         waitQueue.remove(borrower);
-                        return proxyFactory.createObjectProxy(pEntry, borrower);
+                        return proxyFactory.createProxyHandle(pEntry, borrower);
                     }
                 } else if (state instanceof BeeObjectException) {
                     waitQueue.remove(borrower);
@@ -413,11 +421,11 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                         tryToCreateNewConnByAsyn();
                     }
                 } else if (state == OBJECT_USING) {
-                    ProxyObject proxyObject = pEntry.proxyObject;
+                    ProxyHandle proxyHandle = pEntry.proxyHandle;
                     boolean isHoldTimeoutInNotUsing = currentTimeMillis() - pEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0;
                     if (isHoldTimeoutInNotUsing) {//recycle connection
-                        if (proxyObject != null) {
-                            proxyObject.trySetAsClosed();
+                        if (proxyHandle != null) {
+                            tryClosedProxyHandle(proxyHandle);
                         } else {
                             removePooledEntry(pEntry, DESC_REMOVE_BAD);
                             tryToCreateNewConnByAsyn();
@@ -480,13 +488,13 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                 } else if (pEntry.state == OBJECT_CLOSED) {
                     removePooledEntry(pEntry, source);
                 } else if (pEntry.state == OBJECT_USING) {
-                    ProxyObject proxyObject = pEntry.proxyObject;
-                    if (proxyObject != null) {
+                    ProxyHandle proxyHandle = pEntry.proxyHandle;
+                    if (proxyHandle != null) {
                         if (force) {
-                            proxyObject.trySetAsClosed();
+                            tryClosedProxyHandle(proxyHandle);
                         } else {
                             boolean isTimeout = (currentTimeMillis() - pEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0);
-                            if (isTimeout) proxyObject.trySetAsClosed();
+                            if (isTimeout) tryClosedProxyHandle(proxyHandle);
                         }
                     } else {
                         removePooledEntry(pEntry, source);
@@ -522,6 +530,13 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                 if (curSts == THREAD_WAITING) unpark(poolEntryAddThread);
                 break;
             }
+        }
+    }
+
+    private final void tryClosedProxyHandle(ProxyHandle handle) {
+        try {
+            handle.close();
+        } catch (BeeObjectException e) {
         }
     }
 
@@ -643,6 +658,10 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
         void onFailedTransfer(PooledEntry pEntry);
     }
 
+    static interface ProxyHandleFactory {
+        public ProxyHandle createProxyHandle(PooledEntry pEntry, Borrower borrower) throws BeeObjectException;
+    }
+
     static final class PoolThreadThreadFactory implements ThreadFactory {
         private String thName;
 
@@ -657,7 +676,6 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
         }
     }
 
-    //******************************** JMX **************************************/
     static final class CompeteTransferPolicy implements TransferPolicy {
         public final int getCheckStateCode() {
             return OBJECT_IDLE;
@@ -689,6 +707,32 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
         }
 
         public final void beforeTransfer(PooledEntry pEntry) {
+        }
+    }
+
+    static final class ProxyWrapperFactory implements ProxyHandleFactory {
+        public final ProxyHandle createProxyHandle(PooledEntry pEntry, Borrower borrower) throws BeeObjectException {
+            ProxyWrapper proxyObject = new ProxyWrapper(pEntry);
+            borrower.lastUsedEntry = pEntry;
+            return proxyObject;
+        }
+    }
+
+    static final class ProxyReflectFactory implements ProxyHandleFactory {
+        private ClassLoader classLoader;
+        private Class[] objectInterfaces;
+
+        public ProxyReflectFactory(Class[] objectInterfaces) {
+            this.objectInterfaces = objectInterfaces;
+            this.classLoader = this.getClass().getClassLoader();
+        }
+
+        public final ProxyHandle createProxyHandle(PooledEntry pEntry, Borrower borrower) throws BeeObjectException {
+            borrower.lastUsedEntry = pEntry;
+            return (ProxyHandle) Proxy.newProxyInstance(
+                    classLoader,
+                    objectInterfaces,
+                    new ProxyReflect(pEntry));
         }
     }
 

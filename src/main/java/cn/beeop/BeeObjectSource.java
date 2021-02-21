@@ -18,7 +18,7 @@ package cn.beeop;
 import cn.beeop.pool.FastPool;
 import cn.beeop.pool.ObjectPool;
 import cn.beeop.pool.PoolMonitorVo;
-import cn.beeop.pool.ProxyObject;
+import cn.beeop.pool.ProxyHandle;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -58,7 +58,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
      * until other borrower release
      * @throws BeeObjectException if pool is closed or waiting timeout,then throw exception
      */
-    public ProxyObject getObject() throws BeeObjectException {
+    public ProxyHandle getObject() throws BeeObjectException {
         if (inited) return pool.getObject();
 
         if (writeLock.tryLock()) {
