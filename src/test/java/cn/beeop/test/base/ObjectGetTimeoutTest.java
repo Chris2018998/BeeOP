@@ -18,7 +18,7 @@ package cn.beeop.test.base;
 import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.pool.ProxyWrapper;
+import cn.beeop.pool.ProxyWrapperHandle;
 import cn.beeop.test.JavaBook;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
@@ -41,9 +41,9 @@ public class ObjectGetTimeoutTest extends TestCase {
     }
 
     public void test() throws InterruptedException, Exception {
-        ProxyWrapper proxy = null;
+        ProxyWrapperHandle proxy = null;
         try {
-            proxy = (ProxyWrapper) obs.getObject();
+            proxy = (ProxyWrapperHandle) obs.getObject();
             CountDownLatch lacth = new CountDownLatch(1);
             TestThread testTh = new TestThread(lacth);
             testTh.start();
@@ -68,9 +68,9 @@ public class ObjectGetTimeoutTest extends TestCase {
         }
 
         public void run() {
-            ProxyWrapper proxy = null;
+            ProxyWrapperHandle proxy = null;
             try {
-                proxy = (ProxyWrapper) obs.getObject();
+                proxy = (ProxyWrapperHandle) obs.getObject();
             } catch (BeeObjectException e) {
                 this.e = e;
             } finally {

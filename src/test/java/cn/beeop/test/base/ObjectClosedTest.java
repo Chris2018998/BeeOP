@@ -18,7 +18,7 @@ package cn.beeop.test.base;
 import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.pool.ProxyWrapper;
+import cn.beeop.pool.ProxyWrapperHandle;
 import cn.beeop.test.JavaBookFactory;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
@@ -39,9 +39,9 @@ public class ObjectClosedTest extends TestCase {
     }
 
     public void test() throws InterruptedException, Exception {
-        ProxyWrapper proxy = null;
+        ProxyWrapperHandle proxy = null;
         try {
-            proxy = (ProxyWrapper) obs.getObject();
+            proxy = (ProxyWrapperHandle) obs.getObject();
             proxy.close();
             proxy.call("toString", new Class[0], new Object[0]);
             TestUtil.assertError("Closed test failed");

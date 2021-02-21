@@ -19,7 +19,7 @@ import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.PoolMonitorVo;
-import cn.beeop.pool.ProxyWrapper;
+import cn.beeop.pool.ProxyWrapperHandle;
 import cn.beeop.test.JavaBook;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
@@ -42,9 +42,9 @@ public class ObjectHoldTimeoutTest extends TestCase {
     }
 
     public void test() throws InterruptedException, Exception {
-        ProxyWrapper proxy = null;
+        ProxyWrapperHandle proxy = null;
         try {
-            proxy = (ProxyWrapper) obs.getObject();
+            proxy = (ProxyWrapperHandle) obs.getObject();
             PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
 
             if (monitorVo.getIdleSize() + monitorVo.getUsingSize() != 1)

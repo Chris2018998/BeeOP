@@ -16,7 +16,7 @@
 package cn.beeop.test.base;
 
 import cn.beeop.BeeObjectException;
-import cn.beeop.BeeObjectProxyHandle;
+import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.test.Book;
@@ -44,7 +44,7 @@ public class ObjectInterfaceNameTest extends TestCase {
     }
 
     public void test() throws InterruptedException, Exception {
-        BeeObjectProxyHandle proxy = null;
+        BeeObjectHandle proxy = null;
         try {
             proxy = obs.getObject();
             if (proxy == null)

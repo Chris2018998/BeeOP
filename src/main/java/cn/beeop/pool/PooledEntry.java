@@ -17,7 +17,7 @@ package cn.beeop.pool;
 
 import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectFactory;
-import cn.beeop.BeeObjectProxyHandle;
+import cn.beeop.BeeObjectHandle;
 
 import static java.lang.System.currentTimeMillis;
 
@@ -31,7 +31,7 @@ class PooledEntry {
     volatile int state;
     Object rawObject;
     Class rawObjectClass;
-    BeeObjectProxyHandle beeObjectProxyHandle;
+    BeeObjectHandle beeObjectHandle;
 
     volatile long lastAccessTime;
     private BeeObjectFactory objectFactory;
@@ -56,7 +56,7 @@ class PooledEntry {
 
     final void recycleSelf() throws BeeObjectException {
         try {
-            beeObjectProxyHandle = null;
+            beeObjectHandle = null;
             objectFactory.reset(rawObject);
             pool.recycle(this);
         } catch (Exception e) {

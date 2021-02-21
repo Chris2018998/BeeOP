@@ -57,7 +57,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
      * until other borrower release
      * @throws BeeObjectException if pool is closed or waiting timeout,then throw exception
      */
-    public BeeObjectProxyHandle getObject() throws BeeObjectException {
+    public BeeObjectHandle getObject() throws BeeObjectException {
         if (inited) return pool.getObject();
 
         if (writeLock.tryLock()) {
