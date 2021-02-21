@@ -453,7 +453,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
                 throw new BeeObjectSourceConfigException("Failed to instantiate object factory class:" + objectFactoryClassName, e);
             }
         } else {
-            if (objectClass != null) return new ClassObjectFactory(objectClass);
+            if (objectClass != null) return new BeeClassObjectFactory(objectClass);
             if (!isBlank(objectClassName)) {
                 try {
                     objectClass = Class.forName(objectClassName, true, BeeObjectSourceConfig.class.getClassLoader());
@@ -464,7 +464,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
                     } catch (NoSuchMethodException e) {
                         throw new BeeObjectSourceConfigException("Missed no parameter constructor in object class:" + objectClassName);
                     }
-                    return new ClassObjectFactory(objectClass);
+                    return new BeeClassObjectFactory(objectClass);
                 } catch (ClassNotFoundException e) {
                     throw new BeeObjectSourceConfigException("Not found object class:" + objectClassName);
                 }
