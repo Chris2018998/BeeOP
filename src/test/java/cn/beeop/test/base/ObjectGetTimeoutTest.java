@@ -19,7 +19,7 @@ import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.ProxyWrapper;
-import cn.beeop.test.Book;
+import cn.beeop.test.JavaBook;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
@@ -32,7 +32,7 @@ public class ObjectGetTimeoutTest extends TestCase {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setMaxActive(1);
         config.setMaxWait(3000);
-        config.setObjectClass(Book.class);
+        config.setObjectClass(JavaBook.class);
         obs = new BeeObjectSource(config);
     }
 

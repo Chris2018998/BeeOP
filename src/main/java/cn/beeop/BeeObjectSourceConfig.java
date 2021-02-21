@@ -104,14 +104,16 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         return password;
     }
 
-    public void setPassword(String password) { this.password = trimString(password); }
+    public void setPassword(String password) {
+        this.password = trimString(password);
+    }
 
     public String getServerUrl() {
         return serverUrl;
     }
 
     public void setServerUrl(String jdbcUrl) {
-        this.serverUrl =trimString(jdbcUrl);
+        this.serverUrl = trimString(jdbcUrl);
     }
 
     @Override
@@ -120,7 +122,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setPoolName(String poolName) {
-        this.poolName =trimString(poolName);
+        this.poolName = trimString(poolName);
     }
 
     @Override
@@ -301,7 +303,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setObjectFactoryClassName(String objectFactoryClassName) {
-        this.objectFactoryClassName =trimString(objectFactoryClassName);
+        this.objectFactoryClassName = trimString(objectFactoryClassName);
     }
 
     public void removeCreateProperties(String key) {

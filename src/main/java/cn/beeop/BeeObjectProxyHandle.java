@@ -13,10 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.beeop.test;
+package cn.beeop;
 
-public interface Book {
-    public String getName();
+/**
+ * raw object proxy handle interface
+ *
+ * @author Chris.Liao
+ * @version 1.0
+ */
+public interface BeeObjectProxyHandle {
 
-    public long getNumber();
+    /**
+     * return raw object to pool and remark proxy object as closed
+     *
+     * @throws BeeObjectException if access error occurs
+     */
+    public void close() throws BeeObjectException;
+
+    /**
+     * query proxy whether in closed state
+     *
+     * @return proxy state
+     * @throws BeeObjectException if access error occurs
+     */
+    public boolean isClosed() throws BeeObjectException;
+
 }

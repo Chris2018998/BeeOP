@@ -18,7 +18,7 @@ package cn.beeop.test.base;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.PoolMonitorVo;
-import cn.beeop.test.Book;
+import cn.beeop.test.JavaBook;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
@@ -33,7 +33,7 @@ public class ObjectIdleTimeoutTest extends TestCase {
         config.setIdleTimeout(2000);
         config.setIdleCheckTimeInterval(1000L);// two seconds interval
         config.setDelayTimeForNextClear(1);
-        config.setObjectClassName(Book.class.getName());
+        config.setObjectClassName(JavaBook.class.getName());
         obs = new BeeObjectSource(config);
     }
 

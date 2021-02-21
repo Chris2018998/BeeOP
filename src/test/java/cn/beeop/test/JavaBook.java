@@ -15,8 +15,24 @@
  */
 package cn.beeop.test;
 
-public interface Book {
-    public String getName();
+public class JavaBook {
+    private String name;
+    private long number;
 
-    public long getNumber();
+    public JavaBook() {
+        this("Java核心技术·卷2", System.currentTimeMillis());
+    }
+
+    public JavaBook(String name, long number) {
+        this.name = name;
+        this.number = number;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public long getNumber() {
+        return number;
+    }
 }

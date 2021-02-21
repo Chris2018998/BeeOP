@@ -27,6 +27,8 @@ import java.lang.reflect.Method;
  * @version 1.0
  */
 public class ProxyReflect extends ProxyWrapper implements InvocationHandler {
+    private static final String Method_Close = "close";
+    private static final String Method_isClosed = "isClosed";
     public ProxyReflect(PooledEntry pEntry) {
         super(pEntry);
     }
@@ -34,7 +36,15 @@ public class ProxyReflect extends ProxyWrapper implements InvocationHandler {
     public Object invoke(Object proxy, Method method, Object[] args)
             throws Throwable {
         if (isClosed) throw new BeeObjectException();
-        return method.invoke(rawObject, args);
+
+        if(method.getName().equals(Method_Close)){
+            super.close();
+            return null;
+        }else if(method.getName().equals(Method_Close)){
+            return super.isClosed;
+        }else{
+            return method.invoke(rawObject, args);
+        }
     }
 }
 

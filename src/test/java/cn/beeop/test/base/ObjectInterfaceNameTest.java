@@ -16,21 +16,26 @@
 package cn.beeop.test.base;
 
 import cn.beeop.BeeObjectException;
+import cn.beeop.BeeObjectProxyHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.pool.ProxyWrapper;
+import cn.beeop.test.Book;
 import cn.beeop.test.JavaBookFactory;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
-public class ObjectClosedTest extends TestCase {
+/**
+ * ObjectFactory subclass
+ *
+ * @author chris.liao
+ */
+public class ObjectInterfaceNameTest extends TestCase {
     private BeeObjectSource obs;
 
     public void setUp() throws Throwable {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
-        config.setInitialSize(5);
-        config.setIdleTimeout(3000);
-        config.setObjectFactory(new JavaBookFactory());
+        config.setObjectFactoryClassName(JavaBookFactory.class.getName());
+        config.setObjectInterfaceNames(new String[]{Book.class.getName()});
         obs = new BeeObjectSource(config);
     }
 
@@ -39,12 +44,13 @@ public class ObjectClosedTest extends TestCase {
     }
 
     public void test() throws InterruptedException, Exception {
-        ProxyWrapper proxy = null;
+        BeeObjectProxyHandle proxy = null;
         try {
-            proxy = (ProxyWrapper) obs.getObject();
-            proxy.close();
-            proxy.call("toString", new Class[0], new Object[0]);
-            TestUtil.assertError("Closed test failed");
+            proxy = obs.getObject();
+            if (proxy == null)
+                TestUtil.assertError("Failed to get object");
+
+            Book book = (Book) proxy;
         } catch (BeeObjectException e) {
         } finally {
             if (proxy != null)

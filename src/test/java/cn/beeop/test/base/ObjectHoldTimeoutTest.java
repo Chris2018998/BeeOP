@@ -20,7 +20,7 @@ import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.PoolMonitorVo;
 import cn.beeop.pool.ProxyWrapper;
-import cn.beeop.test.Book;
+import cn.beeop.test.JavaBook;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
@@ -33,7 +33,7 @@ public class ObjectHoldTimeoutTest extends TestCase {
         config.setHoldTimeout(1000);// hold and not using connection;
         config.setIdleCheckTimeInterval(1000L);// two seconds interval
         config.setDelayTimeForNextClear(1);
-        config.setObjectClassName(Book.class.getName());
+        config.setObjectClassName(JavaBook.class.getName());
         obs = new BeeObjectSource(config);
     }
 

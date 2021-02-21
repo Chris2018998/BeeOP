@@ -16,6 +16,7 @@
 package cn.beeop.pool;
 
 import cn.beeop.BeeObjectException;
+import cn.beeop.BeeObjectProxyHandle;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -29,7 +30,7 @@ import static cn.beeop.pool.StaticCenter.genMethodCacheKey;
  * @author Chris.Liao
  * @version 1.0
  */
-public class ProxyWrapper implements ProxyHandle {
+public class ProxyWrapper implements BeeObjectProxyHandle {
     protected Object rawObject;
     protected PooledEntry pEntry;
     protected boolean isClosed;
@@ -37,7 +38,7 @@ public class ProxyWrapper implements ProxyHandle {
 
     public ProxyWrapper(PooledEntry pEntry) {
         this.pEntry = pEntry;
-        pEntry.proxyHandle = this;
+        pEntry.beeObjectProxyHandle = this;
         this.rawObject = pEntry.rawObject;
         this.rawObjectClass = pEntry.rawObjectClass;
     }
@@ -65,8 +66,8 @@ public class ProxyWrapper implements ProxyHandle {
             Method method = ObjectMethodMap.get(key);
             if (method == null) {
                 method = rawObjectClass.getMethod(name, types);
-                Method mapMethod=ObjectMethodMap.putIfAbsent(key, method);
-                if(mapMethod!=null)method=mapMethod;
+                Method mapMethod = ObjectMethodMap.putIfAbsent(key, method);
+                if (mapMethod != null) method = mapMethod;
             }
 
             Object v = method.invoke(rawObject, params);

@@ -17,6 +17,7 @@ package cn.beeop.pool;
 
 import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.BeeObjectProxyHandle;
 
 /**
  * object pool interface
@@ -40,7 +41,7 @@ public interface ObjectPool {
      * @return If exists idle object in pool,then return one;if not, waiting until other borrower release
      * @throws BeeObjectException if pool is closed or waiting timeout,then throw exception
      */
-    ProxyHandle getObject() throws BeeObjectException;
+    BeeObjectProxyHandle getObject() throws BeeObjectException;
 
     /**
      * return object to pool after used

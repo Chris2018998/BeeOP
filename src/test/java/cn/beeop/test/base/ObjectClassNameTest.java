@@ -19,18 +19,16 @@ import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.ProxyWrapper;
-import cn.beeop.test.JavaBookFactory;
+import cn.beeop.test.JavaBook;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 
-public class ObjectClosedTest extends TestCase {
+public class ObjectClassNameTest extends TestCase {
     private BeeObjectSource obs;
 
     public void setUp() throws Throwable {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
-        config.setInitialSize(5);
-        config.setIdleTimeout(3000);
-        config.setObjectFactory(new JavaBookFactory());
+        config.setObjectClassName(JavaBook.class.getName());
         obs = new BeeObjectSource(config);
     }
 
@@ -42,9 +40,8 @@ public class ObjectClosedTest extends TestCase {
         ProxyWrapper proxy = null;
         try {
             proxy = (ProxyWrapper) obs.getObject();
-            proxy.close();
-            proxy.call("toString", new Class[0], new Object[0]);
-            TestUtil.assertError("Closed test failed");
+            if (proxy == null)
+                TestUtil.assertError("Failed to get object");
         } catch (BeeObjectException e) {
         } finally {
             if (proxy != null)
