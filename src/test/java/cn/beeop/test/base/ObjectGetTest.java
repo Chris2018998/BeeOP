@@ -41,7 +41,7 @@ public class ObjectGetTest extends TestCase {
     public void test() throws InterruptedException, Exception {
         ProxyWrapper proxy = null;
         try {
-            proxy =(ProxyWrapper) obs.getObject();
+            proxy = (ProxyWrapper) obs.getObject();
             if (proxy == null)
                 TestUtil.assertError("Failed to get object");
         } catch (BeeObjectException e) {

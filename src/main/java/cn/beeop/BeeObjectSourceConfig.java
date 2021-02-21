@@ -97,23 +97,21 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setUsername(String username) {
-        this.username = (username != null) ? username.trim() : username;
+        this.username = trimString(username);
     }
 
     public String getPassword() {
         return password;
     }
 
-    public void setPassword(String password) {
-        this.password = (password != null) ? password.trim() : password;
-    }
+    public void setPassword(String password) { this.password = trimString(password); }
 
     public String getServerUrl() {
         return serverUrl;
     }
 
     public void setServerUrl(String jdbcUrl) {
-        this.serverUrl = (serverUrl != null) ? serverUrl.trim() : serverUrl;
+        this.serverUrl =trimString(jdbcUrl);
     }
 
     @Override
@@ -122,7 +120,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setPoolName(String poolName) {
-        this.poolName = (poolName != null) ? poolName.trim() : poolName;
+        this.poolName =trimString(poolName);
     }
 
     @Override
@@ -260,23 +258,33 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setObjectClassName(String objectClassName) {
-        this.objectClassName = objectClassName.trim();
+        this.objectClassName = trimString(objectClassName);
     }
 
     public Class[] getObjectInterfaces() {
-        return objectInterfaces;
+        int len = (objectInterfaces != null) ? objectInterfaces.length : 0;
+        Class[] interfaces = new Class[len];
+        if (len > 0) System.arraycopy(objectInterfaces, 0, interfaces, 0, len);
+        return interfaces;
     }
 
-    public void setObjectInterfaces(Class[] objectInterfaces) {
-        this.objectInterfaces = objectInterfaces;
+    public void setObjectInterfaces(Class[] interfaces) {
+        int len = (interfaces != null) ? interfaces.length : 0;
+        this.objectInterfaces = new Class[len];
+        if (len > 0) System.arraycopy(interfaces, 0, objectInterfaces, 0, len);
     }
 
     public String[] getObjectInterfaceNames() {
-        return objectInterfaceNames;
+        int len = (objectInterfaceNames != null) ? objectInterfaceNames.length : 0;
+        String[] interfaceNames = new String[len];
+        if (len > 0) System.arraycopy(objectInterfaceNames, 0, interfaceNames, 0, len);
+        return interfaceNames;
     }
 
-    public void setObjectInterfaceNames(String[] objectInterfaceNames) {
-        this.objectInterfaceNames = objectInterfaceNames;
+    public void setObjectInterfaceNames(String[] interfaceNames) {
+        int len = (interfaceNames != null) ? interfaceNames.length : 0;
+        this.objectInterfaceNames = new String[len];
+        if (len > 0) System.arraycopy(interfaceNames, 0, objectInterfaceNames, 0, len);
     }
 
     public BeeObjectFactory getObjectFactory() {
@@ -293,7 +301,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setObjectFactoryClassName(String objectFactoryClassName) {
-        this.objectFactoryClassName = (objectFactoryClassName != null) ? objectFactoryClassName.trim() : objectFactoryClassName;
+        this.objectFactoryClassName =trimString(objectFactoryClassName);
     }
 
     public void removeCreateProperties(String key) {
@@ -314,7 +322,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setPoolImplementClassName(String poolImplementClassName) {
-        this.poolImplementClassName = (poolImplementClassName != null) ? poolImplementClassName.trim() : poolImplementClassName;
+        this.poolImplementClassName = trimString(poolImplementClassName);
     }
 
     @Override
@@ -326,6 +334,9 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         this.enableJmx = enableJmx;
     }
 
+    private String trimString(String value) {
+        return (value == null) ? null : value.trim();
+    }
 
     void copyTo(BeeObjectSourceConfig config) {
         int modifiers;
@@ -401,7 +412,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         }
     }
 
-    private Class[] loadObjectInterfaces() throws BeeObjectSourceConfigException {
+    private final Class[] loadObjectInterfaces() throws BeeObjectSourceConfigException {
         if (objectInterfaces != null) return this.objectInterfaces;
         if (objectInterfaceNames != null) {
             Class[] interfaces = new Class[objectInterfaceNames.length];
@@ -419,7 +430,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             }
             return interfaces;
         }
-        return null;
+        return new Class[0];
     }
 
     private final BeeObjectFactory tryCreateObjectFactory() throws BeeObjectSourceConfigException {

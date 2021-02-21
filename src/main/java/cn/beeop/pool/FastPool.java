@@ -108,10 +108,11 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
 
             createInitObjects(poolConfig.getInitialSize());
             Class[] objectInterfaces = poolConfig.getObjectInterfaces();
-            if (objectInterfaces != null && objectInterfaces.length > 0) {
-                Class[] interfaces = new Class[objectInterfaces.length + 1];
-                System.arraycopy(objectInterfaces, 0, interfaces, 0, objectInterfaces.length);
-                interfaces[objectInterfaces.length] = ProxyHandle.class;
+            int interfacesLen = objectInterfaces.length;
+            if (interfacesLen > 0) {
+                Class[] interfaces = new Class[interfacesLen + 1];
+                System.arraycopy(objectInterfaces, 0, interfaces, 0, interfacesLen);
+                interfaces[interfacesLen] = ProxyHandle.class;
                 proxyFactory = new ProxyReflectFactory(interfaces);
             } else {
                 proxyFactory = new ProxyWrapperFactory();

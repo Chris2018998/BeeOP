@@ -21,6 +21,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import static cn.beeop.pool.StaticCenter.ObjectMethodMap;
+import static cn.beeop.pool.StaticCenter.genMethodCacheKey;
 
 /**
  * object wrapper proxy
@@ -60,11 +61,12 @@ public class ProxyWrapper implements ProxyHandle {
     public final Object call(String name, Class[] types, Object[] params) throws BeeObjectException {
         try {
             if (isClosed) throw new BeeObjectException();
-            MethodKey key = new MethodKey(name, types);
+            Object key = genMethodCacheKey(name, types);
             Method method = ObjectMethodMap.get(key);
             if (method == null) {
                 method = rawObjectClass.getMethod(name, types);
-                ObjectMethodMap.put(key, method);
+                Method mapMethod=ObjectMethodMap.putIfAbsent(key, method);
+                if(mapMethod!=null)method=mapMethod;
             }
 
             Object v = method.invoke(rawObject, params);

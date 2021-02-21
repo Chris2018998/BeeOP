@@ -43,7 +43,7 @@ public class ObjectGetTimeoutTest extends TestCase {
     public void test() throws InterruptedException, Exception {
         ProxyWrapper proxy = null;
         try {
-            proxy =(ProxyWrapper)obs.getObject();
+            proxy = (ProxyWrapper) obs.getObject();
             CountDownLatch lacth = new CountDownLatch(1);
             TestThread testTh = new TestThread(lacth);
             testTh.start();
@@ -70,7 +70,7 @@ public class ObjectGetTimeoutTest extends TestCase {
         public void run() {
             ProxyWrapper proxy = null;
             try {
-                proxy = (ProxyWrapper)obs.getObject();
+                proxy = (ProxyWrapper) obs.getObject();
             } catch (BeeObjectException e) {
                 this.e = e;
             } finally {

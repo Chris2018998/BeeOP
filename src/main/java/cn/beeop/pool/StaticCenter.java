@@ -20,6 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -50,7 +52,11 @@ public class StaticCenter {
     public static final BeeObjectException PoolCloseException = new BeeObjectException("Pool has shut down or in clearing");
     public static final BeeObjectException ObjectClosedException = new BeeObjectException("No operations allowed after object closed.");
     public static final Logger commonLog = LoggerFactory.getLogger(StaticCenter.class);
-    static final ConcurrentHashMap<MethodKey, Method> ObjectMethodMap = new ConcurrentHashMap<MethodKey, Method>();
+    static final ConcurrentHashMap<Object, Method> ObjectMethodMap = new ConcurrentHashMap<Object, Method>();
+
+    static final Object genMethodCacheKey(String name, Class[] types) {
+        return new MethodKey(name, types);
+    }
 
     public static final boolean equals(String a, String b) {
         return a == null ? b == null : a.equals(b);
@@ -65,4 +71,32 @@ public class StaticCenter {
         }
         return true;
     }
+
+    static final class MethodKey {
+        private String name;
+        private Class[] types;
+
+        public MethodKey(String name, Class[] types) {
+            this.name = name;
+            this.types = types;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            MethodKey that = (MethodKey) o;
+            return name.equals(that.name) &&
+                    Arrays.equals(types, that.types);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hash(name);
+            result = 31 * result + Arrays.hashCode(types);
+            return result;
+        }
+    }
 }
+
+
