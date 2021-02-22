@@ -16,9 +16,9 @@
 package cn.beeop.test.base;
 
 import cn.beeop.BeeObjectException;
+import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.pool.ProxyWrapperHandle;
 import cn.beeop.test.JavaBookFactory;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
@@ -37,15 +37,15 @@ public class ObjectFactoryTest extends TestCase {
     }
 
     public void test() throws InterruptedException, Exception {
-        ProxyWrapperHandle proxy = null;
+        BeeObjectHandle handle = null;
         try {
-            proxy = (ProxyWrapperHandle) obs.getObject();
-            if (proxy == null)
+            handle = obs.getObject();
+            if (handle == null)
                 TestUtil.assertError("Failed to get object");
         } catch (BeeObjectException e) {
         } finally {
-            if (proxy != null)
-                proxy.close();
+            if (handle != null)
+                handle.close();
         }
     }
 }

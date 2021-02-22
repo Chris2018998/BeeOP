@@ -44,17 +44,17 @@ public class ObjectInterfaceNameTest extends TestCase {
     }
 
     public void test() throws InterruptedException, Exception {
-        BeeObjectHandle proxy = null;
+        BeeObjectHandle handle = null;
         try {
-            proxy = obs.getObject();
-            if (proxy == null)
+            handle = obs.getObject();
+            if (handle == null)
                 TestUtil.assertError("Failed to get object");
 
-            Book book = (Book) proxy;
+            Book book = (Book) handle.getProxyObject();
         } catch (BeeObjectException e) {
         } finally {
-            if (proxy != null)
-                proxy.close();
+            if (handle != null)
+                handle.close();
         }
     }
 }

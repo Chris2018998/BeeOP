@@ -16,10 +16,10 @@
 package cn.beeop.test.base;
 
 import cn.beeop.BeeObjectException;
+import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.PoolMonitorVo;
-import cn.beeop.pool.ProxyWrapperHandle;
 import cn.beeop.test.JavaBook;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
@@ -42,9 +42,9 @@ public class ObjectHoldTimeoutTest extends TestCase {
     }
 
     public void test() throws InterruptedException, Exception {
-        ProxyWrapperHandle proxy = null;
+        BeeObjectHandle handle = null;
         try {
-            proxy = (ProxyWrapperHandle) obs.getObject();
+            handle = obs.getObject();
             PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
 
             if (monitorVo.getIdleSize() + monitorVo.getUsingSize() != 1)
@@ -57,7 +57,7 @@ public class ObjectHoldTimeoutTest extends TestCase {
                 TestUtil.assertError("Using connections not as expected 0 after hold timeout");
 
             try {
-                proxy.call("toString", new Class[0], new Object[0]);
+                handle.call("toString", new Class[0], new Object[0]);
                 TestUtil.assertError("must throw closed exception");
             } catch (BeeObjectException e) {
                 System.out.println(e);
@@ -65,7 +65,7 @@ public class ObjectHoldTimeoutTest extends TestCase {
 
             Thread.sleep(4000);
         } finally {
-            if (proxy != null) proxy.close();
+            if (handle != null) handle.close();
         }
     }
 }

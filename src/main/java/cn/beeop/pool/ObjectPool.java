@@ -16,8 +16,8 @@
 package cn.beeop.pool;
 
 import cn.beeop.BeeObjectException;
-import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.BeeObjectHandle;
+import cn.beeop.BeeObjectSourceConfig;
 
 /**
  * object pool interface

@@ -38,4 +38,22 @@ public interface BeeObjectHandle {
      */
     public boolean isClosed() throws BeeObjectException;
 
+    /*
+     * @return raw proxy instance of invocation
+     *
+     * @throws BeeObjectException if access error occurs
+     */
+    public Object getProxyObject() throws BeeObjectException;
+
+    /**
+     * call raw object'method
+     *
+     * @param methodName  method name
+     * @param paramTypes  method parameter types
+     * @param paramValues method parameter values
+     * @return
+     * @throws BeeObjectException if access error occurs
+     */
+    public Object call(String methodName, Class[] paramTypes, Object[] paramValues) throws BeeObjectException;
+
 }
