@@ -47,6 +47,14 @@ public interface BeeObjectHandle {
     public Object getProxyObject() throws BeeObjectException;
 
     /**
+     * call raw object'method,which has empty parameter
+     *
+     * @return Invocation result of raw object
+     * @throws BeeObjectException if access error occurs
+     */
+    public Object call(String methodName) throws BeeObjectException;
+
+    /**
      * call raw object'method
      *
      * @param methodName  method name

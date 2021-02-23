@@ -52,7 +52,8 @@ public class StaticCenter {
     public static final BeeObjectException PoolCloseException = new BeeObjectException("Pool has shut down or in clearing");
     public static final BeeObjectException ObjectClosedException = new BeeObjectException("No operations allowed after object handle closed");
     public static final BeeObjectException ObjectMethodForbiddenException = new BeeObjectException("Method illegal access");
-
+    public static final Class[] EmptyParamTypes = new Class[0];
+    public static final Object[] EmptyParamValues = new Object[0];
     public static final Logger commonLog = LoggerFactory.getLogger(StaticCenter.class);
     static final ConcurrentHashMap<Object, Method> ObjectMethodMap = new ConcurrentHashMap<Object, Method>();
 

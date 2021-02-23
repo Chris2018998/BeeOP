@@ -44,6 +44,8 @@ public class ObjectFactoryTest extends TestCase {
         BeeObjectHandle handle = null;
         try {
             handle = obs.getObject();
+            System.out.println(handle.call("getName"));
+
             if (handle == null)
                 TestUtil.assertError("Failed to get object");
         } catch (BeeObjectException e) {

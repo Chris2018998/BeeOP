@@ -33,7 +33,6 @@ import static cn.beeop.pool.StaticCenter.*;
 public final class ObjectHandle implements BeeObjectHandle {
     private PooledEntry pEntry;//owner
     private boolean isClosed;//handle state
-
     private Object rawObject;
     private Class rawObjectClass;
     private Object proxyReflectObject;
@@ -69,6 +68,10 @@ public final class ObjectHandle implements BeeObjectHandle {
 
     void setProxyObject(Object proxyReflectObject) {
         this.proxyReflectObject = proxyReflectObject;
+    }
+
+    public Object call(String methodName) throws BeeObjectException {
+        return call(methodName, EmptyParamTypes, EmptyParamValues);
     }
 
     public final Object call(String name, Class[] types, Object[] params) throws BeeObjectException {
