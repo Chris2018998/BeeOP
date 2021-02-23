@@ -48,7 +48,7 @@ public final class ReflectHandler implements InvocationHandler {
         if (objectHandle.isClosed()) throw ObjectClosedException;
         if (excludeMethodNames.contains(method.getName())) throw ObjectMethodForbiddenException;
 
-        java.lang.Object v = method.invoke(rawObject, args);
+        Object v = method.invoke(rawObject, args);
         pEntry.updateAccessTime();
         return v;
     }

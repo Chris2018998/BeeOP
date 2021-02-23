@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 package cn.beeop.test.object;
+
 /**
  * @author Chris.Liao
  * @version 1.0

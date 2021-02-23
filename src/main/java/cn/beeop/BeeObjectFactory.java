@@ -28,15 +28,15 @@ public interface BeeObjectFactory {
     //create object instance
     public Object create(Properties prop) throws BeeObjectException;
 
-    //set default values
+    //set default values to raw object on initialization
     public void setDefault(Object obj) throws BeeObjectException;
 
-    //set default values
+    //reset some changed properties in raw object on returning
     public void reset(Object obj) throws BeeObjectException;
 
-    //test object
+    //test raw object
     public boolean isAlive(Object obj, long timeout);
 
-    //destroy  object
+    //destroy raw object on removed from pool
     public void destroy(Object obj);
 }
