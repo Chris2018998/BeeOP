@@ -25,6 +25,7 @@ import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Proxy;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -67,9 +68,13 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     private int entryUnCatchStateCode;
     private int objectTestTimeout;//seconds
     private long objectTestInterval;//milliseconds
+
     private Class[] objectInterfaces;
     private BeeObjectFactory objectFactory;
+    private ReflectProxyFactory reflectProxyFactory;
     private Properties createProperties;
+    private List<String> excludeMethodNames;
+
     private PoolHook exitHook;
     private BeeObjectSourceConfig poolConfig;
     private int borrowSemaphoreSize;
@@ -83,6 +88,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     private AtomicInteger poolState = new AtomicInteger(POOL_UNINIT);
     private AtomicInteger createObjThreadState = new AtomicInteger(THREAD_WORKING);
     private AtomicInteger needAddConnSize = new AtomicInteger(0);
+
 
     /**
      * initialize pool with configuration
@@ -104,14 +110,14 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
             objectTestInterval = poolConfig.getObjectTestInterval();
             defaultMaxWaitNanos = MILLISECONDS.toNanos(poolConfig.getMaxWait());
             createProperties = poolConfig.getCreateProperties();
+            excludeMethodNames = poolConfig.getExcludeMethodNames();
 
             createInitObjects(poolConfig.getInitialSize());
-            Class[] interfaces = poolConfig.getObjectInterfaces();
-            int interfacesLen = interfaces.length;
-            if (interfacesLen > 0) {
-                objectInterfaces = new Class[interfacesLen + 1];
-                System.arraycopy(interfaces, 0, objectInterfaces, 0, interfacesLen);
-                objectInterfaces[interfacesLen] = BeeObjectHandle.class;
+            objectInterfaces = poolConfig.getObjectInterfaces();
+            if (objectInterfaces.length > 0) {
+                reflectProxyFactory = new InvocationProxyFactory();
+            } else {
+                reflectProxyFactory = new NullReflectProxyFactory();
             }
 
             if (poolConfig.isFairMode()) {
@@ -171,7 +177,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                 commonLog.debug("BeeOP({}))begin to create new pooled object,state:{}", poolName, connState);
                 Object obj = objectFactory.create(createProperties);
                 objectFactory.setDefault(obj);
-                PooledEntry pEntry = new PooledEntry(obj, connState, this, objectFactory);// add
+                PooledEntry pEntry = new PooledEntry(obj, connState, this, objectFactory);//add
                 commonLog.debug("BeeOP({}))has created new pooled object:{},state:{}", poolName, pEntry, connState);
                 PooledEntry[] arrayNew = new PooledEntry[arrayLen + 1];
                 arraycopy(poolEntryArray, 0, arrayNew, 0, arrayLen);
@@ -418,7 +424,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                         tryToCreateNewConnByAsyn();
                     }
                 } else if (state == OBJECT_USING) {
-                    BeeObjectHandle beeObjectHandle = pEntry.beeObjectHandle;
+                    BeeObjectHandle beeObjectHandle = pEntry.objectHandle;
                     boolean isHoldTimeoutInNotUsing = currentTimeMillis() - pEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0;
                     if (isHoldTimeoutInNotUsing) {//recycle connection
                         if (beeObjectHandle != null) {
@@ -485,7 +491,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                 } else if (pEntry.state == OBJECT_CLOSED) {
                     removePooledEntry(pEntry, source);
                 } else if (pEntry.state == OBJECT_USING) {
-                    BeeObjectHandle beeObjectHandle = pEntry.beeObjectHandle;
+                    BeeObjectHandle beeObjectHandle = pEntry.objectHandle;
                     if (beeObjectHandle != null) {
                         if (force) {
                             tryClosedProxyHandle(beeObjectHandle);
@@ -644,17 +650,15 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
         }
     }
 
-    private final BeeObjectHandle createObjectHandle(PooledEntry pEntry, Borrower borrower) throws BeeObjectException {
-        ObjectHandle handle = new ObjectHandle(pEntry);
+    private final BeeObjectHandle createObjectHandle(PooledEntry pEntry, Borrower borrower) {
+        ObjectHandle handle = new ObjectHandle(pEntry, excludeMethodNames);
         borrower.lastUsedEntry = pEntry;
+        pEntry.objectHandle = handle;
 
-        if (this.objectInterfaces != null) {
-            ProxyHandler handler = new ProxyHandler(pEntry, handle);
-            Object proxyObject = Proxy.newProxyInstance(
-                    classLoader,
-                    objectInterfaces,
-                    handler);
-            handle.setProxyObject(proxyObject);
+        try {
+            handle.setProxyObject(reflectProxyFactory.createProxyObject(pEntry, handle, excludeMethodNames));
+        } catch (Throwable e) {
+            commonLog.warn("BeeOP({})failed to create reflect proxy instance:", poolName, e);
         }
 
         return handle;
@@ -670,6 +674,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
 
         void onFailedTransfer(PooledEntry pEntry);
     }
+
 
     static final class PoolThreadThreadFactory implements ThreadFactory {
         private String thName;
@@ -716,6 +721,22 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
         }
 
         public final void beforeTransfer(PooledEntry pEntry) {
+        }
+    }
+
+    static final class NullReflectProxyFactory implements ReflectProxyFactory {
+        public final Object createProxyObject(PooledEntry pEntry, BeeObjectHandle objectHandle, List<String> excludeMethodNames) throws Exception {
+            return null;
+        }
+    }
+
+    final class InvocationProxyFactory implements ReflectProxyFactory {
+        public final Object createProxyObject(PooledEntry pEntry, BeeObjectHandle objectHandle, List<String> excludeMethodNames) throws Exception {
+            ReflectHandler reflectHandler = new ReflectHandler(pEntry, objectHandle, excludeMethodNames);
+            return Proxy.newProxyInstance(
+                    classLoader,
+                    objectInterfaces,
+                    reflectHandler);
         }
     }
 

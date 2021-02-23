@@ -28,21 +28,23 @@ import static java.lang.System.currentTimeMillis;
  * @version 1.0
  */
 class PooledEntry {
-    volatile int state;
     Object rawObject;
     Class rawObjectClass;
-    BeeObjectHandle beeObjectHandle;
+    volatile int state;
 
-    volatile long lastAccessTime;
-    private BeeObjectFactory objectFactory;
+    BeeObjectHandle objectHandle;//chang when object borrowed out
+    volatile long lastAccessTime;//read in pool
     private ObjectPool pool;
+    private BeeObjectFactory objectFactory;
 
-    public PooledEntry(Object object, int state, ObjectPool pool, BeeObjectFactory factory) {
+    public PooledEntry(Object rawObject, int state,
+                       ObjectPool pool,
+                       BeeObjectFactory objectFactory) {
         this.pool = pool;
         this.state = state;
-        this.rawObject = object;
-        this.rawObjectClass = object.getClass();
-        this.objectFactory = factory;
+        this.rawObject = rawObject;
+        this.rawObjectClass = rawObject.getClass();
+        this.objectFactory = objectFactory;
         this.lastAccessTime = currentTimeMillis();//first time
     }
 
@@ -56,7 +58,7 @@ class PooledEntry {
 
     final void recycleSelf() throws BeeObjectException {
         try {
-            beeObjectHandle = null;
+            objectHandle = null;
             objectFactory.reset(rawObject);
             pool.recycle(this);
         } catch (Exception e) {

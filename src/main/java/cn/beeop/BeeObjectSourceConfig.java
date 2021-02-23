@@ -25,6 +25,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 
@@ -87,10 +89,18 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     private String objectFactoryClassName;
     //object create properties
     private Properties createProperties = new Properties();
+    //exclude method names on raw object,which can't be called by user,for example;close,destroy,terminate
+    private List<String> excludeMethodNames = new ArrayList<>(3);
     //pool implementation class name
     private String poolImplementClassName = FastPool.class.getName();
     //indicator,whether register pool to jmx
     private boolean enableJmx;
+
+    public BeeObjectSourceConfig() {
+        excludeMethodNames.add("close");
+        excludeMethodNames.add("destroy");
+        excludeMethodNames.add("terminate");
+    }
 
     public String getUsername() {
         return username;
@@ -316,6 +326,18 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
     public Properties getCreateProperties() {
         return createProperties;
+    }
+
+    public List<String> getExcludeMethodNames() {
+        return excludeMethodNames;
+    }
+
+    public void addExcludeMethodName(String methodName) {
+        excludeMethodNames.add(methodName);
+    }
+
+    public void removeExcludeMethodName(String methodName) {
+        excludeMethodNames.remove(methodName);
     }
 
     @Override

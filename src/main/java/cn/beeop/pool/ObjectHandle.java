@@ -20,9 +20,9 @@ import cn.beeop.BeeObjectHandle;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.List;
 
-import static cn.beeop.pool.StaticCenter.ObjectMethodMap;
-import static cn.beeop.pool.StaticCenter.genMethodCacheKey;
+import static cn.beeop.pool.StaticCenter.*;
 
 /**
  * object Handle implement
@@ -31,19 +31,19 @@ import static cn.beeop.pool.StaticCenter.genMethodCacheKey;
  * @version 1.0
  */
 public final class ObjectHandle implements BeeObjectHandle {
-    protected Object rawObject;
+    private PooledEntry pEntry;//owner
+    private boolean isClosed;//handle state
+
+    private Object rawObject;
     private Class rawObjectClass;
-    private Object proxyObject;
+    private Object proxyReflectObject;
+    private List<String> excludeMethodNames;
 
-    private PooledEntry pEntry;
-    private boolean isClosed;
-
-    public ObjectHandle(PooledEntry pEntry) {
+    public ObjectHandle(PooledEntry pEntry, List<String> excludeMethodNames) {
         this.pEntry = pEntry;
-        pEntry.beeObjectHandle = this;
-
         this.rawObject = pEntry.rawObject;
         this.rawObjectClass = pEntry.rawObjectClass;
+        this.excludeMethodNames = excludeMethodNames;
     }
 
     public String toString() {
@@ -62,17 +62,20 @@ public final class ObjectHandle implements BeeObjectHandle {
         pEntry.recycleSelf();
     }
 
-    public Object getProxyObject() throws BeeObjectException {
-        return proxyObject;
+    public final Object getProxyObject() throws BeeObjectException {
+        if (isClosed) throw new BeeObjectException();
+        return proxyReflectObject;
     }
 
-    void setProxyObject(Object proxyObject) {
-        this.proxyObject = proxyObject;
+    void setProxyObject(Object proxyReflectObject) {
+        this.proxyReflectObject = proxyReflectObject;
     }
 
     public final Object call(String name, Class[] types, Object[] params) throws BeeObjectException {
         try {
-            if (isClosed) throw new BeeObjectException();
+            if (isClosed) throw ObjectClosedException;
+            if (excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
+
             Object key = genMethodCacheKey(name, types);
             Method method = ObjectMethodMap.get(key);
             if (method == null) {

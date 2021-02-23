@@ -16,7 +16,7 @@
 package cn.beeop;
 
 /**
- * raw object proxy handle interface
+ * object handle interface
  *
  * @author Chris.Liao
  * @version 1.0
@@ -39,8 +39,9 @@ public interface BeeObjectHandle {
     public boolean isClosed() throws BeeObjectException;
 
     /*
-     * @return raw proxy instance of invocation
+     *  return object reflection proxy to user,if 'objectInterfaces' not config,then return null
      *
+     * @return proxy instance
      * @throws BeeObjectException if access error occurs
      */
     public Object getProxyObject() throws BeeObjectException;
@@ -51,7 +52,7 @@ public interface BeeObjectHandle {
      * @param methodName  method name
      * @param paramTypes  method parameter types
      * @param paramValues method parameter values
-     * @return
+     * @return Invocation result of raw object
      * @throws BeeObjectException if access error occurs
      */
     public Object call(String methodName, Class[] paramTypes, Object[] paramValues) throws BeeObjectException;
