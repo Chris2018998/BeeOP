@@ -28,50 +28,65 @@ Maven坐标（Java7)
 
 ##### 范例
 
-```java
-class Book{
-   private String name;
-   private long number;
-   public Book(String name,long number){
-      this.name=name;
-      this.number=number;
-   }
-   pulbic long getName(){
-     return name;
-   }
-   pulbic String getNumber(){
-     return number;
-   }
+ ```java
+public interface Book {
+    public String getName();
+    public long getNumber();
+}
+public class JavaBook implements Book{
+    private String name;
+    private long number;
+    public JavaBook() {
+        this("Java核心技术·卷2", System.currentTimeMillis());
+    }
+    public JavaBook(String name, long number) {
+        this.name = name;
+        this.number = number;
+    }
+    public String getName() {
+        return name;
+    }
+    public long getNumber() {
+        return number;
+    }
+    public String toString() {
+        return name;
+    }
 }
 ```
  
 ```java
-class BookFactory implements ObjectFactory {
-     public Object create(Properties prop) throws ObjectException {
-         return new Book("Java核心技术·卷1",System.currentTimeMillis());
-     }
-    public void setDefault(Object obj) throws ObjectException {}
-    public void reset(Object obj) throws ObjectException {}
-    public void destroy(Object obj) {}
+public class JavaBookFactory implements BeeObjectFactory {
+    public Object create(Properties prop) throws BeeObjectException {
+        return new JavaBook("Java核心技术·卷1", System.currentTimeMillis());
+    }
+    public void setDefault(Object obj) throws BeeObjectException { }
+    public void reset(Object obj) throws BeeObjectException { }
+    public void destroy(Object obj) { }
     public boolean isAlive(Object obj, long timeout) {
         return true;
     }
- }
+}
  ```
  
  ```java
  public class TestBookPool{
    public static void main(String[]){
-     PoolConfig config = new PoolConfig();
-     config.setObjectFactory(new StringFactory());
-     config.setMaxActive(10);
-     config.setInitialSize(10);
-     config.setMaxWait(8000);
-     ObjectPool pool= new ObjectPool(config);
-     ProxyObject proxyObj= pool.getObject();
-     String name=(String)proxyObj.call("getName",new Class[0],new Object[0]);
-     proxyObj.close();
-   }
+       BeeObjectSourceConfig config = new BeeObjectSourceConfig();
+       config.setObjectFactory(new JavaBookFactory());
+       BeeObjectSource obs = new BeeObjectSource(config);
+       
+       BeeObjectHandle handle = null;
+       try {
+            handle = obs.getObject();
+            Object v=handle.call("getName");
+            System.out.println("Book name:"+v);
+        } catch (BeeObjectException e) {
+        } finally {
+            if (handle != null)
+                handle.close();
+        }
+     }
  }
  
 ```
