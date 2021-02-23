@@ -18,7 +18,7 @@ package cn.beeop.test.base;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.PoolMonitorVo;
-import cn.beeop.test.JavaBook;
+import cn.beeop.test.object.JavaBook;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 

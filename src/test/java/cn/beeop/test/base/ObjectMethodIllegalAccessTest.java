@@ -19,16 +19,18 @@ import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.test.object.JavaBookFactory;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
+import cn.beeop.test.object.Book;
+import cn.beeop.test.object.JavaBook;
 
-public class ObjectFactoryTest extends TestCase {
+public class ObjectMethodIllegalAccessTest extends TestCase {
     private BeeObjectSource obs;
 
     public void setUp() throws Throwable {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
-        config.setObjectFactory(new JavaBookFactory());
+        config.setObjectClass(JavaBook.class);
+        config.addExcludeMethodName("getName");
         obs = new BeeObjectSource(config);
     }
 
@@ -36,16 +38,39 @@ public class ObjectFactoryTest extends TestCase {
         obs.close();
     }
 
-    public void test() throws InterruptedException, Exception {
+    public void test1() throws InterruptedException, Exception {
         BeeObjectHandle handle = null;
         try {
             handle = obs.getObject();
-            if (handle == null)
-                TestUtil.assertError("Failed to get object");
+            test1(handle);
+            test2(handle);
         } catch (BeeObjectException e) {
         } finally {
             if (handle != null)
                 handle.close();
         }
     }
+
+    public void test1(BeeObjectHandle handle) throws InterruptedException, Exception {
+        try {
+            handle.call("getName",new Class[0],new Object[0]);
+            TestUtil.assertError("Object method illegal access test fail");
+        } catch (BeeObjectException e) {
+            System.out.println("Handle method illegal access test OK");
+        }
+    }
+
+    public void test2(BeeObjectHandle handle) throws InterruptedException, Exception {
+        try {
+            Book book=(Book) handle.getProxyObject();
+            System.out.println(book);
+
+            System.out.println(book.getName());
+            TestUtil.assertError("Object method illegal access test fail");
+        } catch (BeeObjectException e) {
+            System.out.println("Proxy method illegal access test OK");
+        }
+    }
+
+
 }
