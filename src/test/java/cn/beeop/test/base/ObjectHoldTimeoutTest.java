@@ -20,10 +20,14 @@ import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.PoolMonitorVo;
-import cn.beeop.test.object.JavaBook;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
+import cn.beeop.test.object.JavaBook;
 
+/**
+ * @author Chris.Liao
+ * @version 1.0
+ */
 public class ObjectHoldTimeoutTest extends TestCase {
     private BeeObjectSource obs;
 

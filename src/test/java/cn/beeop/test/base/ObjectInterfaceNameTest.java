@@ -19,10 +19,10 @@ import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.test.object.Book;
-import cn.beeop.test.object.JavaBookFactory;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
+import cn.beeop.test.object.Book;
+import cn.beeop.test.object.JavaBookFactory;
 
 /**
  * ObjectFactory subclass

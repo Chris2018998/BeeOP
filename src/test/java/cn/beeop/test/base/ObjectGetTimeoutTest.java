@@ -20,12 +20,16 @@ import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.ObjectHandle;
-import cn.beeop.test.object.JavaBook;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
+import cn.beeop.test.object.JavaBook;
 
 import java.util.concurrent.CountDownLatch;
 
+/**
+ * @author Chris.Liao
+ * @version 1.0
+ */
 public class ObjectGetTimeoutTest extends TestCase {
     private BeeObjectSource obs;
 

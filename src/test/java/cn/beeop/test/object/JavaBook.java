@@ -15,6 +15,10 @@
  */
 package cn.beeop.test.object;
 
+/**
+ * @author Chris.Liao
+ * @version 1.0
+ */
 public class JavaBook {
     private String name;
     private long number;

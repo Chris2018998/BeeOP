@@ -24,12 +24,19 @@ import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.Book;
 import cn.beeop.test.object.JavaBook;
 
+import java.lang.reflect.UndeclaredThrowableException;
+
+/**
+ * @author Chris.Liao
+ * @version 1.0
+ */
 public class ObjectMethodIllegalAccessTest extends TestCase {
     private BeeObjectSource obs;
 
     public void setUp() throws Throwable {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setObjectClass(JavaBook.class);
+        config.setObjectInterfaces(new Class[]{Book.class});
         config.addExcludeMethodName("getName");
         obs = new BeeObjectSource(config);
     }
@@ -38,7 +45,7 @@ public class ObjectMethodIllegalAccessTest extends TestCase {
         obs.close();
     }
 
-    public void test1() throws InterruptedException, Exception {
+    public void test() throws InterruptedException, Exception {
         BeeObjectHandle handle = null;
         try {
             handle = obs.getObject();
@@ -51,26 +58,25 @@ public class ObjectMethodIllegalAccessTest extends TestCase {
         }
     }
 
-    public void test1(BeeObjectHandle handle) throws InterruptedException, Exception {
+    public void test1(BeeObjectHandle handle) throws Exception {
         try {
-            handle.call("getName",new Class[0],new Object[0]);
+            handle.call("getName", new Class[0], new Object[0]);
             TestUtil.assertError("Object method illegal access test fail");
         } catch (BeeObjectException e) {
             System.out.println("Handle method illegal access test OK");
         }
     }
 
-    public void test2(BeeObjectHandle handle) throws InterruptedException, Exception {
+    public void test2(BeeObjectHandle handle) throws Exception {
         try {
-            Book book=(Book) handle.getProxyObject();
-            System.out.println(book);
-
+            Book book = (Book) handle.getProxyObject();
             System.out.println(book.getName());
-            TestUtil.assertError("Object method illegal access test fail");
-        } catch (BeeObjectException e) {
-            System.out.println("Proxy method illegal access test OK");
+            TestUtil.assertError("Proxy method illegal access test fail");
+        } catch (UndeclaredThrowableException e) {
+            if (e.getCause() instanceof BeeObjectException)
+                System.out.println("Proxy method illegal access test OK");
+            else
+                TestUtil.assertError("Proxy method illegal access test fail");
         }
     }
-
-
 }
