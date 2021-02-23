@@ -33,7 +33,7 @@ public interface Book {
     public String getName();
     public long getNumber();
 }
-public class JavaBook {
+public class JavaBook implements Book{
     private String name;
     private long number;
     public JavaBook() {
