@@ -35,4 +35,8 @@ public class JavaBook {
     public long getNumber() {
         return number;
     }
+
+    public String toString() {
+        return name;
+    }
 }

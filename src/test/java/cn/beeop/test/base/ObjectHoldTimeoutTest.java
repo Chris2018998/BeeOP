@@ -31,7 +31,7 @@ public class ObjectHoldTimeoutTest extends TestCase {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setInitialSize(0);
         config.setHoldTimeout(1000);// hold and not using connection;
-        config.setIdleCheckTimeInterval(1000L);// two seconds interval
+        config.setIdleCheckTimeInterval(1000L);//one second interval
         config.setDelayTimeForNextClear(1);
         config.setObjectClassName(JavaBook.class.getName());
         obs = new BeeObjectSource(config);
@@ -57,7 +57,9 @@ public class ObjectHoldTimeoutTest extends TestCase {
                 TestUtil.assertError("Using connections not as expected 0 after hold timeout");
 
             try {
-                handle.call("toString", new Class[0], new Object[0]);
+                Object v = handle.call("toString", new Class[0], new Object[0]);
+                System.out.println("handle isClosed:" + handle.isClosed());
+
                 TestUtil.assertError("must throw closed exception");
             } catch (BeeObjectException e) {
                 System.out.println(e);
