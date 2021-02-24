@@ -18,7 +18,7 @@ package cn.beeop;
 import java.util.Properties;
 
 /**
- * Class factory
+ * Object factory by class
  *
  * @author Chris.Liao
  * @version 1.0
