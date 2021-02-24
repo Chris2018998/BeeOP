@@ -132,6 +132,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     private final ObjectPool createPool(BeeObjectSourceConfig config) throws BeeObjectException {
         String poolImplementClassName = config.getPoolImplementClassName();
         if (isBlank(poolImplementClassName)) poolImplementClassName = FastPool.class.getName();
+
         try {
             Class<?> poolClass = Class.forName(poolImplementClassName, true, getClass().getClassLoader());
             if (ObjectPool.class.isAssignableFrom(poolClass)) {

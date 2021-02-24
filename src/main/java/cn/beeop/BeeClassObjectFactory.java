@@ -34,9 +34,7 @@ public class BeeClassObjectFactory implements BeeObjectFactory {
     public Object create(Properties prop) throws BeeObjectException {
         try {
             return objectClass.newInstance();
-        } catch (InstantiationException e) {
-            throw new BeeObjectException(e);
-        } catch (IllegalAccessException e) {
+        } catch (Throwable e) {
             throw new BeeObjectException(e);
         }
     }
