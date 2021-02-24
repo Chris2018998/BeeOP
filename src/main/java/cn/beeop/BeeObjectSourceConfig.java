@@ -15,8 +15,6 @@
  */
 package cn.beeop;
 
-import cn.beeop.pool.FastPool;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -92,7 +90,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //exclude method names on raw object,which can't be called by user,for example;close,destroy,terminate
     private List<String> excludeMethodNames = new ArrayList<>(3);
     //pool implementation class name
-    private String poolImplementClassName = FastPool.class.getName();
+    private String poolImplementClassName;
     //indicator,whether register pool to jmx
     private boolean enableJmx;
 
@@ -162,8 +160,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     public void setMaxActive(int maxActive) {
         if (maxActive > 0) {
             this.maxActive = maxActive;
-            if (maxActive > 1)
-                this.borrowSemaphoreSize = Math.min(maxActive / 2, Runtime.getRuntime().availableProcessors());
+            this.borrowSemaphoreSize = (maxActive > 1) ? Math.min(maxActive / 2, Runtime.getRuntime().availableProcessors()) : 1;
         }
     }
 
