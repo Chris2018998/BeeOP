@@ -39,7 +39,7 @@ public class JavaBookFactory implements BeeObjectFactory {
     public void destroy(Object obj) {
     }
 
-    public boolean isAlive(Object obj, long timeout) {
+    public boolean isAlive(Object obj, int timeout) {
         return true;
     }
 }

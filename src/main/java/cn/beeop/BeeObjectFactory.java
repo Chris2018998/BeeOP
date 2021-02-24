@@ -35,7 +35,7 @@ public interface BeeObjectFactory {
     public void reset(Object obj) throws BeeObjectException;
 
     //test raw object
-    public boolean isAlive(Object obj, long timeout);
+    public boolean isAlive(Object obj, int timeout);
 
     //destroy raw object on removed from pool
     public void destroy(Object obj);

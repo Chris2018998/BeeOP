@@ -55,7 +55,7 @@ public class BeeClassObjectFactory implements BeeObjectFactory {
     }
 
     //test object
-    public boolean isAlive(Object obj, long timeout) {
+    public boolean isAlive(Object obj, int timeout) {
         return true;
     }
 }
