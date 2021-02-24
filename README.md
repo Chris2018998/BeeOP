@@ -7,7 +7,7 @@ Maven artifactId(Java7)
 <dependency>
    <groupId>com.github.chris2018998</groupId>
    <artifactId>beeop</artifactId>
-   <version>0.6</version>
+   <version>0.7</version>
 </dependency>
 ```
 ---
@@ -63,7 +63,7 @@ public class JavaBookFactory implements BeeObjectFactory {
     public void setDefault(Object obj) throws BeeObjectException { }
     public void reset(Object obj) throws BeeObjectException { }
     public void destroy(Object obj) { }
-    public boolean isAlive(Object obj, long timeout) {
+    public boolean isAlive(Object obj, int timeout) {
         return true;
     }
 }
