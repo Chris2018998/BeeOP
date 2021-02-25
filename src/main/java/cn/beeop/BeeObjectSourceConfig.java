@@ -23,10 +23,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Properties;
+import java.util.*;
 
 import static cn.beeop.pool.StaticCenter.isBlank;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -360,17 +357,43 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     void copyTo(BeeObjectSourceConfig config) {
-        int modifiers;
+        //container type field
+        List<String>excludeMethodNameList=new ArrayList(4);
+        excludeMethodNameList.add("connectProperties");
+        excludeMethodNameList.add("excludeMethodNames");
+        excludeMethodNameList.add("objectInterfaces");
+        excludeMethodNameList.add("objectInterfaceNames");
+
+        //1:primitive type copy
         Field[] fields = BeeObjectSourceConfig.class.getDeclaredFields();
         for (Field field : fields) {
-            modifiers = field.getModifiers();
-            if (Modifier.isStatic(modifiers) || Modifier.isFinal(modifiers))
-                continue;
-            try {
-                field.set(config, field.get(this));
-            } catch (Exception e) {
-                throw new BeeObjectSourceConfigException("Failed to copy field[" + field.getName() + "]", e);
+            if(!excludeMethodNameList.contains(field.getName())){
+                try {
+                    field.set(config, field.get(this));
+                } catch(Exception e){
+                    throw new BeeObjectSourceConfigException("Failed to copy field[" + field.getName() + "]", e);
+                }
             }
+        }
+
+        //2:copy 'createProperties'
+        Iterator<Map.Entry<Object,Object>>iterator=createProperties.entrySet().iterator();
+        while(iterator.hasNext()){
+            Map.Entry<Object,Object>entry=iterator.next();
+            config.addCreateProperties((String)entry.getKey(),entry.getValue());
+        }
+        //3:copy 'excludeMethodNames'
+        Iterator<String>iterator2=excludeMethodNames.iterator();
+        while(iterator2.hasNext()){
+            config.addExcludeMethodName(iterator2.next());
+        }
+        //4:copy 'excludeMethodNames'
+        if(objectInterfaces!=null){
+            config.setObjectInterfaces(objectInterfaces);
+        }
+        //5:copy 'objectInterfaceNames'
+        if(objectInterfaceNames!=null){
+            config.setObjectInterfaceNames(objectInterfaceNames);
         }
     }
 
