@@ -85,7 +85,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //object create properties
     private Properties createProperties = new Properties();
     //exclude method names on raw object,which can't be called by user,for example;close,destroy,terminate
-    private List<String> excludeMethodNames = new ArrayList<>(3);
+    private Set<String> excludeMethodNames = new HashSet<>(3);
     //pool implementation class name
     private String poolImplementClassName;
     //indicator,whether register pool to jmx
@@ -268,29 +268,19 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public Class[] getObjectInterfaces() {
-        int len = (objectInterfaces != null) ? objectInterfaces.length : 0;
-        Class[] interfaces = new Class[len];
-        if (len > 0) System.arraycopy(objectInterfaces, 0, interfaces, 0, len);
-        return interfaces;
+        return objectInterfaces;
     }
 
     public void setObjectInterfaces(Class[] interfaces) {
-        int len = (interfaces != null) ? interfaces.length : 0;
-        this.objectInterfaces = new Class[len];
-        if (len > 0) System.arraycopy(interfaces, 0, objectInterfaces, 0, len);
+        objectInterfaces = interfaces;
     }
 
     public String[] getObjectInterfaceNames() {
-        int len = (objectInterfaceNames != null) ? objectInterfaceNames.length : 0;
-        String[] interfaceNames = new String[len];
-        if (len > 0) System.arraycopy(objectInterfaceNames, 0, interfaceNames, 0, len);
-        return interfaceNames;
+        return objectInterfaceNames;
     }
 
     public void setObjectInterfaceNames(String[] interfaceNames) {
-        int len = (interfaceNames != null) ? interfaceNames.length : 0;
-        this.objectInterfaceNames = new String[len];
-        if (len > 0) System.arraycopy(interfaceNames, 0, objectInterfaceNames, 0, len);
+        this.objectInterfaceNames = interfaceNames;
     }
 
     public BeeObjectFactory getObjectFactory() {
@@ -322,7 +312,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         return createProperties;
     }
 
-    public List<String> getExcludeMethodNames() {
+    public Set<String> getExcludeMethodNames() {
         return excludeMethodNames;
     }
 
@@ -358,8 +348,8 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
     void copyTo(BeeObjectSourceConfig config) {
         //container type field
-        List<String>excludeMethodNameList=new ArrayList(4);
-        excludeMethodNameList.add("connectProperties");
+        List<String> excludeMethodNameList = new ArrayList(4);
+        excludeMethodNameList.add("createProperties");
         excludeMethodNameList.add("excludeMethodNames");
         excludeMethodNameList.add("objectInterfaces");
         excludeMethodNameList.add("objectInterfaceNames");
@@ -367,34 +357,37 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         //1:primitive type copy
         Field[] fields = BeeObjectSourceConfig.class.getDeclaredFields();
         for (Field field : fields) {
-            if(!excludeMethodNameList.contains(field.getName())){
+            if (!excludeMethodNameList.contains(field.getName())) {
                 try {
                     field.set(config, field.get(this));
-                } catch(Exception e){
+                } catch (Exception e) {
                     throw new BeeObjectSourceConfigException("Failed to copy field[" + field.getName() + "]", e);
                 }
             }
         }
 
         //2:copy 'createProperties'
-        Iterator<Map.Entry<Object,Object>>iterator=createProperties.entrySet().iterator();
-        while(iterator.hasNext()){
-            Map.Entry<Object,Object>entry=iterator.next();
-            config.addCreateProperties((String)entry.getKey(),entry.getValue());
+        Iterator<Map.Entry<Object, Object>> iterator = createProperties.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Object, Object> entry = iterator.next();
+            config.addCreateProperties((String) entry.getKey(), entry.getValue());
         }
+
         //3:copy 'excludeMethodNames'
-        Iterator<String>iterator2=excludeMethodNames.iterator();
-        while(iterator2.hasNext()){
-            config.addExcludeMethodName(iterator2.next());
+        for (String methodName : excludeMethodNames) {
+            config.addExcludeMethodName(methodName);
         }
-        //4:copy 'excludeMethodNames'
-        if(objectInterfaces!=null){
-            config.setObjectInterfaces(objectInterfaces);
-        }
+        //4:copy 'objectInterfaces'
+        Class[] interfaces = (objectInterfaces == null) ? null : new Class[objectInterfaces.length];
+        if (interfaces != null)
+            System.arraycopy(objectInterfaces, 0, interfaces, 0, interfaces.length);
+        config.setObjectInterfaces(interfaces);
+
         //5:copy 'objectInterfaceNames'
-        if(objectInterfaceNames!=null){
-            config.setObjectInterfaceNames(objectInterfaceNames);
-        }
+        String[] interfaceNames = (objectInterfaceNames == null) ? null : new String[objectInterfaceNames.length];
+        if (interfaceNames != null)
+            System.arraycopy(objectInterfaceNames, 0, interfaceNames, 0, interfaceNames.length);
+        config.setObjectInterfaceNames(interfaceNames);
     }
 
     //check pool configuration
@@ -425,12 +418,18 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         configCopy.setObjectFactory(objectFactory);
         configCopy.setObjectInterfaces(objectInterfaces);
 
-        if (!isBlank(password))
+        if (!isBlank(password)) {
+            this.addCreateProperties("user", username);
             configCopy.addCreateProperties("user", username);
-        if (!isBlank(password))
+        }
+        if (!isBlank(password)) {
+            this.addCreateProperties("password", password);
             configCopy.addCreateProperties("password", password);
-        if (!isBlank(serverUrl))
+        }
+        if (!isBlank(serverUrl)) {
+            this.addCreateProperties("serverUrl", serverUrl);
             configCopy.addCreateProperties("serverUrl", serverUrl);
+        }
         return configCopy;
     }
 

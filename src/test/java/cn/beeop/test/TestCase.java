@@ -19,7 +19,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
- * Test case base
+ * Test case pool
  *
  * @author chris.liao
  */

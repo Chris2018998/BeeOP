@@ -17,7 +17,7 @@ package cn.beeop.pool;
 
 import cn.beeop.BeeObjectHandle;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * Proxy reflect handler factory
@@ -27,6 +27,6 @@ import java.util.List;
  */
 interface ReflectProxyFactory {
 
-    Object createProxyObject(PooledEntry pEntry, BeeObjectHandle objectHandle, List<String> excludeMethodNames) throws Exception;
+    Object createProxyObject(PooledEntry pEntry, BeeObjectHandle objectHandle, Set<String> excludeMethodNames) throws Exception;
 
 }

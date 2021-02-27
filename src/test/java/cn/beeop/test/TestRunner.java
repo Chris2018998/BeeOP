@@ -49,18 +49,16 @@ public class TestRunner {
 
             String pass1 = "true", pass2 = "Y";
             properties.load(propertiesStream);
-            Iterator<Map.Entry<Object, Object>> iterator = properties.entrySet().iterator();
-            while (iterator.hasNext()) {
-                Map.Entry entry = iterator.next();
-                String value = entry.getValue().toString();
+            Enumeration<Object> keys = properties.keys();
+            while (keys.hasMoreElements()) {
+                String key = (String) keys.nextElement();
+                String value = properties.getProperty(key);
                 if (pass1.equalsIgnoreCase(value) || pass2.equalsIgnoreCase(value)) {
-                    String key = entry.getKey().toString();
                     Class clazz = Class.forName(key);
                     classList.add(clazz);
                 }
             }
             return (Class[]) classList.toArray(new Class[0]);
-
         } finally {
             if (propertiesStream != null)
                 try {

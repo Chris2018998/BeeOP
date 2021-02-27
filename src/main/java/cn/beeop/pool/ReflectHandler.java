@@ -19,7 +19,7 @@ import cn.beeop.BeeObjectHandle;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.util.List;
+import java.util.Set;
 
 import static cn.beeop.pool.StaticCenter.ObjectClosedException;
 import static cn.beeop.pool.StaticCenter.ObjectMethodForbiddenException;
@@ -34,9 +34,9 @@ public final class ReflectHandler implements InvocationHandler {
     private PooledEntry pEntry;
     private Object rawObject;
     private BeeObjectHandle objectHandle;//owner
-    private List<String> excludeMethodNames;
+    private Set<String> excludeMethodNames;
 
-    public ReflectHandler(PooledEntry pEntry, BeeObjectHandle objectHandle, List<String> excludeMethodNames) {
+    public ReflectHandler(PooledEntry pEntry, BeeObjectHandle objectHandle, Set<String> excludeMethodNames) {
         this.pEntry = pEntry;
         this.rawObject = pEntry.rawObject;
 

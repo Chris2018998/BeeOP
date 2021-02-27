@@ -25,8 +25,8 @@ import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Proxy;
-import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -73,7 +73,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     private BeeObjectFactory objectFactory;
     private ReflectProxyFactory reflectProxyFactory;
     private Properties createProperties;
-    private List<String> excludeMethodNames;
+    private Set<String> excludeMethodNames;
 
     private PoolHook exitHook;
     private BeeObjectSourceConfig poolConfig;
@@ -114,7 +114,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
 
             createInitObjects(poolConfig.getInitialSize());
             objectInterfaces = poolConfig.getObjectInterfaces();
-            if (objectInterfaces.length > 0) {
+            if (objectInterfaces != null && objectInterfaces.length > 0) {
                 reflectProxyFactory = new InvocationProxyFactory();
             } else {
                 reflectProxyFactory = new NullReflectProxyFactory();
@@ -725,13 +725,13 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     }
 
     static final class NullReflectProxyFactory implements ReflectProxyFactory {
-        public final Object createProxyObject(PooledEntry pEntry, BeeObjectHandle objectHandle, List<String> excludeMethodNames) throws Exception {
+        public final Object createProxyObject(PooledEntry pEntry, BeeObjectHandle objectHandle, Set<String> excludeMethodNames) throws Exception {
             return null;
         }
     }
 
     final class InvocationProxyFactory implements ReflectProxyFactory {
-        public final Object createProxyObject(PooledEntry pEntry, BeeObjectHandle objectHandle, List<String> excludeMethodNames) throws Exception {
+        public final Object createProxyObject(PooledEntry pEntry, BeeObjectHandle objectHandle, Set<String> excludeMethodNames) throws Exception {
             ReflectHandler reflectHandler = new ReflectHandler(pEntry, objectHandle, excludeMethodNames);
             return Proxy.newProxyInstance(
                     classLoader,

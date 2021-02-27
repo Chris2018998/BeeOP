@@ -20,7 +20,7 @@ import cn.beeop.BeeObjectHandle;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.List;
+import java.util.Set;
 
 import static cn.beeop.pool.StaticCenter.*;
 
@@ -36,9 +36,9 @@ public final class ObjectHandle implements BeeObjectHandle {
     private Object rawObject;
     private Class rawObjectClass;
     private Object proxyReflectObject;
-    private List<String> excludeMethodNames;
+    private Set<String> excludeMethodNames;
 
-    public ObjectHandle(PooledEntry pEntry, List<String> excludeMethodNames) {
+    public ObjectHandle(PooledEntry pEntry, Set<String> excludeMethodNames) {
         this.pEntry = pEntry;
         this.rawObject = pEntry.rawObject;
         this.rawObjectClass = pEntry.rawObjectClass;
