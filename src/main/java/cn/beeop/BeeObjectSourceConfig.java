@@ -20,12 +20,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
-import static cn.beeop.pool.StaticCenter.isBlank;
+import static cn.beeop.pool.StaticCenter.*;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -300,11 +301,11 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         this.objectFactoryClassName = trimString(objectFactoryClassName);
     }
 
-    public void removeCreateProperties(String key) {
+    public void removeCreateProperty(String key) {
         createProperties.remove(key);
     }
 
-    public void addCreateProperties(String key, Object value) {
+    public void addCreateProperty(String key, Object value) {
         createProperties.put(key, value);
     }
 
@@ -370,7 +371,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         Iterator<Map.Entry<Object, Object>> iterator = createProperties.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<Object, Object> entry = iterator.next();
-            config.addCreateProperties((String) entry.getKey(), entry.getValue());
+            config.addCreateProperty((String) entry.getKey(), entry.getValue());
         }
 
         //3:copy 'excludeMethodNames'
@@ -419,16 +420,16 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         configCopy.setObjectInterfaces(objectInterfaces);
 
         if (!isBlank(password)) {
-            this.addCreateProperties("user", username);
-            configCopy.addCreateProperties("user", username);
+            this.addCreateProperty("user", username);
+            configCopy.addCreateProperty("user", username);
         }
         if (!isBlank(password)) {
-            this.addCreateProperties("password", password);
-            configCopy.addCreateProperties("password", password);
+            this.addCreateProperty("password", password);
+            configCopy.addCreateProperty("password", password);
         }
         if (!isBlank(serverUrl)) {
-            this.addCreateProperties("serverUrl", serverUrl);
-            configCopy.addCreateProperties("serverUrl", serverUrl);
+            this.addCreateProperty("serverUrl", serverUrl);
+            configCopy.addCreateProperty("serverUrl", serverUrl);
         }
         return configCopy;
     }
@@ -448,10 +449,96 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         InputStream stream = null;
         try {
             stream = Files.newInputStream(Paths.get(file.toURI()));
-            createProperties.clear();
-            createProperties.load(stream);
+            Properties configProperties = new Properties();
+            configProperties.load(stream);
+
+            List<String> excludeMethodNameList = new ArrayList(4);
+            excludeMethodNameList.add("excludeMethodNames");
+            excludeMethodNameList.add("objectInterfaceNames");
+            excludeMethodNameList.add("objectInterfaces");
+            excludeMethodNameList.add("createProperties");
+
+            //1:get all properties set methods
+            Map<String, Method> setMethodMap = getSetMethodMap(BeeObjectSourceConfig.class);
+            //2:create properties to collect config value
+            Map<String, Object> setValueMap = new HashMap<String, Object>(setMethodMap.size());
+            //3:loop to find out properties config value by set methods
+            Iterator<String> iterator = setMethodMap.keySet().iterator();
+            while (iterator.hasNext()) {
+                String propertyName = iterator.next();
+                if(excludeMethodNameList.contains(propertyName)) {
+                    String configVal = getConfigValue(configProperties, propertyName);
+                    if (isBlank(configVal)) continue;
+                    setValueMap.put(propertyName, configVal);
+                }
+            }
+            //4:inject found config value to ds config object
+            setPropertiesValue(this, setMethodMap, setValueMap);
+
+
+            //5:try to find 'excludeMethodNames' config value and put to ds config object
+            String excludeMethodNames = getConfigValue(configProperties, "excludeMethodNames");
+            if (!isBlank(excludeMethodNames)) {
+                String[] excludeMethodNameArray = excludeMethodNames.split(",");
+                for (String excludeMethodName : excludeMethodNameArray) {
+                    if (!isBlank(excludeMethodName)) {
+                        excludeMethodName=excludeMethodName.trim();
+                        this.addExcludeMethodName(excludeMethodName);
+                        commonLog.info("add excludeMethodName:{}",excludeMethodName);
+                    }
+                }
+            }
+
+            //6:try to find 'excludeMethodNames' config value and put to ds config object
+            String objectInterfaceNames = getConfigValue(configProperties, "objectInterfaceNames");
+            if (!isBlank(objectInterfaceNames))
+                this.setObjectInterfaceNames(objectInterfaceNames.split(","));
+
+            //7:try to find 'excludeMethodNames' config value and put to ds config object
+            String objectInterfaceNames2 = getConfigValue(configProperties, "objectInterfaces");
+            if (!isBlank(objectInterfaceNames2)) {
+                String[] objectInterfaceNameArray = objectInterfaceNames2.split(",");
+                Class[]objectInterfaces = new Class[objectInterfaceNameArray.length];
+                for (int i=0,l=objectInterfaceNameArray.length;i<l;i++) {
+                    try {
+                        objectInterfaces[i] = Class.forName(objectInterfaceNameArray[i]);
+                    }catch(ClassNotFoundException e){
+                        throw new BeeObjectSourceConfigException("Class not found:"+objectInterfaceNameArray[i]);
+                    }
+                }
+                this.setObjectInterfaces(objectInterfaces);
+            }
+            //8:try to find 'createProperties' config value and put to ds config object
+            String connectPropVal = getConfigValue(configProperties, "createProperties");
+            if (!isBlank(connectPropVal)) {
+                String[] attributeArray = connectPropVal.split("&");
+                for (String attribute : attributeArray) {
+                    String[] pairs = attribute.split("=");
+                    if (pairs.length == 2) {
+                        this.addCreateProperty(pairs[0].trim(), pairs[1].trim());
+                        commonLog.info("beeop.createProperties.{}={}", pairs[0].trim(), pairs[1].trim());
+                    }
+                }
+            }
         } finally {
             if (stream != null) stream.close();
+        }
+    }
+    private final String getConfigValue(Properties configProperties,String propertyName) {
+        String value = readConfig(configProperties, propertyName);
+        if (isBlank(value))
+            value = readConfig(configProperties, propertyNameToFieldId(propertyName, OS_Config_Prop_Separator_MiddleLine));
+        if (isBlank(value))
+            value = readConfig(configProperties, propertyNameToFieldId(propertyName, OS_Config_Prop_Separator_UnderLine));
+        return value;
+    }
+    private final String readConfig(Properties configProperties, String propertyName) {
+        String value = configProperties.getProperty(propertyName);
+        if (!isBlank(value)) {
+            commonLog.info("beeop.{}={}", propertyName, value);
+            return value.trim();
+        }else{
+            return null;
         }
     }
 
