@@ -97,6 +97,9 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         excludeMethodNames.add("destroy");
         excludeMethodNames.add("terminate");
     }
+    public BeeObjectSourceConfig(File propertiesFile){ this();this.loadFromPropertiesFile(propertiesFile); }
+    public BeeObjectSourceConfig(String propertiesFileName){this(); this.loadFromPropertiesFile(propertiesFileName);}
+    public BeeObjectSourceConfig(Properties configProperties){this();this.loadFromProperties(configProperties); }
 
     public String getUsername() {
         return username;
@@ -434,96 +437,101 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         return configCopy;
     }
 
-    public void loadPropertiesFile(String filename) throws IOException {
-        if (isBlank(filename)) throw new IOException("Properties file can't be null");
-        loadPropertiesFile(new File(filename));
+    public void loadFromPropertiesFile(String filename) {
+        if (isBlank(filename)) throw new BeeObjectSourceConfigException("Properties file can't be null");
+        loadFromPropertiesFile(new File(filename));
     }
-
-    public void loadPropertiesFile(File file) throws IOException {
-        if (file == null) throw new IOException("Properties file can't be null");
-        if (!file.exists()) throw new FileNotFoundException(file.getAbsolutePath());
-        if (!file.isFile()) throw new IOException("Target object is not a valid file");
+    public void loadFromPropertiesFile(File file)  {
+        if (file == null) throw new BeeObjectSourceConfigException("Properties file can't be null");
+        if (!file.exists()) throw new BeeObjectSourceConfigException(file.getAbsolutePath());
+        if (!file.isFile()) throw new BeeObjectSourceConfigException("Target object is not a valid file");
         if (!file.getAbsolutePath().toLowerCase(Locale.US).endsWith(".properties"))
-            throw new IOException("Target file is not a properties file");
+            throw new BeeObjectSourceConfigException("Target file is not a properties file");
 
         InputStream stream = null;
         try {
             stream = Files.newInputStream(Paths.get(file.toURI()));
             Properties configProperties = new Properties();
             configProperties.load(stream);
-
-            List<String> excludeMethodNameList = new ArrayList(4);
-            excludeMethodNameList.add("excludeMethodNames");
-            excludeMethodNameList.add("objectInterfaceNames");
-            excludeMethodNameList.add("objectInterfaces");
-            excludeMethodNameList.add("createProperties");
-
-            //1:get all properties set methods
-            Map<String, Method> setMethodMap = getSetMethodMap(BeeObjectSourceConfig.class);
-            //2:create properties to collect config value
-            Map<String, Object> setValueMap = new HashMap<String, Object>(setMethodMap.size());
-            //3:loop to find out properties config value by set methods
-            Iterator<String> iterator = setMethodMap.keySet().iterator();
-            while (iterator.hasNext()) {
-                String propertyName = iterator.next();
-                if(excludeMethodNameList.contains(propertyName)) {
-                    String configVal = getConfigValue(configProperties, propertyName);
-                    if (isBlank(configVal)) continue;
-                    setValueMap.put(propertyName, configVal);
-                }
-            }
-            //4:inject found config value to ds config object
-            setPropertiesValue(this, setMethodMap, setValueMap);
-
-
-            //5:try to find 'excludeMethodNames' config value and put to ds config object
-            String excludeMethodNames = getConfigValue(configProperties, "excludeMethodNames");
-            if (!isBlank(excludeMethodNames)) {
-                String[] excludeMethodNameArray = excludeMethodNames.split(",");
-                for (String excludeMethodName : excludeMethodNameArray) {
-                    if (!isBlank(excludeMethodName)) {
-                        excludeMethodName=excludeMethodName.trim();
-                        this.addExcludeMethodName(excludeMethodName);
-                        commonLog.info("add excludeMethodName:{}",excludeMethodName);
-                    }
-                }
-            }
-
-            //6:try to find 'excludeMethodNames' config value and put to ds config object
-            String objectInterfaceNames = getConfigValue(configProperties, "objectInterfaceNames");
-            if (!isBlank(objectInterfaceNames))
-                this.setObjectInterfaceNames(objectInterfaceNames.split(","));
-
-            //7:try to find 'excludeMethodNames' config value and put to ds config object
-            String objectInterfaceNames2 = getConfigValue(configProperties, "objectInterfaces");
-            if (!isBlank(objectInterfaceNames2)) {
-                String[] objectInterfaceNameArray = objectInterfaceNames2.split(",");
-                Class[]objectInterfaces = new Class[objectInterfaceNameArray.length];
-                for (int i=0,l=objectInterfaceNameArray.length;i<l;i++) {
-                    try {
-                        objectInterfaces[i] = Class.forName(objectInterfaceNameArray[i]);
-                    }catch(ClassNotFoundException e){
-                        throw new BeeObjectSourceConfigException("Class not found:"+objectInterfaceNameArray[i]);
-                    }
-                }
-                this.setObjectInterfaces(objectInterfaces);
-            }
-            //8:try to find 'createProperties' config value and put to ds config object
-            String connectPropVal = getConfigValue(configProperties, "createProperties");
-            if (!isBlank(connectPropVal)) {
-                String[] attributeArray = connectPropVal.split("&");
-                for (String attribute : attributeArray) {
-                    String[] pairs = attribute.split("=");
-                    if (pairs.length == 2) {
-                        this.addCreateProperty(pairs[0].trim(), pairs[1].trim());
-                        commonLog.info("beeop.createProperties.{}={}", pairs[0].trim(), pairs[1].trim());
-                    }
-                }
-            }
+            loadFromProperties(configProperties);
+        }catch(Throwable e){
+            throw new BeeObjectSourceConfigException("Failed to load properties file:",e);
         } finally {
-            if (stream != null) stream.close();
+            if (stream != null)try{ stream.close();}catch(Throwable e){}
         }
     }
+
+    public void loadFromProperties(Properties configProperties){
+        List<String> excludeMethodNameList = new ArrayList(4);
+        excludeMethodNameList.add("excludeMethodNames");
+        excludeMethodNameList.add("objectInterfaceNames");
+        excludeMethodNameList.add("objectInterfaces");
+        excludeMethodNameList.add("createProperties");
+
+        //1:get all properties set methods
+        Map<String, Method> setMethodMap = getSetMethodMap(BeeObjectSourceConfig.class);
+        //2:create properties to collect config value
+        Map<String, Object> setValueMap = new HashMap<String, Object>(setMethodMap.size());
+        //3:loop to find out properties config value by set methods
+        Iterator<String> iterator = setMethodMap.keySet().iterator();
+        while (iterator.hasNext()) {
+            String propertyName = iterator.next();
+            if(excludeMethodNameList.contains(propertyName)) {
+                String configVal = getConfigValue(configProperties, propertyName);
+                if (isBlank(configVal)) continue;
+                setValueMap.put(propertyName, configVal);
+            }
+        }
+        //4:inject found config value to ds config object
+        setPropertiesValue(this, setMethodMap, setValueMap);
+
+
+        //5:try to find 'excludeMethodNames' config value and put to ds config object
+        String excludeMethodNames = getConfigValue(configProperties, "excludeMethodNames");
+        if (!isBlank(excludeMethodNames)) {
+            String[] excludeMethodNameArray = excludeMethodNames.split(",");
+            for (String excludeMethodName : excludeMethodNameArray) {
+                if (!isBlank(excludeMethodName)) {
+                    excludeMethodName=excludeMethodName.trim();
+                    this.addExcludeMethodName(excludeMethodName);
+                    commonLog.info("add excludeMethodName:{}",excludeMethodName);
+                }
+            }
+        }
+
+        //6:try to find 'excludeMethodNames' config value and put to ds config object
+        String objectInterfaceNames = getConfigValue(configProperties, "objectInterfaceNames");
+        if (!isBlank(objectInterfaceNames))
+            this.setObjectInterfaceNames(objectInterfaceNames.split(","));
+
+        //7:try to find 'excludeMethodNames' config value and put to ds config object
+        String objectInterfaceNames2 = getConfigValue(configProperties, "objectInterfaces");
+        if (!isBlank(objectInterfaceNames2)) {
+            String[] objectInterfaceNameArray = objectInterfaceNames2.split(",");
+            Class[]objectInterfaces = new Class[objectInterfaceNameArray.length];
+            for (int i=0,l=objectInterfaceNameArray.length;i<l;i++) {
+                try {
+                    objectInterfaces[i] = Class.forName(objectInterfaceNameArray[i]);
+                }catch(ClassNotFoundException e){
+                    throw new BeeObjectSourceConfigException("Class not found:"+objectInterfaceNameArray[i]);
+                }
+            }
+            this.setObjectInterfaces(objectInterfaces);
+        }
+        //8:try to find 'createProperties' config value and put to ds config object
+        String connectPropVal = getConfigValue(configProperties, "createProperties");
+        if (!isBlank(connectPropVal)) {
+            String[] attributeArray = connectPropVal.split("&");
+            for (String attribute : attributeArray) {
+                String[] pairs = attribute.split("=");
+                if (pairs.length == 2) {
+                    this.addCreateProperty(pairs[0].trim(), pairs[1].trim());
+                    commonLog.info("beeop.createProperties.{}={}", pairs[0].trim(), pairs[1].trim());
+                }
+            }
+        }
+    }
+
     private final String getConfigValue(Properties configProperties,String propertyName) {
         String value = readConfig(configProperties, propertyName);
         if (isBlank(value))
