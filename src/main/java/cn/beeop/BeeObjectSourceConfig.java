@@ -462,6 +462,8 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void loadFromProperties(Properties configProperties){
+        if (configProperties == null || configProperties.isEmpty()) throw new BeeObjectSourceConfigException("Properties can't be null or empty");
+
         List<String> excludeMethodNameList = new ArrayList(4);
         excludeMethodNameList.add("excludeMethodNames");
         excludeMethodNameList.add("objectInterfaceNames");
