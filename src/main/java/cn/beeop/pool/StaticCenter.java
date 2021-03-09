@@ -210,7 +210,12 @@ public class StaticCenter {
             return new BigInteger(text);
         } else if (type == BigDecimal.class) {
             return new BigDecimal(text);
-        } else {
+        } else if(type.isArray()){
+            String[]elements=text.split(",");
+            /**
+             * @todo
+             */
+        } else{
             try {
                 Object objInstance = Class.forName(text).newInstance();
                 if (!type.isInstance(objInstance))
@@ -226,8 +231,6 @@ public class StaticCenter {
             }
         }
     }
-    
-    
 }
 
 
