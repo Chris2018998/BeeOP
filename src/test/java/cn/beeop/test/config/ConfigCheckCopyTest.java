@@ -70,7 +70,5 @@ public class ConfigCheckCopyTest extends TestCase {
     private void testContainerField(BeeObjectSourceConfig config, BeeObjectSourceConfig config2, String propertyName) throws Exception {
         Field field = BeeObjectSourceConfig.class.getDeclaredField(propertyName);
         field.setAccessible(true);
-
-
     }
 }
