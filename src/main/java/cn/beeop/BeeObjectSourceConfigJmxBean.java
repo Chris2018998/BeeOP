@@ -16,7 +16,7 @@
 package cn.beeop;
 
 /**
- * Bee DataSourceConfig JMX Bean interface
+ * Bee Object SourceConfig JMX Bean interface
  *
  * @author Chris.Liao
  * @version 1.0

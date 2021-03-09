@@ -35,6 +35,7 @@ public class PropertiesFileLoadTest extends TestCase {
 
         BeeObjectSourceConfig testConfig = new BeeObjectSourceConfig();
         testConfig.loadFromPropertiesFile(url.getFile());
+
         if(!"root".equals(testConfig.getUsername()))throw new BeeObjectSourceConfigException("username error");
         if(!"root".equals(testConfig.getPassword()))throw new BeeObjectSourceConfigException("password error");
         if(!"http://www.xxx".equals(testConfig.getServerUrl()))throw new BeeObjectSourceConfigException("jdbcUrl error");
@@ -54,12 +55,11 @@ public class PropertiesFileLoadTest extends TestCase {
         if(testConfig.getDelayTimeForNextClear()!=3000)throw new BeeObjectSourceConfigException("delayTimeForNextClear error");
 
         if(!"cn.beeop.test.object.JavaBook".equals(testConfig.getObjectClassName()))throw new BeeObjectSourceConfigException("objectClassName error");
-        if(!"cn.beeop.test.object.JavaBook".equals(testConfig.getObjectClass().getClass().getName()))throw new BeeObjectSourceConfigException("objectClass error");
+        //if(!"cn.beeop.test.object.JavaBook".equals(testConfig.getObjectClass().getClass().getName()))throw new BeeObjectSourceConfigException("objectClass error");
         if(!"cn.beeop.test.object.JavaBookFactory".equals(testConfig.getObjectFactoryClassName()))throw new BeeObjectSourceConfigException("objectFactoryClassName error");
         if(!"cn.beeop.test.object.JavaBookFactory".equals(testConfig.getObjectFactory().getClass().getName()))throw new BeeObjectSourceConfigException("objectFactory error");
         if(!"cn.beeop.pool.FastPool".equals(testConfig.getPoolImplementClassName()))throw new BeeObjectSourceConfigException("xaConnectionFactoryClassName error");
         if(!testConfig.isEnableJmx())throw new BeeObjectSourceConfigException("enableJmx error");
-
 
         Field connectPropertiesField = BeeObjectSourceConfig.class.getDeclaredField("createProperties");
         connectPropertiesField.setAccessible(true);

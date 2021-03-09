@@ -495,15 +495,15 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         Iterator<String> iterator = setMethodMap.keySet().iterator();
         while (iterator.hasNext()) {
             String propertyName = iterator.next();
-            if (excludeMethodNameList.contains(propertyName)) {
+            if (!excludeMethodNameList.contains(propertyName)) {
                 String configVal = getConfigValue(configProperties, propertyName);
                 if (isBlank(configVal)) continue;
                 setValueMap.put(propertyName, configVal);
             }
         }
+
         //4:inject found config value to ds config object
         setPropertiesValue(this, setMethodMap, setValueMap);
-
 
         //5:try to find 'excludeMethodNames' config value and put to ds config object
         String excludeMethodNames = getConfigValue(configProperties, "excludeMethodNames");

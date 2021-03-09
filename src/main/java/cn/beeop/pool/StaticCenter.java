@@ -127,6 +127,8 @@ public class StaticCenter {
             if (setMethod != null && setValue != null) {
                 Object value = null;
                 Class type = setMethod.getParameterTypes()[0];
+                if(type.isArray() ||Collection.class.isAssignableFrom(type) || Map.class.isAssignableFrom(type))//exclude container type properties
+                     continue;
 
                 try {//1:convert config value to match type of set method
                     value = convert(propertyName, setValue, type);
@@ -210,11 +212,18 @@ public class StaticCenter {
             return new BigInteger(text);
         } else if (type == BigDecimal.class) {
             return new BigDecimal(text);
-        } else if(type.isArray()){
-            String[]elements=text.split(",");
-            /**
-             * @todo
-             */
+        } else if (type == Class.class) {
+            try {
+                 return  Class.forName(text);
+            } catch (ClassNotFoundException e) {
+                throw new BeeObjectSourceConfigException("Not found class:" + text);
+            }
+        } else if(type.isArray()){//do nothing
+            return text;
+        } else if(Collection.class.isAssignableFrom(type)){//do nothing
+            return text;
+        } else if(Map.class.isAssignableFrom(type)) {//do nothing
+            return text;
         } else{
             try {
                 Object objInstance = Class.forName(text).newInstance();
