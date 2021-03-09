@@ -16,8 +16,6 @@
 package cn.beeop;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -97,9 +95,21 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         excludeMethodNames.add("destroy");
         excludeMethodNames.add("terminate");
     }
-    public BeeObjectSourceConfig(File propertiesFile){ this();this.loadFromPropertiesFile(propertiesFile); }
-    public BeeObjectSourceConfig(String propertiesFileName){this(); this.loadFromPropertiesFile(propertiesFileName);}
-    public BeeObjectSourceConfig(Properties configProperties){this();this.loadFromProperties(configProperties); }
+
+    public BeeObjectSourceConfig(File propertiesFile) {
+        this();
+        this.loadFromPropertiesFile(propertiesFile);
+    }
+
+    public BeeObjectSourceConfig(String propertiesFileName) {
+        this();
+        this.loadFromPropertiesFile(propertiesFileName);
+    }
+
+    public BeeObjectSourceConfig(Properties configProperties) {
+        this();
+        this.loadFromProperties(configProperties);
+    }
 
     public String getUsername() {
         return username;
@@ -438,15 +448,16 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void loadFromPropertiesFile(String filename) {
-        if (isBlank(filename)) throw new BeeObjectSourceConfigException("Properties file can't be null");
+        if (isBlank(filename)) throw new IllegalArgumentException("Properties file can't be null");
         loadFromPropertiesFile(new File(filename));
     }
-    public void loadFromPropertiesFile(File file)  {
-        if (file == null) throw new BeeObjectSourceConfigException("Properties file can't be null");
-        if (!file.exists()) throw new BeeObjectSourceConfigException(file.getAbsolutePath());
-        if (!file.isFile()) throw new BeeObjectSourceConfigException("Target object is not a valid file");
+
+    public void loadFromPropertiesFile(File file) {
+        if (file == null) throw new IllegalArgumentException("Properties file can't be null");
+        if (!file.exists()) throw new IllegalArgumentException(file.getAbsolutePath());
+        if (!file.isFile()) throw new IllegalArgumentException("Target object is not a valid file");
         if (!file.getAbsolutePath().toLowerCase(Locale.US).endsWith(".properties"))
-            throw new BeeObjectSourceConfigException("Target file is not a properties file");
+            throw new IllegalArgumentException("Target file is not a properties file");
 
         InputStream stream = null;
         try {
@@ -454,15 +465,21 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             Properties configProperties = new Properties();
             configProperties.load(stream);
             loadFromProperties(configProperties);
-        }catch(Throwable e){
-            throw new BeeObjectSourceConfigException("Failed to load properties file:",e);
+        } catch (BeeObjectSourceConfigException e) {
+            throw (BeeObjectSourceConfigException) e;
+        } catch (Throwable e) {
+            throw new IllegalArgumentException("Failed to load properties file:", e);
         } finally {
-            if (stream != null)try{ stream.close();}catch(Throwable e){}
+            if (stream != null) try {
+                stream.close();
+            } catch (Throwable e) {
+            }
         }
     }
 
-    public void loadFromProperties(Properties configProperties){
-        if (configProperties == null || configProperties.isEmpty()) throw new BeeObjectSourceConfigException("Properties can't be null or empty");
+    public void loadFromProperties(Properties configProperties) {
+        if (configProperties == null || configProperties.isEmpty())
+            throw new IllegalArgumentException("Properties can't be null or empty");
 
         List<String> excludeMethodNameList = new ArrayList(4);
         excludeMethodNameList.add("excludeMethodNames");
@@ -478,7 +495,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         Iterator<String> iterator = setMethodMap.keySet().iterator();
         while (iterator.hasNext()) {
             String propertyName = iterator.next();
-            if(excludeMethodNameList.contains(propertyName)) {
+            if (excludeMethodNameList.contains(propertyName)) {
                 String configVal = getConfigValue(configProperties, propertyName);
                 if (isBlank(configVal)) continue;
                 setValueMap.put(propertyName, configVal);
@@ -494,9 +511,9 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             String[] excludeMethodNameArray = excludeMethodNames.split(",");
             for (String excludeMethodName : excludeMethodNameArray) {
                 if (!isBlank(excludeMethodName)) {
-                    excludeMethodName=excludeMethodName.trim();
+                    excludeMethodName = excludeMethodName.trim();
                     this.addExcludeMethodName(excludeMethodName);
-                    commonLog.info("add excludeMethodName:{}",excludeMethodName);
+                    commonLog.info("add excludeMethodName:{}", excludeMethodName);
                 }
             }
         }
@@ -510,12 +527,12 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         String objectInterfaceNames2 = getConfigValue(configProperties, "objectInterfaces");
         if (!isBlank(objectInterfaceNames2)) {
             String[] objectInterfaceNameArray = objectInterfaceNames2.split(",");
-            Class[]objectInterfaces = new Class[objectInterfaceNameArray.length];
-            for (int i=0,l=objectInterfaceNameArray.length;i<l;i++) {
+            Class[] objectInterfaces = new Class[objectInterfaceNameArray.length];
+            for (int i = 0, l = objectInterfaceNameArray.length; i < l; i++) {
                 try {
                     objectInterfaces[i] = Class.forName(objectInterfaceNameArray[i]);
-                }catch(ClassNotFoundException e){
-                    throw new BeeObjectSourceConfigException("Class not found:"+objectInterfaceNameArray[i]);
+                } catch (ClassNotFoundException e) {
+                    throw new BeeObjectSourceConfigException("Class not found:" + objectInterfaceNameArray[i]);
                 }
             }
             this.setObjectInterfaces(objectInterfaces);
@@ -534,7 +551,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         }
     }
 
-    private final String getConfigValue(Properties configProperties,String propertyName) {
+    private final String getConfigValue(Properties configProperties, String propertyName) {
         String value = readConfig(configProperties, propertyName);
         if (isBlank(value))
             value = readConfig(configProperties, propertyNameToFieldId(propertyName, OS_Config_Prop_Separator_MiddleLine));
@@ -542,12 +559,13 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             value = readConfig(configProperties, propertyNameToFieldId(propertyName, OS_Config_Prop_Separator_UnderLine));
         return value;
     }
+
     private final String readConfig(Properties configProperties, String propertyName) {
         String value = configProperties.getProperty(propertyName);
         if (!isBlank(value)) {
             commonLog.info("beeop.{}={}", propertyName, value);
             return value.trim();
-        }else{
+        } else {
             return null;
         }
     }
