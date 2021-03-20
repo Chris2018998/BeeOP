@@ -60,7 +60,7 @@ public class StaticCenter {
     public static final Logger commonLog = LoggerFactory.getLogger(StaticCenter.class);
     public static final String OS_Config_Prop_Separator_MiddleLine = "-";
     public static final String OS_Config_Prop_Separator_UnderLine = "_";
-    static final ConcurrentHashMap<Object, Method> ObjectMethodMap = new ConcurrentHashMap<Object, Method>();
+    static final ConcurrentHashMap<Object, Method> ObjectMethodMap = new ConcurrentHashMap<Object, Method>(16);
     static final Object genMethodCacheKey(String name, Class[] types) {
         return new MethodKey(name, types);
     }
@@ -99,7 +99,7 @@ public class StaticCenter {
 
         @Override
         public int hashCode() {
-            int result = Objects.hash(name);
+            int result = name.hashCode();
             result = 31 * result + Arrays.hashCode(types);
             return result;
         }
@@ -155,7 +155,7 @@ public class StaticCenter {
     }
 
     public static final Map<String, Method> getSetMethodMap(Class beanClass) {
-        HashMap<String, Method> methodMap = new LinkedHashMap<String, Method>();
+        HashMap<String, Method> methodMap = new LinkedHashMap<String, Method>(32);
         Method[] methods = beanClass.getMethods();
         for (Method method : methods) {
             String methodName = method.getName();
@@ -173,7 +173,7 @@ public class StaticCenter {
         StringBuilder sb = new StringBuilder(chars.length);
         for (char c : chars) {
             if (Character.isUpperCase(c)) {
-                sb.append(separator + Character.toLowerCase(c));
+                sb.append(separator).append(Character.toLowerCase(c));
             } else {
                 sb.append(c);
             }

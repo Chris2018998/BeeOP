@@ -536,7 +536,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
         }
     }
 
-    private final void tryClosedProxyHandle(BeeObjectHandle handle) {
+    private static final void tryClosedProxyHandle(BeeObjectHandle handle) {
         try {
             handle.close();
         } catch (BeeObjectException e) {
