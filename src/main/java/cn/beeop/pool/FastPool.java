@@ -25,6 +25,7 @@ import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Proxy;
+import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.*;
@@ -382,7 +383,9 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     public final void recycle(PooledEntry pEntry) {
         transferPolicy.beforeTransfer(pEntry);
 
-        for (Borrower borrower : waitQueue)
+        Iterator<Borrower> iterator = waitQueue.iterator();
+        while (iterator.hasNext()) {
+            Borrower borrower = iterator.next();
             for (Object state = borrower.state; state == BORROWER_NORMAL || state == BORROWER_WAITING; state = borrower.state) {
                 if (pEntry.state - this.entryUnCatchStateCode != 0) return;
                 if (BwrStUpd.compareAndSet(borrower, state, pEntry)) {
@@ -391,6 +394,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                     return;
                 }
             }
+        }
         transferPolicy.onFailedTransfer(pEntry);
     }
 
@@ -398,13 +402,16 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
      * @param exception: transfer Exception to waiter
      */
     private void transferException(BeeObjectException exception) {
-        for (Borrower borrower : waitQueue)
+        Iterator<Borrower> iterator = waitQueue.iterator();
+        while (iterator.hasNext()) {
+            Borrower borrower = iterator.next();
             for (Object state = borrower.state; state == BORROWER_NORMAL || state == BORROWER_WAITING; state = borrower.state) {
                 if (BwrStUpd.compareAndSet(borrower, state, exception)) {//transfer successful
                     if (state == BORROWER_WAITING) unpark(borrower.thread);
                     return;
                 }
             }
+        }
     }
 
     /**
