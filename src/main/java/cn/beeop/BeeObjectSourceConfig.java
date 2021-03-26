@@ -97,17 +97,14 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public BeeObjectSourceConfig(File propertiesFile) {
-        this();
         this.loadFromPropertiesFile(propertiesFile);
     }
 
     public BeeObjectSourceConfig(String propertiesFileName) {
-        this();
         this.loadFromPropertiesFile(propertiesFileName);
     }
 
     public BeeObjectSourceConfig(Properties configProperties) {
-        this();
         this.loadFromProperties(configProperties);
     }
 
