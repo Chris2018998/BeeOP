@@ -382,19 +382,24 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
      */
     public final void recycle(PooledEntry pEntry) {
         transferPolicy.beforeTransfer(pEntry);
-
         Iterator<Borrower> iterator = waitQueue.iterator();
+
         while (iterator.hasNext()) {
             Borrower borrower = iterator.next();
-            for (Object state = borrower.state; state == BORROWER_NORMAL || state == BORROWER_WAITING; state = borrower.state) {
-                if (pEntry.state - this.entryUnCatchStateCode != 0) return;
-                if (BwrStUpd.compareAndSet(borrower, state, pEntry)) {
-                    if (state == BORROWER_WAITING)
-                        unpark(borrower.thread);
+            do {
+                //pooledEntry has hold by another thread
+                if (pEntry.state != entryUnCatchStateCode) return;
+
+                Object state = borrower.state;
+                //current waiter has received one pooledEntry or timeout
+                if (!(state instanceof BorrowerState)) break;
+                if (BwrStUpd.compareAndSet(borrower, state, pEntry)) {//transfer successful
+                    if (BORROWER_WAITING == state) unpark(borrower.thread);
                     return;
                 }
-            }
-        }
+            } while (true);
+        }//first while loop
+
         transferPolicy.onFailedTransfer(pEntry);
     }
 
@@ -405,13 +410,16 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
         Iterator<Borrower> iterator = waitQueue.iterator();
         while (iterator.hasNext()) {
             Borrower borrower = iterator.next();
-            for (Object state = borrower.state; state == BORROWER_NORMAL || state == BORROWER_WAITING; state = borrower.state) {
+            do {
+                Object state = borrower.state;
+                //current waiter has received one pooledConnection or timeout
+                if (!(state instanceof BorrowerState)) break;
                 if (BwrStUpd.compareAndSet(borrower, state, exception)) {//transfer successful
-                    if (state == BORROWER_WAITING) unpark(borrower.thread);
+                    if (BORROWER_WAITING == state) unpark(borrower.thread);
                     return;
                 }
-            }
-        }
+            } while (true);
+        }//first while loop
     }
 
     /**

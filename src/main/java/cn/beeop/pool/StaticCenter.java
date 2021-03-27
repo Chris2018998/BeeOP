@@ -47,9 +47,11 @@ public class StaticCenter {
     public static final int THREAD_WORKING = 1;
     public static final int THREAD_WAITING = 2;
     public static final int THREAD_DEAD = 3;
+
     //BORROWER STATE
-    public static final Object BORROWER_NORMAL = new Object();
-    public static final Object BORROWER_WAITING = new Object();
+    static final class BorrowerState {}
+    public static final Object BORROWER_NORMAL = new BorrowerState();
+    public static final Object BORROWER_WAITING = new BorrowerState();
     public static final BeeObjectException RequestTimeoutException = new BeeObjectException("Request timeout");
     public static final BeeObjectException RequestInterruptException = new BeeObjectException("Request interrupted");
     public static final BeeObjectException PoolCloseException = new BeeObjectException("Pool has shut down or in clearing");

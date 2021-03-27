@@ -279,19 +279,41 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public Class[] getObjectInterfaces() {
-        return objectInterfaces;
+        if(objectInterfaces==null){
+            return null;
+        }else {
+            Class[]tempInterfaces = new Class[objectInterfaces.length];
+            System.arraycopy(objectInterfaces,0,tempInterfaces,0,objectInterfaces.length);
+            return tempInterfaces;
+        }
     }
 
     public void setObjectInterfaces(Class[] interfaces) {
-        objectInterfaces = interfaces;
+        if(interfaces==null) {
+            this.objectInterfaces = null;
+        }else {
+            this.objectInterfaces = new Class[interfaces.length];
+            System.arraycopy(interfaces,0,objectInterfaces,0,interfaces.length);
+        }
     }
 
     public String[] getObjectInterfaceNames() {
-        return objectInterfaceNames;
+        if(objectInterfaceNames==null){
+            return null;
+        }else {
+            String[]tempInterfaceNames = new String[objectInterfaceNames.length];
+            System.arraycopy(objectInterfaceNames,0,tempInterfaceNames,0,objectInterfaceNames.length);
+            return tempInterfaceNames;
+        }
     }
 
     public void setObjectInterfaceNames(String[] interfaceNames) {
-        this.objectInterfaceNames = interfaceNames;
+        if(interfaceNames==null) {
+            this.objectInterfaceNames = null;
+        }else {
+            this.objectInterfaceNames = new String[interfaceNames.length];
+            System.arraycopy(interfaceNames,0,objectInterfaceNames,0,interfaceNames.length);
+        }
     }
 
     public BeeObjectFactory getObjectFactory() {
