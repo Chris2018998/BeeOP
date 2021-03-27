@@ -19,6 +19,8 @@ import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectFactory;
 import cn.beeop.BeeObjectHandle;
 
+import java.sql.SQLException;
+
 import static java.lang.System.currentTimeMillis;
 
 /**
@@ -61,9 +63,13 @@ class PooledEntry {
             objectHandle = null;
             objectFactory.reset(rawObject);
             pool.recycle(this);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             pool.abandonOnReturn(this);
-            throw e;
+            if (e instanceof SQLException) {
+                throw (BeeObjectException) e;
+            } else {
+                throw new BeeObjectException(e);
+            }
         }
     }
 }
