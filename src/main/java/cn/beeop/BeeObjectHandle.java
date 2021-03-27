@@ -49,6 +49,7 @@ public interface BeeObjectHandle {
     /**
      * call raw object'method,which has empty parameter
      *
+     * @param methodName  method name
      * @return Invocation result of raw object
      * @throws BeeObjectException if access error occurs
      */

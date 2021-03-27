@@ -292,6 +292,10 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         if(interfaces==null) {
             this.objectInterfaces = null;
         }else {
+            for(int i=0,l=interfaces.length;i<l;i++){
+                if(interfaces[i]==null)throw new IllegalArgumentException("Parameter element["+i+"]is null");
+                if(!interfaces[i].isInterface())throw new IllegalArgumentException("Parameter element["+i+"]is not valid interface");
+            }
             this.objectInterfaces = new Class[interfaces.length];
             System.arraycopy(interfaces,0,objectInterfaces,0,interfaces.length);
         }
@@ -311,6 +315,10 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         if(interfaceNames==null) {
             this.objectInterfaceNames = null;
         }else {
+            for(int i=0,l=interfaceNames.length;i<l;i++){
+                if(isBlank(interfaceNames[i]))throw new IllegalArgumentException("Parameter element["+i+"]is null or empty");
+                try{Class.forName(interfaceNames[i]);}catch (ClassNotFoundException e){throw new IllegalArgumentException("Not found class:"+interfaceNames[i]);}
+            }
             this.objectInterfaceNames = new String[interfaceNames.length];
             System.arraycopy(interfaceNames,0,objectInterfaceNames,0,interfaceNames.length);
         }
