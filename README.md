@@ -7,7 +7,7 @@ Maven artifactId(Java7)
 <dependency>
    <groupId>com.github.chris2018998</groupId>
    <artifactId>beeop</artifactId>
-   <version>0.8</version>
+   <version>0.9</version>
 </dependency>
 ```
 ---
