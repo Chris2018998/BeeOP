@@ -253,10 +253,15 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
             try {
                 for (int i = 0; i < initSize; i++)
                     createPooledEntry(OBJECT_IDLE);
-            } catch (BeeObjectException e) {
+            } catch (Throwable e) {
                 for (PooledEntry pEntry : poolEntryArray)
                     removePooledEntry(pEntry, DESC_REMOVE_INIT);
-                throw e;
+
+                if(e instanceof BeeObjectException){
+                    throw (BeeObjectException)e;
+                }else{
+                    throw new BeeObjectException(e);
+                }
             }
         }
     }
@@ -554,7 +559,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     private static final void tryClosedProxyHandle(BeeObjectHandle handle) {
         try {
             handle.close();
-        } catch (BeeObjectException e) {
+        } catch (Throwable e) {
         }
     }
 
@@ -766,8 +771,12 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                         try {
                             if ((pEntry = createPooledEntry(OBJECT_USING)) != null)
                                 recycle(pEntry);
-                        } catch (BeeObjectException e) {
-                            transferException(e);
+                        } catch (Throwable e) {
+                            if(e instanceof BeeObjectException){
+                                transferException((BeeObjectException)e);
+                            }else{
+                                transferException(new BeeObjectException(e));
+                            }
                         }
                     }
                 }
@@ -786,7 +795,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
         public void run() {
             try {
                 FastPool.this.close();
-            } catch (BeeObjectException e) {
+            } catch (Throwable e) {
                 commonLog.error("Error on closing pool,cause:", e);
             }
         }
