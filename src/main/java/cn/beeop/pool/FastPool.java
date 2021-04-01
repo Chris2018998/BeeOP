@@ -347,20 +347,20 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                     long timeout = deadline - nanoTime();
                     if (timeout > 0L) {
                         if (spinSize > 0) {
-                            spinSize--;
-                        } else if (timeout - spinForTimeoutThreshold > 0 && (borrower.state == state) && BwrStUpd.compareAndSet(borrower, state, BORROWER_WAITING)) {
+                            --spinSize;
+                        } else if (BORROWER_NORMAL==borrower.state && timeout > spinForTimeoutThreshold && BwrStUpd.compareAndSet(borrower, BORROWER_NORMAL, BORROWER_WAITING)) {
                             parkNanos(borrower, timeout);
                             if (cThread.isInterrupted()) {
                                 failed = true;
                                 failedCause = RequestInterruptException;
                             }
-                            if (borrower.state == BORROWER_WAITING)
+                            if (BORROWER_WAITING==borrower.state)
                                 BwrStUpd.compareAndSet(borrower, BORROWER_WAITING, failed ? failedCause : BORROWER_NORMAL);//reset to norma
                         }
                     } else {//timeout
                         failed = true;
                         failedCause = RequestTimeoutException;
-                        if (borrower.state == state)
+                        if (BORROWER_NORMAL==borrower.state)
                             BwrStUpd.compareAndSet(borrower, state, failedCause);
                     }
                 }
