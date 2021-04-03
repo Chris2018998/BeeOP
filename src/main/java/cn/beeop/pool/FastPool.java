@@ -349,7 +349,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                         if (spinSize > 0) {
                             --spinSize;
                         } else if (borrower.state==BORROWER_NORMAL && timeout > spinForTimeoutThreshold && BwrStUpd.compareAndSet(borrower, BORROWER_NORMAL, BORROWER_WAITING)) {
-                            parkNanos(borrower, timeout);
+                            parkNanos(timeout);
                             if (cThread.isInterrupted()) {
                                 failed = true;
                                 failedCause = RequestInterruptException;
