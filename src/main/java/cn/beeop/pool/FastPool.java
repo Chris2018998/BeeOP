@@ -90,6 +90,12 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     private AtomicInteger createObjThreadState = new AtomicInteger(THREAD_WORKING);
     private AtomicInteger needAddConnSize = new AtomicInteger(0);
 
+    private static final void tryClosedProxyHandle(BeeObjectHandle handle) {
+        try {
+            handle.close();
+        } catch (Throwable e) {
+        }
+    }
 
     /**
      * initialize pool with configuration
@@ -257,9 +263,9 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                 for (PooledEntry pEntry : poolEntryArray)
                     removePooledEntry(pEntry, DESC_REMOVE_INIT);
 
-                if(e instanceof BeeObjectException){
-                    throw (BeeObjectException)e;
-                }else{
+                if (e instanceof BeeObjectException) {
+                    throw (BeeObjectException) e;
+                } else {
                     throw new BeeObjectException(e);
                 }
             }
@@ -324,7 +330,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
             waitQueue.offer(borrower);
             int spinSize = (waitQueue.peek() == borrower) ? maxTimedSpins : 0;
 
-            while (true) {
+            do {
                 Object state = borrower.state;
                 if (state instanceof PooledEntry) {
                     pEntry = (PooledEntry) state;
@@ -348,23 +354,23 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                     if (timeout > 0L) {
                         if (spinSize > 0) {
                             --spinSize;
-                        } else if (borrower.state==BORROWER_NORMAL && timeout > spinForTimeoutThreshold && BwrStUpd.compareAndSet(borrower, BORROWER_NORMAL, BORROWER_WAITING)) {
+                        } else if (borrower.state == BORROWER_NORMAL && timeout > spinForTimeoutThreshold && BwrStUpd.compareAndSet(borrower, BORROWER_NORMAL, BORROWER_WAITING)) {
                             parkNanos(timeout);
                             if (cThread.isInterrupted()) {
                                 failed = true;
                                 failedCause = RequestInterruptException;
                             }
-                            if (borrower.state==BORROWER_WAITING)
+                            if (borrower.state == BORROWER_WAITING)
                                 BwrStUpd.compareAndSet(borrower, BORROWER_WAITING, failed ? failedCause : BORROWER_NORMAL);//reset to norma
                         }
                     } else {//timeout
                         failed = true;
                         failedCause = RequestTimeoutException;
-                        if (borrower.state==BORROWER_NORMAL)
+                        if (borrower.state == BORROWER_NORMAL)
                             BwrStUpd.compareAndSet(borrower, state, failedCause);
                     }
                 }
-            }//while
+            } while (true);
         } finally {
             borrowSemaphore.release();
         }
@@ -399,7 +405,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                 //current waiter has received one pooledEntry or timeout
                 if (!(state instanceof BorrowerState)) break;
                 if (BwrStUpd.compareAndSet(borrower, state, pEntry)) {//transfer successful
-                    if (state==BORROWER_WAITING) unpark(borrower.thread);
+                    if (state == BORROWER_WAITING) unpark(borrower.thread);
                     return;
                 }
             } while (true);
@@ -420,7 +426,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                 //current waiter has received one pooledConnection or timeout
                 if (!(state instanceof BorrowerState)) break;
                 if (BwrStUpd.compareAndSet(borrower, state, exception)) {//transfer successful
-                    if (state==BORROWER_WAITING) unpark(borrower.thread);
+                    if (state == BORROWER_WAITING) unpark(borrower.thread);
                     return;
                 }
             } while (true);
@@ -468,7 +474,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     // shutdown pool
     public void close() throws BeeObjectException {
         long parkNanoSeconds = MILLISECONDS.toNanos(poolConfig.getDelayTimeForNextClear());
-        while (true) {
+        do {
             if (poolState.compareAndSet(POOL_NORMAL, POOL_CLOSED)) {
                 commonLog.info("BeeOP({})begin to shutdown", poolName);
                 removeAllObjects(poolConfig.isForceCloseUsingOnClear(), DESC_REMOVE_DESTROY);
@@ -489,7 +495,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
             } else {
                 parkNanos(parkNanoSeconds);// wait 3 seconds
             }
-        }
+        } while (true);
     }
 
     public boolean isClosed() {
@@ -532,7 +538,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
 
     // notify to create objects to pool
     private void tryToCreateNewConnByAsyn() {
-        while (true) {
+        do {
             int curAddSize = needAddConnSize.get();
             int updAddSize = curAddSize + 1;
             if (poolEntryArray.length + updAddSize > poolMaxSize) return;
@@ -541,26 +547,19 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                     unpark(poolEntryAddThread);
                 return;
             }
-        }
+        } while (true);
     }
 
     // exit objects creation thread
     private void shutdownCreateConnThread() {
         int curSts;
-        while (true) {
+        do {
             curSts = createObjThreadState.get();
             if ((curSts == THREAD_WORKING || curSts == THREAD_WAITING) && createObjThreadState.compareAndSet(curSts, THREAD_DEAD)) {
                 if (curSts == THREAD_WAITING) unpark(poolEntryAddThread);
                 break;
             }
-        }
-    }
-
-    private static final void tryClosedProxyHandle(BeeObjectHandle handle) {
-        try {
-            handle.close();
-        } catch (Throwable e) {
-        }
+        } while (true);
     }
 
     /******************************** JMX **************************************/
@@ -764,7 +763,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
     private class PooledConnAddThread extends Thread {
         public void run() {
             PooledEntry pEntry;
-            while (true) {
+            do {
                 while (needAddConnSize.get() > 0) {
                     needAddConnSize.decrementAndGet();
                     if (getTransferWaitingSize() > 0) {
@@ -772,9 +771,9 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                             if ((pEntry = createPooledEntry(OBJECT_USING)) != null)
                                 recycle(pEntry);
                         } catch (Throwable e) {
-                            if(e instanceof BeeObjectException){
-                                transferException((BeeObjectException)e);
-                            }else{
+                            if (e instanceof BeeObjectException) {
+                                transferException((BeeObjectException) e);
+                            } else {
                                 transferException(new BeeObjectException(e));
                             }
                         }
@@ -784,7 +783,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                 if (needAddConnSize.get() == 0 && createObjThreadState.compareAndSet(THREAD_WORKING, THREAD_WAITING))
                     park(this);
                 if (createObjThreadState.get() == THREAD_DEAD) break;
-            }
+            } while (true);
         }
     }
 
