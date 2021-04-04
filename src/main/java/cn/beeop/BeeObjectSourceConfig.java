@@ -400,7 +400,9 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         for (Field field : fields) {
             if (!excludeMethodNameList.contains(field.getName())) {
                 try {
-                    field.set(config, field.get(this));
+                    Object fieldValue=field.get(this);
+                    commonLog.debug("BeeObjectSourceConfig.{}={}",field.getName(),fieldValue);
+                    field.set(config,fieldValue);
                 } catch (Exception e) {
                     throw new BeeObjectSourceConfigException("Failed to copy field[" + field.getName() + "]", e);
                 }
@@ -411,23 +413,32 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         Iterator<Map.Entry<Object, Object>> iterator = createProperties.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<Object, Object> entry = iterator.next();
+            commonLog.debug("BeeObjectSourceConfig.createProperties.{}={}",entry.getKey(), entry.getValue());
             config.addCreateProperty((String) entry.getKey(), entry.getValue());
         }
 
         //3:copy 'excludeMethodNames'
+        int index=0;
         for (String methodName : excludeMethodNames) {
             config.addExcludeMethodName(methodName);
+            commonLog.debug("BeeObjectSourceConfig.excludeMethodNames[{}]={}",index++,methodName);
         }
         //4:copy 'objectInterfaces'
         Class[] interfaces = (objectInterfaces == null) ? null : new Class[objectInterfaces.length];
-        if (interfaces != null)
+        if (interfaces != null) {
             System.arraycopy(objectInterfaces, 0, interfaces, 0, interfaces.length);
+            for(int i=0,l=interfaces.length;i<l;i++)
+                commonLog.debug("BeeObjectSourceConfig.objectInterfaces[{}]={}",i,interfaces[i]);
+        }
         config.setObjectInterfaces(interfaces);
 
         //5:copy 'objectInterfaceNames'
         String[] interfaceNames = (objectInterfaceNames == null) ? null : new String[objectInterfaceNames.length];
-        if (interfaceNames != null)
+        if (interfaceNames != null) {
             System.arraycopy(objectInterfaceNames, 0, interfaceNames, 0, interfaceNames.length);
+            for(int i=0,l=objectInterfaceNames.length;i<l;i++)
+                commonLog.debug("BeeObjectSourceConfig.objectInterfaceNames[{}]={}",i,objectInterfaceNames[i]);
+        }
         config.setObjectInterfaceNames(interfaceNames);
     }
 
