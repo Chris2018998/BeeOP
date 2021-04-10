@@ -181,11 +181,11 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
         synchronized (entryArrayLock) {
             int arrayLen = poolEntryArray.length;
             if (arrayLen < poolMaxSize) {
-                commonLog.debug("BeeOP({}))begin to create new pooled object,state:{}", poolName, connState);
+               if(isDebugEnabled)commonLog.debug("BeeOP({}))begin to create new pooled object,state:{}", poolName, connState);
                 Object obj = objectFactory.create(createProperties);
                 objectFactory.setDefault(obj);
                 PooledEntry pEntry = new PooledEntry(obj, connState, this, objectFactory);//add
-                commonLog.debug("BeeOP({}))has created new pooled object:{},state:{}", poolName, pEntry, connState);
+                if(isDebugEnabled)commonLog.debug("BeeOP({}))has created new pooled object:{},state:{}", poolName, pEntry, connState);
                 PooledEntry[] arrayNew = new PooledEntry[arrayLen + 1];
                 arraycopy(poolEntryArray, 0, arrayNew, 0, arrayLen);
                 arrayNew[arrayLen] = pEntry;// tail
@@ -199,7 +199,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
 
     //remove Pooled object
     private void removePooledEntry(PooledEntry pEntry, String removeType) {
-        commonLog.debug("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, pEntry, removeType);
+        if(isDebugEnabled)commonLog.debug("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, pEntry, removeType);
         pEntry.state = OBJECT_CLOSED;
         // pEntry.closeRawConn();
         synchronized (entryArrayLock) {
@@ -215,7 +215,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
             }
 
             objectFactory.destroy(pEntry.rawObject);
-            commonLog.debug("BeeOP({}))has removed pooled object:{},reason:{}", poolName, pEntry, removeType);
+            if(isDebugEnabled)commonLog.debug("BeeOP({}))has removed pooled object:{},reason:{}", poolName, pEntry, removeType);
             poolEntryArray = arrayNew;
         }
     }
@@ -467,7 +467,7 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
             }
 
             PoolMonitorVo vo = this.getMonitorVo();
-            commonLog.debug("BeeOP({})idle:{},using:{},semaphore-waiter:{},wait-transfer:{}", poolName, vo.getIdleSize(), vo.getUsingSize(), vo.getSemaphoreWaiterSize(), vo.getTransferWaiterSize());
+            if(isDebugEnabled)commonLog.debug("BeeOP({})idle:{},using:{},semaphore-waiter:{},wait-transfer:{}", poolName, vo.getIdleSize(), vo.getUsingSize(), vo.getSemaphoreWaiterSize(), vo.getTransferWaiterSize());
         }
     }
 
