@@ -357,8 +357,6 @@ public final class FastPool implements PoolJmxBean, ObjectPool {
                     } else {//timeout
                         failed = true;
                         failedCause = RequestTimeoutException;
-                        if (borrower.state == BORROWER_NORMAL)
-                            BwrStUpd.compareAndSet(borrower, state, failedCause);
                     }
                 }
             } while (true);
