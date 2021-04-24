@@ -64,8 +64,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private int semaphoreSize;
     private Semaphore semaphore;
     private TransferPolicy transferPolicy;
-    private BeeObjectFactory conFactory;
-    private volatile PooledEntry[] conArray = new PooledEntry[0];
+    private BeeObjectFactory objectFactory;
+    private volatile PooledEntry[] poolEntryArray = new PooledEntry[0];
     private DynAddPooledEntryTask dynAddPooledEntryTask;
     private ThreadPoolExecutor poolTaskExecutor;
     private String poolName = "";
@@ -91,7 +91,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             poolName = !isBlank(config.getPoolName()) ? config.getPoolName() : "FastPool-" + poolNameIndex.getAndIncrement();
             commonLog.info("BeeOP({})starting....", poolName);
             PoolMaxSize = poolConfig.getMaxActive();
-            conFactory = poolConfig.getObjectFactory();
+            objectFactory = poolConfig.getObjectFactory();
             ObjectTestTimeout = poolConfig.getObjectTestTimeout();
             createProperties = poolConfig.getCreateProperties();
             excludeMethodNames = poolConfig.getExcludeMethodNames();
@@ -127,7 +127,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             commonLog.info("BeeOP({})has startup{mode:{},init size:{},max size:{},semaphore size:{},max wait:{}ms",
                     poolName,
                     poolMode,
-                    conArray.length,
+                    poolEntryArray.length,
                     config.getMaxActive(),
                     semaphoreSize,
                     poolConfig.getMaxWait());
@@ -153,30 +153,30 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     //create Pooled object
     private final PooledEntry createPooledEntry(int conState) throws BeeObjectException {
         synchronized (connArrayLock) {
-            int arrayLen = conArray.length;
+            int arrayLen = poolEntryArray.length;
             if (arrayLen < PoolMaxSize) {
                 if (isDebugEnabled)
                     commonLog.debug("BeeOP({}))begin to create a new pooled object,state:{}", poolName, conState);
                 Object con = null;
                 try {
-                    con = conFactory.create(this.createProperties);
+                    con = objectFactory.create(this.createProperties);
                 } catch (Throwable e) {
                     throw new ObjectCreateFailedException(e);
                 }
                 try {
-                    conFactory.setDefault(con);
+                    objectFactory.setDefault(con);
                 } catch (Throwable e) {
-                    conFactory.destroy(con);
+                    objectFactory.destroy(con);
                     throw e;
                 }
 
-                PooledEntry pooledEntry = new PooledEntry(con, conState, this, conFactory);// registerStatement
+                PooledEntry pooledEntry = new PooledEntry(con, conState, this, objectFactory);// registerStatement
                 if (isDebugEnabled)
                     commonLog.debug("BeeOP({}))has created a new pooled object:{},state:{}", poolName, pooledEntry, conState);
                 PooledEntry[] arrayNew = new PooledEntry[arrayLen + 1];
-                arraycopy(conArray, 0, arrayNew, 0, arrayLen);
+                arraycopy(poolEntryArray, 0, arrayNew, 0, arrayLen);
                 arrayNew[arrayLen] = pooledEntry;// tail
-                conArray = arrayNew;
+                poolEntryArray = arrayNew;
                 return pooledEntry;
             } else {
                 return null;
@@ -189,22 +189,22 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         if (isDebugEnabled)
             commonLog.debug("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, pooledEntry, removeType);
         pooledEntry.state = OBJECT_CLOSED;
-        conFactory.destroy(pooledEntry.rawObject);
+        objectFactory.destroy(pooledEntry.rawObject);
 
         synchronized (connArrayLock) {
-            int oLen = conArray.length;
+            int oLen = poolEntryArray.length;
             PooledEntry[] arrayNew = new PooledEntry[oLen - 1];
             for (int i = 0; i < oLen; i++) {
-                if (conArray[i] == pooledEntry) {
-                    arraycopy(conArray, 0, arrayNew, 0, i);
+                if (poolEntryArray[i] == pooledEntry) {
+                    arraycopy(poolEntryArray, 0, arrayNew, 0, i);
                     int m = oLen - i - 1;
-                    if (m > 0) arraycopy(conArray, i + 1, arrayNew, i, m);
+                    if (m > 0) arraycopy(poolEntryArray, i + 1, arrayNew, i, m);
                     break;
                 }
             }
             if (isDebugEnabled)
                 commonLog.debug("BeeOP({}))has removed pooled object:{},reason:{}", poolName, pooledEntry, removeType);
-            conArray = arrayNew;
+            poolEntryArray = arrayNew;
         }
     }
 
@@ -215,7 +215,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      * false if false then close it
      */
     private final boolean testOnBorrow(PooledEntry pooledEntry) {
-        if (currentTimeMillis() - pooledEntry.lastAccessTime - ObjectTestInterval >= 0L && !conFactory.isAlive(pooledEntry, ObjectTestTimeout)) {
+        if (currentTimeMillis() - pooledEntry.lastAccessTime - ObjectTestInterval >= 0L && !objectFactory.isAlive(pooledEntry, ObjectTestTimeout)) {
             removePooledEntry(pooledEntry, DESC_RM_BAD);
             tryToCreateNewPoolEntryByAsyn();
             return false;
@@ -235,7 +235,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             for (int i = 0; i < initSize; i++)
                 createPooledEntry(OBJECT_IDLE);
         } catch (Throwable e) {
-            for (PooledEntry pooledEntry : conArray)
+            for (PooledEntry pooledEntry : poolEntryArray)
                 removePooledEntry(pooledEntry, DESC_RM_INIT);
             if (e instanceof ObjectCreateFailedException) {//may be network bad or database is not ready
                 if (initSize > 0) throw e;
@@ -278,14 +278,14 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         try {//semaphore acquired
             //1:try to search one from array
             PooledEntry pooledEntry;
-            PooledEntry[] array = conArray;
+            PooledEntry[] array = poolEntryArray;
             for (int i = 0, l = array.length; i < l; i++) {
                 pooledEntry = array[i];
                 if (pooledEntry.state == OBJECT_IDLE && ObjStUpd.compareAndSet(pooledEntry, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(pooledEntry))
                     return createObjectHandle(pooledEntry, borrower);
             }
             //2:try to create one directly
-            if (conArray.length < PoolMaxSize && (pooledEntry = createPooledEntry(OBJECT_USING)) != null)
+            if (poolEntryArray.length < PoolMaxSize && (pooledEntry = createPooledEntry(OBJECT_USING)) != null)
                 return createObjectHandle(pooledEntry, borrower);
             //3:try to get one transferred object
             boolean failed = false;
@@ -397,7 +397,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      */
     private void closeIdleTimeoutPooledEntry() {
         if (poolState.get() == POOL_NORMAL) {
-            PooledEntry[] array = conArray;
+            PooledEntry[] array = poolEntryArray;
             for (int i = 0, len = array.length; i < len; i++) {
                 PooledEntry pooledEntry = array[i];
                 int state = pooledEntry.state;
@@ -465,8 +465,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         while (existBorrower()) {
             transferException(PoolCloseException);
         }
-        while (conArray.length > 0) {
-            PooledEntry[] array = conArray;
+        while (poolEntryArray.length > 0) {
+            PooledEntry[] array = poolEntryArray;
             for (int i = 0, len = array.length; i < len; i++) {
                 PooledEntry pooledEntry = array[i];
                 if (ObjStUpd.compareAndSet(pooledEntry, OBJECT_IDLE, OBJECT_CLOSED)) {
@@ -487,7 +487,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     }
                 }
             } // for
-            if (conArray.length > 0) parkNanos(DelayTimeForNextClearNanos);
+            if (poolEntryArray.length > 0) parkNanos(DelayTimeForNextClearNanos);
         } // while
     }
 
@@ -496,7 +496,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         do {
             int curAddSize = needAddEntrySize.get();
             int updAddSize = curAddSize + 1;
-            if (conArray.length + updAddSize > PoolMaxSize) return;
+            if (poolEntryArray.length + updAddSize > PoolMaxSize) return;
             if (needAddEntrySize.compareAndSet(curAddSize, updAddSize)) {
                 poolTaskExecutor.submit(dynAddPooledEntryTask);
                 return;
@@ -520,12 +520,12 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     public int getTotalSize() {
-        return conArray.length;
+        return poolEntryArray.length;
     }
 
     public int getIdleSize() {
         int idlePooledEntrys = 0;
-        for (PooledEntry pooledEntry : this.conArray) {
+        for (PooledEntry pooledEntry : this.poolEntryArray) {
             if (pooledEntry.state == OBJECT_IDLE)
                 idlePooledEntrys++;
         }
@@ -533,7 +533,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     public int getUsingSize() {
-        int active = conArray.length - getIdleSize();
+        int active = poolEntryArray.length - getIdleSize();
         return (active > 0) ? active : 0;
     }
 
