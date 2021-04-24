@@ -30,7 +30,8 @@ class PooledEntry {
     private ObjectPool pool;
     private BeeObjectFactory objectFactory;
 
-    public PooledEntry(Object rawObject, int state,
+    public PooledEntry(Object rawObject,
+                       int state,
                        ObjectPool pool,
                        BeeObjectFactory objectFactory) {
         this.pool = pool;

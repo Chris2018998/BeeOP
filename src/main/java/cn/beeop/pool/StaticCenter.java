@@ -7,12 +7,14 @@
 package cn.beeop.pool;
 
 import cn.beeop.BeeObjectException;
+import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSourceConfigException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
@@ -29,20 +31,17 @@ public class StaticCenter {
     public static final int POOL_UNINIT = 1;
     public static final int POOL_NORMAL = 2;
     public static final int POOL_CLOSED = 3;
-    public static final int POOL_RESTING = 4;
+    public static final int POOL_CLEARING = 4;
     //POOLED OBJECT STATE
     public static final int OBJECT_IDLE = 1;
     public static final int OBJECT_USING = 2;
     public static final int OBJECT_CLOSED = 3;
-    //ADD OBJECT THREAD STATE
+    //Idle Scan thread state
     public static final int THREAD_WORKING = 1;
-    public static final int THREAD_WAITING = 2;
-    public static final int THREAD_DEAD = 3;
-
+    public static final int THREAD_EXIT = 2;
     //BORROWER STATE
-    static final class BorrowerState {}
-    public static final Object BORROWER_NORMAL = new BorrowerState();
-    public static final Object BORROWER_WAITING = new BorrowerState();
+    public static final BorrowerState BOWER_NORMAL = new BorrowerState();
+    public static final BorrowerState BOWER_WAITING = new BorrowerState();
     public static final BeeObjectException RequestTimeoutException = new BeeObjectException("Request timeout");
     public static final BeeObjectException RequestInterruptException = new BeeObjectException("Request interrupted");
     public static final BeeObjectException PoolCloseException = new BeeObjectException("Pool has shut down or in clearing");
@@ -51,12 +50,21 @@ public class StaticCenter {
     public static final Class[] EmptyParamTypes = new Class[0];
     public static final Object[] EmptyParamValues = new Object[0];
     public static final Logger commonLog = LoggerFactory.getLogger(StaticCenter.class);
-    public static final boolean isDebugEnabled =commonLog.isDebugEnabled();
+    public static final boolean isDebugEnabled = commonLog.isDebugEnabled();
     public static final String OS_Config_Prop_Separator_MiddleLine = "-";
     public static final String OS_Config_Prop_Separator_UnderLine = "_";
     static final ConcurrentHashMap<Object, Method> ObjectMethodMap = new ConcurrentHashMap<Object, Method>(16);
+    private static final ClassLoader classLoader = FastPool.class.getClassLoader();
+
     static final Object genMethodCacheKey(String name, Class[] types) {
         return new MethodKey(name, types);
+    }
+
+    static final void tryClosedProxyHandle(BeeObjectHandle handle) {
+        try {
+            handle.close();
+        } catch (Throwable e) {
+        }
     }
 
     public static final boolean equals(String a, String b) {
@@ -72,33 +80,6 @@ public class StaticCenter {
         }
         return true;
     }
-
-    static final class MethodKey {
-        private String name;
-        private Class[] types;
-
-        public MethodKey(String name, Class[] types) {
-            this.name = name;
-            this.types = types;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            MethodKey that = (MethodKey) o;
-            return name.equals(that.name) &&
-                    Arrays.equals(types, that.types);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = name.hashCode();
-            result = 31 * result + Arrays.hashCode(types);
-            return result;
-        }
-    }
-
 
     public static final void setPropertiesValue(Object bean, Map<String, Object> setValueMap) throws Exception {
         if (bean == null) throw new BeeObjectSourceConfigException("Bean can't be null");
@@ -121,8 +102,8 @@ public class StaticCenter {
             if (setMethod != null && setValue != null) {
                 Object value = null;
                 Class type = setMethod.getParameterTypes()[0];
-                if(type.isArray() ||Collection.class.isAssignableFrom(type) || Map.class.isAssignableFrom(type))//exclude container type properties
-                     continue;
+                if (type.isArray() || Collection.class.isAssignableFrom(type) || Map.class.isAssignableFrom(type))//exclude container type properties
+                    continue;
 
                 try {//1:convert config value to match type of set method
                     value = convert(propertyName, setValue, type);
@@ -208,17 +189,17 @@ public class StaticCenter {
             return new BigDecimal(text);
         } else if (type == Class.class) {
             try {
-                 return  Class.forName(text);
+                return Class.forName(text);
             } catch (ClassNotFoundException e) {
                 throw new BeeObjectSourceConfigException("Not found class:" + text);
             }
-        } else if(type.isArray()){//do nothing
+        } else if (type.isArray()) {//do nothing
             return text;
-        } else if(Collection.class.isAssignableFrom(type)){//do nothing
+        } else if (Collection.class.isAssignableFrom(type)) {//do nothing
             return text;
-        } else if(Map.class.isAssignableFrom(type)) {//do nothing
+        } else if (Map.class.isAssignableFrom(type)) {//do nothing
             return text;
-        } else{
+        } else {
             try {
                 Object objInstance = Class.forName(text).newInstance();
                 if (!type.isInstance(objInstance))
@@ -232,6 +213,64 @@ public class StaticCenter {
             } catch (IllegalAccessException e) {
                 throw new BeeObjectSourceConfigException("Failed to instantiated class:" + text, e);
             }
+        }
+    }
+
+    //BORROWER STATE
+    static final class BorrowerState {
+    }
+
+    static final class ObjectCreateFailedException extends BeeObjectException {
+        public ObjectCreateFailedException(Throwable cause) {
+            super(cause);
+        }
+    }
+
+    static final class NullReflectProxyFactory implements ReflectProxyFactory {
+        public final Object createProxyObject(PooledEntry pEntry, BeeObjectHandle objectHandle, Set<String> excludeMethodNames) throws Exception {
+            return null;
+        }
+    }
+
+    static final class InvocationProxyFactory implements ReflectProxyFactory {
+        private Class[] objectInterfaces;
+
+        public InvocationProxyFactory(Class[] objectInterfaces) {
+            this.objectInterfaces = objectInterfaces;
+        }
+
+        public final Object createProxyObject(PooledEntry pEntry, BeeObjectHandle objectHandle, Set<String> excludeMethodNames) throws Exception {
+            ReflectHandler reflectHandler = new ReflectHandler(pEntry, objectHandle, excludeMethodNames);
+            return Proxy.newProxyInstance(
+                    classLoader,
+                    objectInterfaces,
+                    reflectHandler);
+        }
+    }
+
+    static final class MethodKey {
+        private String name;
+        private Class[] types;
+
+        public MethodKey(String name, Class[] types) {
+            this.name = name;
+            this.types = types;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            MethodKey that = (MethodKey) o;
+            return name.equals(that.name) &&
+                    Arrays.equals(types, that.types);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = name.hashCode();
+            result = 31 * result + Arrays.hashCode(types);
+            return result;
         }
     }
 }
