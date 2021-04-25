@@ -232,7 +232,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private void createInitObjects(int initSize) throws BeeObjectException {
         try {
             int size = (initSize > 0) ? initSize : 1;
-            for (int i = 0; i < initSize; i++)
+            for (int i = 0; i < size; i++)
                 createPooledEntry(OBJECT_IDLE);
         } catch (Throwable e) {
             for (PooledEntry pooledEntry : poolEntryArray)
@@ -713,8 +713,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 needAddEntrySize.decrementAndGet();
                 if (!waitQueue.isEmpty()) {
                     try {
-                        if ((pooledEntry = createPooledEntry(OBJECT_USING)) != null)
-                            recycle(pooledEntry);
+                        pooledEntry = createPooledEntry(OBJECT_USING);
+                        if(pooledEntry!=null)recycle(pooledEntry);
                     } catch (Throwable e) {
                         transferException((e instanceof BeeObjectException) ? (BeeObjectException) e : new BeeObjectException(e));
                     }
