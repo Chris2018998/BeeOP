@@ -58,7 +58,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private int ObjectTestTimeout;//seconds
     private long ObjectTestInterval;//milliseconds
     private long DelayTimeForNextClearNanos;//nanoseconds
-    private long CheckTimeIntervalNanos;//nanoseconds
     private ObjectPoolHook exitHook;
     private BeeObjectSourceConfig poolConfig;
     private int semaphoreSize;
@@ -133,7 +132,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     poolConfig.getMaxWait());
             poolState.set(POOL_NORMAL);
 
-            this.CheckTimeIntervalNanos = MILLISECONDS.toNanos(poolConfig.getIdleCheckTimeInterval());
             this.setName("IdleTimeoutScanThread");
             this.setDaemon(true);
             this.start();
@@ -575,6 +573,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     public void run() {
+        final long CheckTimeIntervalNanos = MILLISECONDS.toNanos(poolConfig.getIdleCheckTimeInterval());
         do {
             if (idleThreadState.get() == THREAD_WORKING) {
                 try {
