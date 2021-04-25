@@ -107,7 +107,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 transferPolicy = new CompeteTransferPolicy();
                 UnCatchStateCode = transferPolicy.getCheckStateCode();
             }
-            createInitObjects(poolConfig.getInitialSize());
+
             Class[] objectInterfaces = poolConfig.getObjectInterfaces();
             if (objectInterfaces != null && objectInterfaces.length > 0) {
                 reflectProxyFactory = new InvocationProxyFactory(poolConfig.getObjectInterfaces());
@@ -115,13 +115,15 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 reflectProxyFactory = new NullReflectProxyFactory();
             }
 
-            exitHook = new ObjectPoolHook();
-            Runtime.getRuntime().addShutdownHook(exitHook);
             semaphoreSize = poolConfig.getBorrowSemaphoreSize();
             semaphore = new Semaphore(semaphoreSize, poolConfig.isFairMode());
             dynAddPooledEntryTask = new DynAddPooledEntryTask();
             poolTaskExecutor = new ThreadPoolExecutor(1, 1, 5, SECONDS, new LinkedBlockingQueue<Runnable>(), new PoolThreadThreadFactory("PoolTaskThread"));
             poolTaskExecutor.allowCoreThreadTimeOut(true);
+            createInitObjects(poolConfig.getInitialSize());
+
+            exitHook = new ObjectPoolHook();
+            Runtime.getRuntime().addShutdownHook(exitHook);
             registerJmx();
             commonLog.info("BeeOP({})has startup{mode:{},init size:{},max size:{},semaphore size:{},max wait:{}ms",
                     poolName,
