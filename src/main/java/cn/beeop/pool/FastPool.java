@@ -188,9 +188,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private void removePooledEntry(PooledEntry pooledEntry, String removeType) {
         if (isDebugEnabled)
             commonLog.debug("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, pooledEntry, removeType);
-        pooledEntry.state = OBJECT_CLOSED;
-        objectFactory.destroy(pooledEntry.rawObject);
 
+        pooledEntry.onBeforeRemove();
         synchronized (connArrayLock) {
             int oLen = poolEntryArray.length;
             PooledEntry[] arrayNew = new PooledEntry[oLen - 1];
@@ -715,7 +714,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 if (!waitQueue.isEmpty()) {
                     try {
                         pooledEntry = createPooledEntry(OBJECT_USING);
-                        if(pooledEntry!=null)recycle(pooledEntry);
+                        if (pooledEntry != null) recycle(pooledEntry);
                     } catch (Throwable e) {
                         transferException((e instanceof BeeObjectException) ? (BeeObjectException) e : new BeeObjectException(e));
                     }

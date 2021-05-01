@@ -36,6 +36,13 @@ public final class ObjectHandle implements BeeObjectHandle {
         this.excludeMethodNames = excludeMethodNames;
     }
 
+    final void setAsClosed() {
+        synchronized (this) {//safe close
+            if (isClosed) return;
+            isClosed = true;
+        }
+    }
+
     public String toString() {
         return pEntry.toString();
     }
@@ -45,10 +52,7 @@ public final class ObjectHandle implements BeeObjectHandle {
     }
 
     public final void close() throws BeeObjectException {
-        synchronized (this) {//safe close
-            if (isClosed) return;
-            isClosed = true;
-        }
+        setAsClosed();
         pEntry.recycleSelf();
     }
 

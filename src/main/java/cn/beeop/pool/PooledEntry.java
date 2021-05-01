@@ -12,6 +12,8 @@ import cn.beeop.BeeObjectHandle;
 
 import java.sql.SQLException;
 
+import static cn.beeop.pool.StaticCenter.OBJECT_CLOSED;
+import static cn.beeop.pool.StaticCenter.commonLog;
 import static java.lang.System.currentTimeMillis;
 
 /**
@@ -25,7 +27,7 @@ class PooledEntry {
     Class rawObjectClass;
     volatile int state;
 
-    BeeObjectHandle objectHandle;//chang when object borrowed out
+    ObjectHandle objectHandle;//chang when object borrowed out
     volatile long lastAccessTime;//read in pool
     private ObjectPool pool;
     private BeeObjectFactory objectFactory;
@@ -42,12 +44,27 @@ class PooledEntry {
         this.lastAccessTime = currentTimeMillis();//first time
     }
 
+    public String toString() {
+        return rawObject.toString();
+    }
+
     final void updateAccessTime() {
         lastAccessTime = currentTimeMillis();
     }
 
-    public String toString() {
-        return rawObject.toString();
+    //close raw connection
+    void onBeforeRemove() {
+        try {
+            this.state = OBJECT_CLOSED;
+            if (objectHandle != null) {
+                objectHandle.setAsClosed();
+                objectHandle = null;
+            }
+        } catch (Throwable e) {
+            commonLog.error("Object close error", e);
+        } finally {
+            objectFactory.destroy(rawObject);
+        }
     }
 
     final void recycleSelf() throws BeeObjectException {

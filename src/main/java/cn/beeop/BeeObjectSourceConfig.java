@@ -270,48 +270,54 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public Class[] getObjectInterfaces() {
-        if(objectInterfaces==null){
+        if (objectInterfaces == null) {
             return null;
-        }else {
-            Class[]tempInterfaces = new Class[objectInterfaces.length];
-            System.arraycopy(objectInterfaces,0,tempInterfaces,0,objectInterfaces.length);
+        } else {
+            Class[] tempInterfaces = new Class[objectInterfaces.length];
+            System.arraycopy(objectInterfaces, 0, tempInterfaces, 0, objectInterfaces.length);
             return tempInterfaces;
         }
     }
 
     public void setObjectInterfaces(Class[] interfaces) {
-        if(interfaces==null) {
+        if (interfaces == null) {
             this.objectInterfaces = null;
-        }else {
-            for(int i=0,l=interfaces.length;i<l;i++){
-                if(interfaces[i]==null)throw new IllegalArgumentException("Parameter element["+i+"]is null");
-                if(!interfaces[i].isInterface())throw new IllegalArgumentException("Parameter element["+i+"]is not valid interface");
+        } else {
+            for (int i = 0, l = interfaces.length; i < l; i++) {
+                if (interfaces[i] == null) throw new IllegalArgumentException("Parameter element[" + i + "]is null");
+                if (!interfaces[i].isInterface())
+                    throw new IllegalArgumentException("Parameter element[" + i + "]is not valid interface");
             }
             this.objectInterfaces = new Class[interfaces.length];
-            System.arraycopy(interfaces,0,objectInterfaces,0,interfaces.length);
+            System.arraycopy(interfaces, 0, objectInterfaces, 0, interfaces.length);
         }
     }
 
     public String[] getObjectInterfaceNames() {
-        if(objectInterfaceNames==null){
+        if (objectInterfaceNames == null) {
             return null;
-        }else {
-            String[]tempInterfaceNames = new String[objectInterfaceNames.length];
-            System.arraycopy(objectInterfaceNames,0,tempInterfaceNames,0,objectInterfaceNames.length);
+        } else {
+            String[] tempInterfaceNames = new String[objectInterfaceNames.length];
+            System.arraycopy(objectInterfaceNames, 0, tempInterfaceNames, 0, objectInterfaceNames.length);
             return tempInterfaceNames;
         }
     }
 
     public void setObjectInterfaceNames(String[] interfaceNames) {
-        if(interfaceNames==null) {
+        if (interfaceNames == null) {
             this.objectInterfaceNames = null;
-        }else {
-            for(int i=0,l=interfaceNames.length;i<l;i++){
-                if(isBlank(interfaceNames[i]))throw new IllegalArgumentException("Parameter element["+i+"]is null or empty");
-                try{Class.forName(interfaceNames[i]);}catch (ClassNotFoundException e){throw new IllegalArgumentException("Not found class:"+interfaceNames[i]);}
+        } else {
+            for (int i = 0, l = interfaceNames.length; i < l; i++) {
+                if (isBlank(interfaceNames[i]))
+                    throw new IllegalArgumentException("Parameter element[" + i + "]is null or empty");
+                try {
+                    Class.forName(interfaceNames[i]);
+                } catch (ClassNotFoundException e) {
+                    throw new IllegalArgumentException("Not found class:" + interfaceNames[i]);
+                }
             }
             this.objectInterfaceNames = new String[interfaceNames.length];
-            System.arraycopy(interfaceNames,0,objectInterfaceNames,0,interfaceNames.length);
+            System.arraycopy(interfaceNames, 0, objectInterfaceNames, 0, interfaceNames.length);
         }
     }
 
@@ -391,9 +397,9 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         for (Field field : fields) {
             if (!excludeMethodNameList.contains(field.getName())) {
                 try {
-                    Object fieldValue=field.get(this);
-                    commonLog.debug("BeeObjectSourceConfig.{}={}",field.getName(),fieldValue);
-                    field.set(config,fieldValue);
+                    Object fieldValue = field.get(this);
+                    commonLog.debug("BeeObjectSourceConfig.{}={}", field.getName(), fieldValue);
+                    field.set(config, fieldValue);
                 } catch (Exception e) {
                     throw new BeeObjectSourceConfigException("Failed to copy field[" + field.getName() + "]", e);
                 }
@@ -404,22 +410,22 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         Iterator<Map.Entry<Object, Object>> iterator = createProperties.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<Object, Object> entry = iterator.next();
-            commonLog.debug("BeeObjectSourceConfig.createProperties.{}={}",entry.getKey(), entry.getValue());
+            commonLog.debug("BeeObjectSourceConfig.createProperties.{}={}", entry.getKey(), entry.getValue());
             config.addCreateProperty((String) entry.getKey(), entry.getValue());
         }
 
         //3:copy 'excludeMethodNames'
-        int index=0;
+        int index = 0;
         for (String methodName : excludeMethodNames) {
             config.addExcludeMethodName(methodName);
-            commonLog.debug("BeeObjectSourceConfig.excludeMethodNames[{}]={}",index++,methodName);
+            commonLog.debug("BeeObjectSourceConfig.excludeMethodNames[{}]={}", index++, methodName);
         }
         //4:copy 'objectInterfaces'
         Class[] interfaces = (objectInterfaces == null) ? null : new Class[objectInterfaces.length];
         if (interfaces != null) {
             System.arraycopy(objectInterfaces, 0, interfaces, 0, interfaces.length);
-            for(int i=0,l=interfaces.length;i<l;i++)
-                commonLog.debug("BeeObjectSourceConfig.objectInterfaces[{}]={}",i,interfaces[i]);
+            for (int i = 0, l = interfaces.length; i < l; i++)
+                commonLog.debug("BeeObjectSourceConfig.objectInterfaces[{}]={}", i, interfaces[i]);
         }
         config.setObjectInterfaces(interfaces);
 
@@ -427,8 +433,8 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         String[] interfaceNames = (objectInterfaceNames == null) ? null : new String[objectInterfaceNames.length];
         if (interfaceNames != null) {
             System.arraycopy(objectInterfaceNames, 0, interfaceNames, 0, interfaceNames.length);
-            for(int i=0,l=objectInterfaceNames.length;i<l;i++)
-                commonLog.debug("BeeObjectSourceConfig.objectInterfaceNames[{}]={}",i,objectInterfaceNames[i]);
+            for (int i = 0, l = objectInterfaceNames.length; i < l; i++)
+                commonLog.debug("BeeObjectSourceConfig.objectInterfaceNames[{}]={}", i, objectInterfaceNames[i]);
         }
         config.setObjectInterfaceNames(interfaceNames);
     }
