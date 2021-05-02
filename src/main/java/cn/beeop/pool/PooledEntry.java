@@ -52,7 +52,7 @@ class PooledEntry {
         lastAccessTime = currentTimeMillis();
     }
 
-    //close raw connection
+    //called by pool before remove from pool
     void onBeforeRemove() {
         try {
             this.state = OBJECT_CLOSED;
