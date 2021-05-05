@@ -8,7 +8,6 @@ package cn.beeop.pool;
 
 import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectFactory;
-import cn.beeop.BeeObjectHandle;
 
 import java.sql.SQLException;
 
@@ -56,10 +55,6 @@ class PooledEntry {
     void onBeforeRemove() {
         try {
             this.state = OBJECT_CLOSED;
-            if (objectHandle != null) {
-                objectHandle.setAsClosed();
-                objectHandle = null;
-            }
         } catch (Throwable e) {
             commonLog.error("Object close error", e);
         } finally {
