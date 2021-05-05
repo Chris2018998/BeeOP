@@ -77,6 +77,13 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private Set<String> excludeMethodNames;
     private ReflectProxyFactory reflectProxyFactory;
 
+
+    /******************************************************************************************
+     *                                                                                        *
+     *                 1: Pool initialize and Pooled object create/remove methods             *
+     *                                                                                        *
+     ******************************************************************************************/
+
     /**
      * initialize pool with configuration
      *
@@ -101,13 +108,13 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             if (poolConfig.isFairMode()) {
                 poolMode = "fair";
                 transferPolicy = new FairTransferPolicy();
-                UnCatchStateCode = transferPolicy.getCheckStateCode();
             } else {
                 poolMode = "compete";
                 transferPolicy = new CompeteTransferPolicy();
-                UnCatchStateCode = transferPolicy.getCheckStateCode();
+
             }
 
+            UnCatchStateCode = transferPolicy.getCheckStateCode();
             Class[] objectInterfaces = poolConfig.getObjectInterfaces();
             if (objectInterfaces != null && objectInterfaces.length > 0) {
                 reflectProxyFactory = new InvocationProxyFactory(poolConfig.getObjectInterfaces());
@@ -142,15 +149,28 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         }
     }
 
-    ThreadPoolExecutor getNetworkTimeoutExecutor() {
-        return poolTaskExecutor;
+    /**
+     * create specified size objects to pool,if zero,then try to create one
+     *
+     * @throws BeeObjectException error occurred in creating objects
+     */
+    private void createInitObjects(int initSize) throws BeeObjectException {
+        try {
+            int size = (initSize > 0) ? initSize : 1;
+            for (int i = 0; i < size; i++)
+                createPooledEntry(OBJECT_IDLE);
+        } catch (Throwable e) {
+            for (PooledEntry pooledEntry : poolEntryArray)
+                removePooledEntry(pooledEntry, DESC_RM_INIT);
+            if (e instanceof ObjectCreateFailedException) {//may be network bad or database is not ready
+                if (initSize > 0) throw e;
+            } else {
+                throw e;
+            }
+        }
     }
 
-    private final boolean existBorrower() {
-        return semaphoreSize > semaphore.availablePermits();
-    }
-
-    //create Pooled object
+    //create one pooled object
     private final PooledEntry createPooledEntry(int conState) throws BeeObjectException {
         synchronized (connArrayLock) {
             int arrayLen = poolEntryArray.length;
@@ -184,7 +204,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         }
     }
 
-    //remove Pooled object
+    //remove one pooled object
     private void removePooledEntry(PooledEntry pooledEntry, String removeType) {
         if (isDebugEnabled)
             commonLog.debug("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, pooledEntry, removeType);
@@ -207,48 +227,34 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         }
     }
 
-    /**
-     * check object state
-     *
-     * @return if the checked object is active then return true,otherwise
-     * false if false then close it
-     */
-    private final boolean testOnBorrow(PooledEntry pooledEntry) {
-        if (currentTimeMillis() - pooledEntry.lastAccessTime - ObjectTestInterval >= 0L && !objectFactory.isAlive(pooledEntry, ObjectTestTimeout)) {
-            removePooledEntry(pooledEntry, DESC_RM_BAD);
-            tryToCreateNewPoolEntryByAsyn();
-            return false;
-        } else {
-            return true;
-        }
-    }
-
-    /**
-     * create initialization objects
-     *
-     * @throws BeeObjectException error occurred in creating objects
-     */
-    private void createInitObjects(int initSize) throws BeeObjectException {
-        try {
-            int size = (initSize > 0) ? initSize : 1;
-            for (int i = 0; i < size; i++)
-                createPooledEntry(OBJECT_IDLE);
-        } catch (Throwable e) {
-            for (PooledEntry pooledEntry : poolEntryArray)
-                removePooledEntry(pooledEntry, DESC_RM_INIT);
-            if (e instanceof ObjectCreateFailedException) {//may be network bad or database is not ready
-                if (initSize > 0) throw e;
-            } else {
-                throw e;
+    // notify creator thread to add one object to pool
+    private void tryToCreateNewPoolEntryByAsyn() {
+        do {
+            int curAddSize = needAddEntrySize.get();
+            int updAddSize = curAddSize + 1;
+            if (poolEntryArray.length + updAddSize > PoolMaxSize) return;
+            if (needAddEntrySize.compareAndSet(curAddSize, updAddSize)) {
+                poolTaskExecutor.submit(dynAddPooledEntryTask);
+                return;
             }
-        }
+        } while (true);
     }
 
+    ThreadPoolExecutor getNetworkTimeoutExecutor() {
+        return poolTaskExecutor;
+    }
+
+    /******************************************************************************************
+     *                                                                                        *
+     *                 2: Pooled object borrow and release methods                            *
+     *                                                                                        *
+     ******************************************************************************************/
+
     /**
-     * borrow one object from pool
+     * borrow one object from pool,if search one idle object in pool,then try to catch it and return it
+     * if not search,then wait until other borrowers release objects or wait timeout
      *
-     * @return If exists idle object in pool,then return one;if not, waiting
-     * until other borrower release
+     * @return pooled object,
      * @throws BeeObjectException if pool is closed or waiting timeout,then throw exception
      */
     public final BeeObjectHandle getObject() throws BeeObjectException {
@@ -337,17 +343,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     /**
-     * remove object
-     *
-     * @param pooledEntry target object need release
-     */
-    public void abandonOnReturn(PooledEntry pooledEntry) {
-        removePooledEntry(pooledEntry, DESC_RM_BAD);
-        tryToCreateNewPoolEntryByAsyn();
-    }
-
-    /**
-     * return object to pool
+     * return object to pool after borrower end of use object
      *
      * @param pooledEntry target object need release
      */
@@ -372,6 +368,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     /**
+     * when object create failed,creator thread will transfer caused exception to one waiting borrower,
+     * which will exit wait and throw this exception.
+     *
      * @param e: transfer Exception to waiter
      */
     private void transferException(BeeObjectException e) {
@@ -388,6 +387,83 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 }
             } while (true);
         }//first while loop
+    }
+
+    /**
+     * remove object when exception occur in return
+     *
+     * @param pooledEntry target object need release
+     */
+    public void abandonOnReturn(PooledEntry pooledEntry) {
+        removePooledEntry(pooledEntry, DESC_RM_BAD);
+        tryToCreateNewPoolEntryByAsyn();
+    }
+
+    /**
+     * check object alive state,if not alive then remove it from pool
+     *
+     * @return object alive state,true,alive
+     */
+    private final boolean testOnBorrow(PooledEntry pooledEntry) {
+        if (currentTimeMillis() - pooledEntry.lastAccessTime - ObjectTestInterval >= 0L && !objectFactory.isAlive(pooledEntry, ObjectTestTimeout)) {
+            removePooledEntry(pooledEntry, DESC_RM_BAD);
+            tryToCreateNewPoolEntryByAsyn();
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * create one wrapper around one borrowed object.
+     *
+     * @param pEntry   borrowed pooled object
+     * @param borrower
+     * @return object handle
+     */
+    private final BeeObjectHandle createObjectHandle(PooledEntry pEntry, Borrower borrower) {
+        ObjectHandle handle = new ObjectHandle(pEntry, excludeMethodNames);
+        borrower.lastUsedEntry = pEntry;
+        pEntry.objectHandle = handle;
+
+        try {
+            handle.setProxyObject(reflectProxyFactory.createProxyObject(pEntry, handle, excludeMethodNames));
+        } catch (Throwable e) {
+            commonLog.warn("BeeOP({})failed to create reflect proxy instance:", poolName, e);
+        }
+
+        return handle;
+    }
+
+
+    /******************************************************************************************
+     *                                                                                        *
+     *              3: Pooled object idle-timeout/hold-timeout scan methods                   *
+     *                                                                                        *
+     ******************************************************************************************/
+
+    private final boolean existBorrower() {
+        return semaphoreSize > semaphore.availablePermits();
+    }
+
+    private void shutdownIdleScanThread() {
+        idleThreadState.set(THREAD_EXIT);
+        unpark(this);
+    }
+
+    public void run() {
+        final long CheckTimeIntervalNanos = MILLISECONDS.toNanos(poolConfig.getIdleCheckTimeInterval());
+        do {
+            if (idleThreadState.get() == THREAD_WORKING) {
+                try {
+                    parkNanos(CheckTimeIntervalNanos);
+                    closeIdleTimeoutPooledEntry();
+                } catch (Throwable e) {
+                }
+            } else {
+                break;
+            }
+        } while (true);
     }
 
     /**
@@ -429,34 +505,27 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         }
     }
 
-    // shutdown pool
-    public void close() throws BeeObjectException {
-        do {
-            int poolStateCode = poolState.get();
-            if ((poolStateCode == POOL_UNINIT || poolStateCode == POOL_NORMAL) && poolState.compareAndSet(poolStateCode, POOL_CLOSED)) {
-                commonLog.info("BeeOP({})begin to shutdown", poolName);
-                clearAllObjects(poolConfig.isForceCloseUsingOnClear(), DESC_RM_DESTROY);
-                unregisterJmx();
-                shutdownIdleScanThread();
-                poolTaskExecutor.getQueue().clear();
-                poolTaskExecutor.shutdownNow();
 
-                try {
-                    Runtime.getRuntime().removeShutdownHook(exitHook);
-                } catch (Throwable e) {
-                }
-                commonLog.info("BeeOP({})has shutdown", poolName);
-                break;
-            } else if (poolState.get() == POOL_CLOSED) {
-                break;
-            } else {
-                parkNanos(DelayTimeForNextClearNanos);// wait 3 seconds
-            }
-        } while (true);
+    /******************************************************************************************
+     *                                                                                        *
+     *                       4: Pool clear/close methods                                      *
+     *                                                                                        *
+     ******************************************************************************************/
+
+    //close objects and remove them from pool
+    public void clearAllObjects() {
+        clearAllObjects(false);
     }
 
-    public boolean isClosed() {
-        return poolState.get() == POOL_CLOSED;
+    //close objects and remove them from pool
+    public void clearAllObjects(boolean force) {
+        if (poolState.compareAndSet(POOL_NORMAL, POOL_CLEARING)) {
+            commonLog.info("BeeOP({})begin to remove objects", poolName);
+            clearAllObjects(force, DESC_RM_CLEAR);
+            commonLog.info("BeeOP({})all objects were removed", poolName);
+            poolState.set(POOL_NORMAL);// restore state;
+            commonLog.info("BeeOP({})restore to accept new requests", poolName);
+        }
     }
 
     // remove all objects
@@ -490,32 +559,54 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         } // while
     }
 
-    // notify to create objects to pool
-    private void tryToCreateNewPoolEntryByAsyn() {
+    public boolean isClosed() {
+        return poolState.get() == POOL_CLOSED;
+    }
+
+    public void close() throws BeeObjectException {
         do {
-            int curAddSize = needAddEntrySize.get();
-            int updAddSize = curAddSize + 1;
-            if (poolEntryArray.length + updAddSize > PoolMaxSize) return;
-            if (needAddEntrySize.compareAndSet(curAddSize, updAddSize)) {
-                poolTaskExecutor.submit(dynAddPooledEntryTask);
-                return;
+            int poolStateCode = poolState.get();
+            if ((poolStateCode == POOL_UNINIT || poolStateCode == POOL_NORMAL) && poolState.compareAndSet(poolStateCode, POOL_CLOSED)) {
+                commonLog.info("BeeOP({})begin to shutdown", poolName);
+                clearAllObjects(poolConfig.isForceCloseUsingOnClear(), DESC_RM_DESTROY);
+                unregisterJmx();
+                shutdownIdleScanThread();
+                poolTaskExecutor.getQueue().clear();
+                poolTaskExecutor.shutdownNow();
+
+                try {
+                    Runtime.getRuntime().removeShutdownHook(exitHook);
+                } catch (Throwable e) {
+                }
+                commonLog.info("BeeOP({})has shutdown", poolName);
+                break;
+            } else if (poolState.get() == POOL_CLOSED) {
+                break;
+            } else {
+                parkNanos(DelayTimeForNextClearNanos);// default wait 3 seconds
             }
         } while (true);
     }
 
-    public void clearAllObjects() {
-        clearAllObjects(false);// wait borrower release objects,then close them
-    }
 
-    // close all objects
-    public void clearAllObjects(boolean force) {
-        if (poolState.compareAndSet(POOL_NORMAL, POOL_CLEARING)) {
-            commonLog.info("BeeOP({})begin to remove objects", poolName);
-            clearAllObjects(force, DESC_RM_CLEAR);
-            commonLog.info("BeeOP({})all objects were removed", poolName);
-            poolState.set(POOL_NORMAL);// restore state;
-            commonLog.info("BeeOP({})restore to accept new requests", poolName);
-        }
+    /******************************************************************************************
+     *                                                                                        *
+     *                        5: Pool monitor/jmx methods                                     *
+     *                                                                                        *
+     ******************************************************************************************/
+
+    public PoolMonitorVo getMonitorVo() {
+        int totSize = getTotalSize();
+        int idleSize = getIdleSize();
+        monitorVo.setPoolName(poolName);
+        monitorVo.setPoolMode(poolMode);
+        monitorVo.setPoolState(poolState.get());
+        monitorVo.setMaxActive(PoolMaxSize);
+        monitorVo.setIdleSize(idleSize);
+        monitorVo.setUsingSize(totSize - idleSize);
+        monitorVo.setSemaphoreWaiterSize(getSemaphoreWaitingSize());
+        monitorVo.setTransferWaiterSize(getTransferWaitingSize());
+        return monitorVo;
     }
 
     public int getTotalSize() {
@@ -554,56 +645,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         return size;
     }
 
-    public PoolMonitorVo getMonitorVo() {
-        int totSize = getTotalSize();
-        int idleSize = getIdleSize();
-        monitorVo.setPoolName(poolName);
-        monitorVo.setPoolMode(poolMode);
-        monitorVo.setPoolState(poolState.get());
-        monitorVo.setMaxActive(PoolMaxSize);
-        monitorVo.setIdleSize(idleSize);
-        monitorVo.setUsingSize(totSize - idleSize);
-        monitorVo.setSemaphoreWaiterSize(getSemaphoreWaitingSize());
-        monitorVo.setTransferWaiterSize(getTransferWaitingSize());
-        return monitorVo;
-    }
-
-    private void shutdownIdleScanThread() {
-        idleThreadState.set(THREAD_EXIT);
-        unpark(this);
-    }
-
-    public void run() {
-        final long CheckTimeIntervalNanos = MILLISECONDS.toNanos(poolConfig.getIdleCheckTimeInterval());
-        do {
-            if (idleThreadState.get() == THREAD_WORKING) {
-                try {
-                    parkNanos(CheckTimeIntervalNanos);
-                    closeIdleTimeoutPooledEntry();
-                } catch (Throwable e) {
-                }
-            } else {
-                break;
-            }
-        } while (true);
-    }
-
-    private final BeeObjectHandle createObjectHandle(PooledEntry pEntry, Borrower borrower) {
-        ObjectHandle handle = new ObjectHandle(pEntry, excludeMethodNames);
-        borrower.lastUsedEntry = pEntry;
-        pEntry.objectHandle = handle;
-
-        try {
-            handle.setProxyObject(reflectProxyFactory.createProxyObject(pEntry, handle, excludeMethodNames));
-        } catch (Throwable e) {
-            commonLog.warn("BeeOP({})failed to create reflect proxy instance:", poolName, e);
-        }
-
-        return handle;
-    }
-
-
-    //******************************** JMX methods ********************************************************************/
     private void registerJmx() {
         if (poolConfig.isEnableJmx()) {
             MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
@@ -641,10 +682,14 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             commonLog.warn("BeeOP({})failed to unregister jmx-bean:{}", poolName, regName, e);
         }
     }
-    //******************************** JMX methods ********************************************************************/
 
 
-    /**********************************************Below are some inner classes******************************************************************/
+    /******************************************************************************************
+     *                                                                                        *
+     *                        6: Pool some inner classes                                      *
+     *                                                                                        *
+     ******************************************************************************************/
+
     // Transfer Policy
     static interface TransferPolicy {
         int getCheckStateCode();
@@ -675,21 +720,24 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             return OBJECT_IDLE;
         }
 
+        public final void beforeTransfer(PooledEntry p) {
+            p.state = OBJECT_IDLE;
+        }
+
         public final boolean tryCatch(PooledEntry p) {
             return ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING);
         }
 
         public final void onFailedTransfer(PooledEntry p) {
         }
-
-        public final void beforeTransfer(PooledEntry p) {
-            p.state = OBJECT_IDLE;
-        }
     }
 
     static final class FairTransferPolicy implements TransferPolicy {
         public final int getCheckStateCode() {
             return OBJECT_USING;
+        }
+
+        public final void beforeTransfer(PooledEntry p) {
         }
 
         public final boolean tryCatch(PooledEntry p) {
@@ -700,8 +748,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             p.state = OBJECT_IDLE;
         }
 
-        public final void beforeTransfer(PooledEntry p) {
-        }
     }
 
     //create pooled object by asyn
