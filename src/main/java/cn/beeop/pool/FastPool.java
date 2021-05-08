@@ -483,9 +483,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                         tryToCreateNewPoolEntryByAsyn();
                     }
                 } else if (state == OBJECT_USING) {
-                    BeeObjectHandle proxyHandle = pooledEntry.objectHandle;
-                    boolean isHoldTimeoutInNotUsing = currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0;
-                    if (isHoldTimeoutInNotUsing) {//recycle object
+                    if (currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0L) {//hold timeout
+                        BeeObjectHandle proxyHandle = pooledEntry.objectHandle;
                         if (proxyHandle != null) {
                             tryClosedProxyHandle(proxyHandle);
                         } else {
@@ -544,12 +543,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 } else if (pooledEntry.state == OBJECT_USING) {
                     BeeObjectHandle proxyHandle = pooledEntry.objectHandle;
                     if (proxyHandle != null) {
-                        if (force) {
+                        if (force || currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0L)
                             tryClosedProxyHandle(proxyHandle);
-                        } else {
-                            boolean isTimeout = (currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0);
-                            if (isTimeout) tryClosedProxyHandle(proxyHandle);
-                        }
                     } else {
                         removePooledEntry(pooledEntry, source);
                     }
