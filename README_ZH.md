@@ -2,12 +2,12 @@
 
 小蜜蜂对象池：一款轻量高性能Java对象池 
 
-Maven坐标（Java7)
+Maven坐标（Java7及更高版本)
 ```xml
 <dependency>
    <groupId>com.github.chris2018998</groupId>
    <artifactId>beeop</artifactId>
-   <version>1.0.3</version>
+   <version>1.0.4</version>
 </dependency>
 ```
 ---
@@ -117,7 +117,7 @@ public class JavaBookFactory implements BeeObjectFactory {
 
 |             配置项      |   描述                          |   备注                                                      |
 | ---------------------  | ----------------------------    | -----------------------------------------------------------|
-|poolName	             |池名                              |如果未赋值则会自动产生一个                                      |
+| poolName	             |池名                              |如果未赋值则会自动产生一个                                      |
 | fairMode               |是否公平模式                       |默认false,竞争模式                                            |
 | initialSize            |池初始创建对象数                   | 默认为0                                                      |
 | maxActive              |池最大创建对象数                   | 默认为10个                                                   | 
