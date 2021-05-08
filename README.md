@@ -2,7 +2,7 @@
 
 BeeOP：A light high-performance java object pool
 
-Maven artifactId(Java7)
+Maven artifactId(Java7 and higher)
 ```xml
 <dependency>
    <groupId>com.github.chris2018998</groupId>
