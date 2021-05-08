@@ -70,14 +70,14 @@ public interface ObjectPool {
     /**
      * Clear all objects from pool
      */
-    public void clearAllObjects();
+    void clearAllObjects();
 
     /**
      * Clear all objects from pool
      *
      * @param forceCloseUsingOnClear close using objects directly
      */
-    public void clearAllObjects(boolean forceCloseUsingOnClear);
+    void clearAllObjects(boolean forceCloseUsingOnClear);
 
 }
 	

@@ -32,11 +32,5 @@ public interface PoolJmxBean {
     //return waiter size for transferred object
     int getTransferWaitingSize();
 
-    //clear all objects from pool
-    public void clearAllObjects();
-
-    //Clear all objects from pool
-    public void clearAllObjects(boolean forceCloseUsing);
-
 }
 
