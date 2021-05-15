@@ -229,9 +229,10 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
     // notify creator thread to add one object to pool
     private void tryToCreateNewPoolEntryByAsyn() {
+        int curAddSize, updAddSize;
         do {
-            int curAddSize = needAddEntrySize.get();
-            int updAddSize = curAddSize + 1;
+            curAddSize = needAddEntrySize.get();
+            updAddSize = curAddSize + 1;
             if (poolEntryArray.length + updAddSize > PoolMaxSize) return;
             if (needAddEntrySize.compareAndSet(curAddSize, updAddSize)) {
                 poolTaskExecutor.submit(dynAddPooledEntryTask);
@@ -350,19 +351,16 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     public final void recycle(PooledEntry pooledEntry) {
         transferPolicy.beforeTransfer(pooledEntry);
         Iterator<Borrower> iterator = waitQueue.iterator();
-        while (iterator.hasNext()) {
+        W:while (iterator.hasNext()) {
             Borrower borrower = iterator.next();
+            Object state;
             do {
-                //pooledEntry has hold by another thread
                 if (pooledEntry.state != UnCatchStateCode) return;
-                Object state = borrower.state;
-                //current waiter has received one pooledEntry or timeout
-                if (!(state instanceof BorrowerState)) break;
-                if (BorrowStUpd.compareAndSet(borrower, state, pooledEntry)) {//transfer successful
-                    if (state == BOWER_WAITING) unpark(borrower.thread);
-                    return;
-                }
-            } while (true);
+                state = borrower.state;
+                if (!(state instanceof BorrowerState)) continue W;
+            } while (!BorrowStUpd.compareAndSet(borrower, state, pooledEntry));
+            if (state == BOWER_WAITING) unpark(borrower.thread);
+            return;
         }//first while loop
         transferPolicy.onFailedTransfer(pooledEntry);
     }
@@ -375,17 +373,15 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      */
     private void transferException(BeeObjectException e) {
         Iterator<Borrower> iterator = waitQueue.iterator();
-        while (iterator.hasNext()) {
+        W:while (iterator.hasNext()) {
             Borrower borrower = iterator.next();
+            Object state;
             do {
-                Object state = borrower.state;
-                //current waiter has received one pooledEntry or timeout
-                if (!(state instanceof BorrowerState)) break;
-                if (BorrowStUpd.compareAndSet(borrower, state, e)) {//transfer successful
-                    if (state == BOWER_WAITING) unpark(borrower.thread);
-                    return;
-                }
-            } while (true);
+                state = borrower.state;
+                if (!(state instanceof BorrowerState)) continue W;
+            } while (!BorrowStUpd.compareAndSet(borrower, state, e));
+            if (state == BOWER_WAITING) unpark(borrower.thread);
+            return;
         }//first while loop
     }
 
@@ -609,12 +605,11 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     public int getIdleSize() {
-        int idlePooledEntrys = 0;
-        for (PooledEntry pooledEntry : this.poolEntryArray) {
-            if (pooledEntry.state == OBJECT_IDLE)
-                idlePooledEntrys++;
-        }
-        return idlePooledEntrys;
+        int idleSize = 0;
+        PooledEntry[] array = poolEntryArray;
+        for (int i = 0, l = array.length; i < l; i++)
+            if (array[i].state == OBJECT_IDLE) idleSize++;
+        return idleSize;
     }
 
     public int getUsingSize() {
@@ -632,10 +627,10 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
     public int getTransferWaitingSize() {
         int size = 0;
-        for (Borrower borrower : waitQueue) {
-            Object state = borrower.state;
-            if (state == BOWER_NORMAL || state == BOWER_WAITING)
-                size++;
+        Iterator<Borrower> iterator = waitQueue.iterator();
+        while (iterator.hasNext()) {
+            Borrower borrower = iterator.next();
+            if (borrower.state instanceof BorrowerState) size++;
         }
         return size;
     }
