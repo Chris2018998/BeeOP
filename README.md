@@ -131,4 +131,6 @@ public class JavaBookFactory implements BeeObjectFactory {
 ---
 ### Donate
 
+If the software help to you, please donate fee to us for one coffe
+
 <img height="50%" width="50%" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/donate.png"> 
