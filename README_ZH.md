@@ -12,7 +12,7 @@ Maven坐标（Java7及更高版本)
 ```
 ---
 
-##### 性能测试
+### 性能测试
 100万次借用/归还(1000线程 x1000次),获取时间分布,平均时间
 |  对象池名    | commons-pool2-2.9.0 | BeeOP0.3_Fair      | BeeOP0.3_Compete  |
 | ----------- |----------------     | -------------------| -------------      |  
@@ -26,7 +26,7 @@ Maven坐标（Java7及更高版本)
 
 ---
 
-##### 范例
+### 范例
 
  ```java
 public interface Book {
@@ -91,7 +91,7 @@ public class JavaBookFactory implements BeeObjectFactory {
  
 ```
 ---
-##### 功能支持
+### 功能支持
 
 1：对象借用超时
 
@@ -113,7 +113,7 @@ public class JavaBookFactory implements BeeObjectFactory {
 
  
 ---
-##### 配置项说明
+### 配置项说明
 
 |             配置项      |   描述                          |   备注                                                      |
 | ---------------------  | ----------------------------    | -----------------------------------------------------------|
@@ -131,3 +131,9 @@ public class JavaBookFactory implements BeeObjectFactory {
 | objectFactoryClassName |自定义的对象工厂类名                |默认为空                                                    |
 | enableJmx              |JMX监控支持开关                    |默认false                                                  |
 
+---
+### 捐助
+
+如果您觉得此作品不错，可以捐赠请我们喝杯咖啡吧，在此表示感谢^_^。
+
+<img height="50%" width="50%" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/donate.png"> 
