@@ -14,6 +14,7 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static cn.beeop.pool.StaticCenter.*;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -26,6 +27,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * @version 1.0
  */
 public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
+    //poolName index
+    private static final AtomicInteger poolNameIndex = new AtomicInteger(1);
     //user name
     private String username;
     //password
@@ -395,6 +398,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         //1:primitive type copy
         Field[] fields = BeeObjectSourceConfig.class.getDeclaredFields();
         for (Field field : fields) {
+            if (Modifier.isFinal(field.getModifiers()) || Modifier.isStatic(field.getModifiers())) continue;
             if (!excludeMethodNameList.contains(field.getName())) {
                 try {
                     Object fieldValue = field.get(this);
@@ -455,6 +459,8 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             throw new BeeObjectSourceConfigException("holdTimeout must be greater than zero");
         if (this.maxWait <= 0)
             throw new BeeObjectSourceConfigException("maxWait must be greater than zero");
+
+        if (isBlank(this.poolName)) this.poolName = "FastPool-" + poolNameIndex.getAndIncrement();
 
         //1:load object implemented interfaces,if config
         Class[] objectInterfaces = loadObjectInterfaces();

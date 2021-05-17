@@ -47,7 +47,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private static final String DESC_RM_CLOSED = "closed";
     private static final String DESC_RM_CLEAR = "clear";
     private static final String DESC_RM_DESTROY = "destroy";
-    private static final AtomicInteger poolNameIndex = new AtomicInteger(1);
     private final Object connArrayLock = new Object();
     private final ConcurrentLinkedQueue<Borrower> waitQueue = new ConcurrentLinkedQueue<Borrower>();
     private final ThreadLocal<WeakReference<Borrower>> threadLocal = new ThreadLocal<WeakReference<Borrower>>();
@@ -94,7 +93,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         if (poolState.get() == POOL_UNINIT) {
             if (config == null) throw new BeeObjectException("Configuration can't be null");
             poolConfig = config.check();//why need a copy here?
-            poolName = !isBlank(config.getPoolName()) ? config.getPoolName() : "FastPool-" + poolNameIndex.getAndIncrement();
+            poolName = poolConfig.getPoolName();
+
             commonLog.info("BeeOP({})starting....", poolName);
             PoolMaxSize = poolConfig.getMaxActive();
             objectFactory = poolConfig.getObjectFactory();
@@ -351,7 +351,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     public final void recycle(PooledEntry pooledEntry) {
         transferPolicy.beforeTransfer(pooledEntry);
         Iterator<Borrower> iterator = waitQueue.iterator();
-        W:while (iterator.hasNext()) {
+        W:
+        while (iterator.hasNext()) {
             Borrower borrower = iterator.next();
             Object state;
             do {
@@ -373,7 +374,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      */
     private void transferException(BeeObjectException e) {
         Iterator<Borrower> iterator = waitQueue.iterator();
-        W:while (iterator.hasNext()) {
+        W:
+        while (iterator.hasNext()) {
             Borrower borrower = iterator.next();
             Object state;
             do {
