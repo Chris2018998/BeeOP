@@ -283,10 +283,11 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         }
         try {//semaphore acquired
             //1:try to search one from array
-            PooledEntry pooledEntry;
             PooledEntry[] array = poolEntryArray;
-            for (int i = 0, l = array.length; i < l; i++) {
-                pooledEntry = array[i];
+            int i = 0, l = array.length;
+            PooledEntry pooledEntry;
+            while (i < l) {
+                pooledEntry = array[i++];
                 if (pooledEntry.state == OBJECT_IDLE && ObjStUpd.compareAndSet(pooledEntry, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(pooledEntry))
                     return createObjectHandle(pooledEntry, borrower);
             }

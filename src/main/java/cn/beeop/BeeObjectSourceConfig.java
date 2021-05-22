@@ -51,13 +51,13 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //milliseconds:idle timeout object will be removed from pool
     private long idleTimeout = MINUTES.toMillis(3);
     //milliseconds:long time not active object hold by borrower will closed by pool
-    private long holdTimeout = MINUTES.toMillis(5);
+    private long holdTimeout = MINUTES.toMillis(3);
     //seconds:max time to get check active result
     private int objectTestTimeout = 3;
     //milliseconds:object test interval time from last active time
     private long objectTestInterval = 500L;
     //milliseconds:interval time to run check task in scheduledThreadPoolExecutor
-    private long idleCheckTimeInterval = MINUTES.toMillis(5);
+    private long idleCheckTimeInterval = MINUTES.toMillis(1);
     //using object close indicator,true,close directly;false,delay close util them becoming idle or hold timeout
     private boolean forceCloseUsingOnClear;
     //milliseconds:delay time for next clear pooled entry when exists using entry and 'forceCloseUsingOnClear' is false
