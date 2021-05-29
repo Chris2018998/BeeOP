@@ -40,7 +40,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private static final int maxTimedSpins = (Runtime.getRuntime().availableProcessors() < 2) ? 0 : 32;
     private static final AtomicIntegerFieldUpdater<PooledEntry> ObjStUpd = AtomicIntegerFieldUpdater.newUpdater(PooledEntry.class, "state");
     private static final AtomicReferenceFieldUpdater<Borrower, Object> BorrowStUpd = AtomicReferenceFieldUpdater.newUpdater(Borrower.class, Object.class, "state");
-    private static final String DESC_RM_PRE_INIT = "pre_init";
     private static final String DESC_RM_INIT = "init";
     private static final String DESC_RM_BAD = "bad";
     private static final String DESC_RM_IDLE = "idle";
