@@ -15,6 +15,7 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
+import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
@@ -70,7 +71,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private AtomicInteger idleThreadState = new AtomicInteger(THREAD_WORKING);
     private PoolServantThread servantThread = new PoolServantThread();
     private AtomicInteger servantThreadState = new AtomicInteger(THREAD_WORKING);
-    private AtomicInteger servantThreadWorkCount = new AtomicInteger(0);
     private Properties createProperties;
     private Set<String> excludeMethodNames;
     private ReflectProxyFactory reflectProxyFactory;
@@ -139,6 +139,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             this.start();
             servantThread.setName("PooledConnectionCreateThread");
             servantThread.setDaemon(true);
+            servantThread.setPriority(Thread.MIN_PRIORITY);
             servantThread.start();
             poolState.set(POOL_NORMAL);
         } else {
@@ -325,8 +326,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     private final void wakeupServantThread() {
-        servantThreadWorkCount.incrementAndGet();
-        if (servantThreadState.get() == THREAD_WAITING)
+        if (servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING,THREAD_WORKING))
             unpark(servantThread);
     }
 
@@ -713,8 +713,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     final class PoolServantThread extends Thread {
         public void run() {
             while (poolState.get() != POOL_CLOSED) {
-                while (servantThreadState.get() == THREAD_WORKING && servantThreadWorkCount.get() > 0 && !waitQueue.isEmpty()) {
-                    servantThreadWorkCount.decrementAndGet();
+                while (servantThreadState.get() == THREAD_WORKING  && !waitQueue.isEmpty()) {
                     try {
                         PooledEntry pooledEntry = searchOrCreate();
                         if (pooledEntry != null) recycle(pooledEntry);
@@ -723,13 +722,10 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     }
                 }
 
-                servantThreadWorkCount.set(0);
                 if (servantThreadState.get() == THREAD_EXIT)
                     break;
                 else if (idleThreadState.compareAndSet(THREAD_WORKING, THREAD_WAITING)) {
                     park();
-                    if (idleThreadState.get() == THREAD_WAITING)
-                        idleThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING);
                 }
             }
         }
