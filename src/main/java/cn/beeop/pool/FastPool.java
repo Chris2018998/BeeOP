@@ -18,16 +18,17 @@ import java.lang.ref.WeakReference;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static cn.beeop.pool.StaticCenter.*;
 import static java.lang.System.*;
-import static java.util.concurrent.TimeUnit.*;
-import static java.util.concurrent.locks.LockSupport.parkNanos;
-import static java.util.concurrent.locks.LockSupport.unpark;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.concurrent.locks.LockSupport.*;
 
 /**
  * Object Pool Implementation
@@ -62,13 +63,14 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private TransferPolicy transferPolicy;
     private BeeObjectFactory objectFactory;
     private volatile PooledEntry[] poolEntryArray = new PooledEntry[0];
-    private PooledEntryAsynTask pooledEntryAsynTask;
-    private LinkedBlockingQueue pooledEntryTaskQueue;
-    private ThreadPoolExecutor pooledEntryTaskExecutor;
+
     private String poolName = "";
     private String poolMode = "";
     private AtomicInteger poolState = new AtomicInteger(POOL_UNINIT);
     private AtomicInteger idleThreadState = new AtomicInteger(THREAD_WORKING);
+    private PoolServantThread servantThread = new PoolServantThread();
+    private AtomicInteger servantThreadState = new AtomicInteger(THREAD_WORKING);
+    private AtomicInteger servantThreadWorkCount = new AtomicInteger(0);
     private Properties createProperties;
     private Set<String> excludeMethodNames;
     private ReflectProxyFactory reflectProxyFactory;
@@ -119,10 +121,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
             semaphoreSize = poolConfig.getBorrowSemaphoreSize();
             semaphore = new Semaphore(semaphoreSize, poolConfig.isFairMode());
-            pooledEntryAsynTask = new PooledEntryAsynTask();
-            pooledEntryTaskQueue = new LinkedBlockingQueue<Runnable>(poolMaxSize);
-            pooledEntryTaskExecutor = new ThreadPoolExecutor(1, 1, 10, SECONDS, pooledEntryTaskQueue, new PoolThreadThreadFactory("PoolTaskThread"));
-            pooledEntryTaskExecutor.allowCoreThreadTimeOut(true);
             createInitObjects(poolConfig.getInitialSize());
 
             exitHook = new ObjectPoolHook();
@@ -135,11 +133,14 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     config.getMaxActive(),
                     semaphoreSize,
                     poolConfig.getMaxWait());
-            poolState.set(POOL_NORMAL);
 
             this.setName("IdleTimeoutScanThread");
             this.setDaemon(true);
             this.start();
+            servantThread.setName("PooledConnectionCreateThread");
+            servantThread.setDaemon(true);
+            servantThread.start();
+            poolState.set(POOL_NORMAL);
         } else {
             throw new BeeObjectException("Pool has initialized");
         }
@@ -219,16 +220,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         poolEntryArray = arrayNew;
     }
 
-    // notify creator thread to add one object to pool
-    private void tryToCreateNewPoolEntryByAsyn() {
-        if (pooledEntryTaskQueue.size() < poolMaxSize)
-            pooledEntryTaskExecutor.execute(pooledEntryAsynTask);
-    }
-
-    ThreadPoolExecutor getNetworkTimeoutExecutor() {
-        return pooledEntryTaskExecutor;
-    }
-
     /******************************************************************************************
      *                                                                                        *
      *                 2: Pooled object borrow and release methods                            *
@@ -300,6 +291,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                         if (spinSize > 0) {
                             --spinSize;
                         } else if (borrower.state == BOWER_NORMAL && timeout > spinForTimeoutThreshold && BorrowStUpd.compareAndSet(borrower, BOWER_NORMAL, BOWER_WAITING)) {
+                            wakeupServantThread();
                             parkNanos(timeout);
                             if (cth.isInterrupted()) {
                                 failed = true;
@@ -330,6 +322,12 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         if (poolEntryArray.length < poolMaxSize)
             return this.createPooledEntry(OBJECT_USING);
         return null;
+    }
+
+    private final void wakeupServantThread() {
+        servantThreadWorkCount.incrementAndGet();
+        if (servantThreadState.get() == THREAD_WAITING)
+            unpark(servantThread);
     }
 
     /**
@@ -383,7 +381,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      */
     public void abandonOnReturn(PooledEntry pooledEntry) {
         removePooledEntry(pooledEntry, DESC_RM_BAD);
-        tryToCreateNewPoolEntryByAsyn();
     }
 
     /**
@@ -394,7 +391,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private final boolean testOnBorrow(PooledEntry pooledEntry) {
         if (currentTimeMillis() - pooledEntry.lastAccessTime - objectTestInterval >= 0L && !objectFactory.isAlive(pooledEntry, objectTestTimeout)) {
             removePooledEntry(pooledEntry, DESC_RM_BAD);
-            tryToCreateNewPoolEntryByAsyn();
             return false;
         } else {
             return true;
@@ -433,24 +429,25 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         return semaphoreSize > semaphore.availablePermits();
     }
 
-    private void shutdownIdleScanThread() {
+    private void shutdownPoolThread() {
+        int curState = idleThreadState.get();
         idleThreadState.set(THREAD_EXIT);
-        unpark(this);
+        if (curState == THREAD_WAITING) unpark(this);
+
+        curState = servantThreadState.get();
+        servantThreadState.set(THREAD_EXIT);
+        if (curState == THREAD_WAITING) unpark(servantThread);
     }
 
     public void run() {
-        final long CheckTimeIntervalNanos = MILLISECONDS.toNanos(poolConfig.getIdleCheckTimeInterval());
-        do {
-            if (idleThreadState.get() == THREAD_WORKING) {
-                try {
-                    parkNanos(CheckTimeIntervalNanos);
-                    closeIdleTimeoutPooledEntry();
-                } catch (Throwable e) {
-                }
-            } else {
-                break;
+        final long checkTimeIntervalNanos = MILLISECONDS.toNanos(poolConfig.getIdleCheckTimeInterval());
+        while (idleThreadState.get() == THREAD_WORKING) {
+            parkNanos(checkTimeIntervalNanos);
+            try {
+                closeIdleTimeoutPooledEntry();
+            } catch (Throwable e) {
             }
-        } while (true);
+        }
     }
 
     /**
@@ -549,9 +546,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 commonLog.info("BeeOP({})begin to shutdown", poolName);
                 clearAllObjects(poolConfig.isForceCloseUsingOnClear(), DESC_RM_DESTROY);
                 unregisterJmx();
-                shutdownIdleScanThread();
-                pooledEntryTaskExecutor.getQueue().clear();
-                pooledEntryTaskExecutor.shutdownNow();
+                shutdownPoolThread();
 
                 try {
                     Runtime.getRuntime().removeShutdownHook(exitHook);
@@ -679,20 +674,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         void onFailedTransfer(PooledEntry p);
     }
 
-    static final class PoolThreadThreadFactory implements ThreadFactory {
-        private String thName;
-
-        public PoolThreadThreadFactory(String thName) {
-            this.thName = thName;
-        }
-
-        public Thread newThread(Runnable r) {
-            Thread th = new Thread(r, thName);
-            th.setDaemon(true);
-            return th;
-        }
-    }
-
     static final class CompeteTransferPolicy implements TransferPolicy {
         public final int getCheckStateCode() {
             return OBJECT_IDLE;
@@ -728,15 +709,27 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
     }
 
-    //create pooled object by asyn
-    final class PooledEntryAsynTask implements Runnable {
+    //create pooled connection by asyn
+    final class PoolServantThread extends Thread {
         public void run() {
-            if (!waitQueue.isEmpty()) {
-                try {
-                    PooledEntry pooledEntry = searchOrCreate();
-                    if (pooledEntry != null) recycle(pooledEntry);
-                } catch (Throwable e) {
-                    transferException((e instanceof BeeObjectException) ? (BeeObjectException) e : new BeeObjectException(e));
+            while (poolState.get() != POOL_CLOSED) {
+                while (servantThreadState.get() == THREAD_WORKING && servantThreadWorkCount.get() > 0 && !waitQueue.isEmpty()) {
+                    servantThreadWorkCount.decrementAndGet();
+                    try {
+                        PooledEntry pooledEntry = searchOrCreate();
+                        if (pooledEntry != null) recycle(pooledEntry);
+                    } catch (Throwable e) {
+                        transferException((e instanceof BeeObjectException) ? (BeeObjectException) e : new BeeObjectException(e));
+                    }
+                }
+
+                servantThreadWorkCount.set(0);
+                if (servantThreadState.get() == THREAD_EXIT)
+                    break;
+                else if (idleThreadState.compareAndSet(THREAD_WORKING, THREAD_WAITING)) {
+                    park();
+                    if (idleThreadState.get() == THREAD_WAITING)
+                        idleThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING);
                 }
             }
         }
