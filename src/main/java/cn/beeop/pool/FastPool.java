@@ -724,9 +724,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
                 if (servantThreadState.get() == THREAD_EXIT)
                     break;
-                else if (idleThreadState.compareAndSet(THREAD_WORKING, THREAD_WAITING)) {
+                else if (idleThreadState.compareAndSet(THREAD_WORKING, THREAD_WAITING))
                     park();
-                }
             }
         }
     }
