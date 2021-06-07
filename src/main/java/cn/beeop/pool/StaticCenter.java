@@ -38,7 +38,8 @@ public class StaticCenter {
     public static final int OBJECT_CLOSED = 3;
     //Idle Scan thread state
     public static final int THREAD_WORKING = 1;
-    public static final int THREAD_EXIT = 2;
+    public static final int THREAD_WAITING = 2;
+    public static final int THREAD_EXIT = 3;
     //BORROWER STATE
     public static final BorrowerState BOWER_NORMAL = new BorrowerState();
     public static final BorrowerState BOWER_WAITING = new BorrowerState();
