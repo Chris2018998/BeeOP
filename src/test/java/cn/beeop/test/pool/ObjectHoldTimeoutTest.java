@@ -24,6 +24,9 @@ import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.JavaBook;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
+
 /**
  * @author Chris.Liao
  * @version 1.0
@@ -56,7 +59,7 @@ public class ObjectHoldTimeoutTest extends TestCase {
             if (monitorVo.getUsingSize() != 1)
                 TestUtil.assertError("Using connections not as expected 1");
 
-            Thread.sleep(4000);
+            LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(5));
             if (monitorVo.getUsingSize() != 0)
                 TestUtil.assertError("Using connections not as expected 0 after hold timeout");
 
@@ -69,7 +72,7 @@ public class ObjectHoldTimeoutTest extends TestCase {
                 System.out.println(e);
             }
 
-            Thread.sleep(4000);
+            LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(5));
         } finally {
             if (handle != null) handle.close();
         }

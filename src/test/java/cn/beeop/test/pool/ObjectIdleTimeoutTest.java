@@ -22,6 +22,9 @@ import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.JavaBook;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
+
 /**
  * @author Chris.Liao
  * @version 1.0
@@ -55,7 +58,7 @@ public class ObjectIdleTimeoutTest extends TestCase {
             TestUtil.assertError("Total object not as expected:" + initSize);
         if (idleSize != initSize) TestUtil.assertError("Idle object not as expected:" + initSize);
 
-        Thread.sleep(5000);
+        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(5));
         monitorVo = obs.getPoolMonitorVo();
         usingSize = monitorVo.getUsingSize();
         idleSize = monitorVo.getIdleSize();
