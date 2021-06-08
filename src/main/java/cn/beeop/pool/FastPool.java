@@ -15,7 +15,6 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
-import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
@@ -60,7 +59,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private ObjectPoolHook exitHook;
     private BeeObjectSourceConfig poolConfig;
     private int semaphoreSize;
-    private Semaphore semaphore;
+    private PoolSemaphore semaphore;
     private TransferPolicy transferPolicy;
     private BeeObjectFactory objectFactory;
     private volatile PooledEntry[] poolEntryArray = new PooledEntry[0];
@@ -120,7 +119,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             }
 
             semaphoreSize = poolConfig.getBorrowSemaphoreSize();
-            semaphore = new Semaphore(semaphoreSize, poolConfig.isFairMode());
+            semaphore = new PoolSemaphore(semaphoreSize, poolConfig.isFairMode());
             createInitObjects(poolConfig.getInitialSize());
 
             exitHook = new ObjectPoolHook();
@@ -141,6 +140,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             servantThread.setDaemon(true);
             servantThread.setPriority(Thread.MIN_PRIORITY);
             servantThread.start();
+            while(!this.isAlive() || !servantThread.isAlive());
             poolState.set(POOL_NORMAL);
         } else {
             throw new BeeObjectException("Pool has initialized");
@@ -461,7 +461,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 PooledEntry pooledEntry = array[i];
                 int state = pooledEntry.state;
                 if (state == OBJECT_IDLE && !existBorrower()) {
-                    boolean isTimeoutInIdle = (currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getIdleTimeout() >= 0);
+                    boolean isTimeoutInIdle =currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getIdleTimeout() >= 0;
                     if (isTimeoutInIdle && ObjStUpd.compareAndSet(pooledEntry, state, OBJECT_CLOSED)) {//need close idle
                         removePooledEntry(pooledEntry, DESC_RM_IDLE);
                     }
@@ -510,9 +510,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
     // remove all objects
     public void clearAllObjects(boolean force, String source) {
-        while (existBorrower()) {
-            transferException(PoolCloseException);
-        }
+        semaphore.interruptWaitingThreads();
+        while (!waitQueue.isEmpty())transferException(PoolCloseException);
+
         while (poolEntryArray.length > 0) {
             PooledEntry[] array = poolEntryArray;
             for (int i = 0, len = array.length; i < len; i++) {
@@ -709,8 +709,27 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
     }
 
+    private static final class PoolSemaphore extends Semaphore {
+        public PoolSemaphore(int permits) {
+            super(permits);
+        }
+        public PoolSemaphore(int permits, boolean fair) {
+            super(permits,fair);
+        }
+        public void interruptWaitingThreads(){
+            Iterator<Thread> iterator = super.getQueuedThreads().iterator();
+            while(iterator.hasNext()){
+                Thread thread = iterator.next();
+                State state=thread.getState();
+                if(state==State.WAITING ||state==State.TIMED_WAITING){
+                    thread.interrupt();
+                }
+            }
+        }
+    }
+
     //create pooled connection by asyn
-    final class PoolServantThread extends Thread {
+    private final class PoolServantThread extends Thread {
         public void run() {
             while (poolState.get() != POOL_CLOSED) {
                 while (servantThreadState.get() == THREAD_WORKING  && !waitQueue.isEmpty()) {
