@@ -717,14 +717,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     private static final class PoolSemaphore extends Semaphore {
-        public PoolSemaphore(int permits) {
-            super(permits);
-        }
-
         public PoolSemaphore(int permits, boolean fair) {
             super(permits, fair);
         }
-
         public void interruptWaitingThreads() {
             Iterator<Thread> iterator = super.getQueuedThreads().iterator();
             while (iterator.hasNext()) {
