@@ -741,10 +741,15 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private final class PoolServantThread extends Thread {
         public void run() {
             while (poolState.get() != POOL_CLOSED) {
-                while (servantThreadState.get() == THREAD_WORKING && !waitQueue.isEmpty()) {
+                while (servantThreadState.get() == THREAD_WORKING && servantThreadWorkCount.get() > 0) {
+                    servantThreadWorkCount.decrementAndGet();
+                    if (waitQueue.isEmpty()) break;
                     try {
                         PooledEntry pooledEntry = searchOrCreate();
-                        if (pooledEntry != null) recycle(pooledEntry);
+                        if (pooledEntry != null)
+                            recycle(pooledEntry);
+                        else
+                            yield();
                     } catch (Throwable e) {
                         transferException(e instanceof BeeObjectException ? (BeeObjectException) e : new BeeObjectException(e));
                     }
