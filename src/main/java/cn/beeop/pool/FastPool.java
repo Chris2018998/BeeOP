@@ -744,7 +744,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                         if (pooledEntry != null)
                             recycle(pooledEntry);
                         else
-                           break;
+                           yield();
                     } catch (Throwable e) {
                         transferException(e instanceof BeeObjectException ? (BeeObjectException) e : new BeeObjectException(e));
                     }
