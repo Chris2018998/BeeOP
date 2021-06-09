@@ -383,7 +383,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      */
     public void abandonOnReturn(PooledEntry pooledEntry) {
         removePooledEntry(pooledEntry, DESC_RM_BAD);
-        if (!waitQueue.isEmpty()) wakeupServantThread();
+        wakeupServantThread();
     }
 
     /**
@@ -394,7 +394,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private final boolean testOnBorrow(PooledEntry pooledEntry) {
         if (currentTimeMillis() - pooledEntry.lastAccessTime - objectTestInterval >= 0L && !objectFactory.isAlive(pooledEntry, objectTestTimeout)) {
             removePooledEntry(pooledEntry, DESC_RM_BAD);
-            if (!waitQueue.isEmpty()) wakeupServantThread();
+            wakeupServantThread();
             return false;
         } else {
             return true;
@@ -468,7 +468,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     boolean isTimeoutInIdle = currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getIdleTimeout() >= 0;
                     if (isTimeoutInIdle && ObjStUpd.compareAndSet(pooledEntry, state, OBJECT_CLOSED)) {//need close idle
                         removePooledEntry(pooledEntry, DESC_RM_IDLE);
-                        if (!waitQueue.isEmpty()) wakeupServantThread();
+                        wakeupServantThread();
                     }
                 } else if (state == OBJECT_USING) {
                     if (currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0L) {//hold timeout
@@ -477,12 +477,12 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                             tryClosedProxyHandle(proxyHandle);
                         } else {
                             removePooledEntry(pooledEntry, DESC_RM_BAD);
-                            if (!waitQueue.isEmpty()) wakeupServantThread();
+                            wakeupServantThread();
                         }
                     }
                 } else if (state == OBJECT_CLOSED) {
                     removePooledEntry(pooledEntry, DESC_RM_CLOSED);
-                    if (!waitQueue.isEmpty()) wakeupServantThread();
+                    wakeupServantThread();
                 }
             }
 
