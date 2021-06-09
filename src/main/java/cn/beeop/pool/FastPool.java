@@ -141,7 +141,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             servantThread.setDaemon(true);
             servantThread.setPriority(Thread.MIN_PRIORITY);
             servantThread.start();
-            while(!this.isAlive() || !servantThread.isAlive());
+            while (!this.isAlive() || !servantThread.isAlive()) ;
             poolState.set(POOL_NORMAL);
         } else {
             throw new BeeObjectException("Pool has initialized");
@@ -328,7 +328,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
     private final void wakeupServantThread() {
         servantThreadWorkCount.incrementAndGet();
-        if (servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING,THREAD_WORKING))
+        if (servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
             unpark(servantThread);
     }
 
@@ -383,7 +383,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      */
     public void abandonOnReturn(PooledEntry pooledEntry) {
         removePooledEntry(pooledEntry, DESC_RM_BAD);
-        if(!waitQueue.isEmpty())wakeupServantThread();
+        if (!waitQueue.isEmpty()) wakeupServantThread();
     }
 
     /**
@@ -394,7 +394,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private final boolean testOnBorrow(PooledEntry pooledEntry) {
         if (currentTimeMillis() - pooledEntry.lastAccessTime - objectTestInterval >= 0L && !objectFactory.isAlive(pooledEntry, objectTestTimeout)) {
             removePooledEntry(pooledEntry, DESC_RM_BAD);
-            if(!waitQueue.isEmpty())wakeupServantThread();
+            if (!waitQueue.isEmpty()) wakeupServantThread();
             return false;
         } else {
             return true;
@@ -465,10 +465,10 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 PooledEntry pooledEntry = array[i];
                 int state = pooledEntry.state;
                 if (state == OBJECT_IDLE && !existBorrower()) {
-                    boolean isTimeoutInIdle =currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getIdleTimeout() >= 0;
+                    boolean isTimeoutInIdle = currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getIdleTimeout() >= 0;
                     if (isTimeoutInIdle && ObjStUpd.compareAndSet(pooledEntry, state, OBJECT_CLOSED)) {//need close idle
                         removePooledEntry(pooledEntry, DESC_RM_IDLE);
-                        if(!waitQueue.isEmpty())wakeupServantThread();
+                        if (!waitQueue.isEmpty()) wakeupServantThread();
                     }
                 } else if (state == OBJECT_USING) {
                     if (currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0L) {//hold timeout
@@ -477,12 +477,12 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                             tryClosedProxyHandle(proxyHandle);
                         } else {
                             removePooledEntry(pooledEntry, DESC_RM_BAD);
-                            if(!waitQueue.isEmpty())wakeupServantThread();
+                            if (!waitQueue.isEmpty()) wakeupServantThread();
                         }
                     }
                 } else if (state == OBJECT_CLOSED) {
                     removePooledEntry(pooledEntry, DESC_RM_CLOSED);
-                    if(!waitQueue.isEmpty())wakeupServantThread();
+                    if (!waitQueue.isEmpty()) wakeupServantThread();
                 }
             }
 
@@ -518,7 +518,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     // remove all objects
     public void clearAllObjects(boolean force, String source) {
         semaphore.interruptWaitingThreads();
-        while (!waitQueue.isEmpty())transferException(PoolCloseException);
+        while (!waitQueue.isEmpty()) transferException(PoolCloseException);
 
         while (poolEntryArray.length > 0) {
             PooledEntry[] array = poolEntryArray;
@@ -720,15 +720,17 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         public PoolSemaphore(int permits) {
             super(permits);
         }
+
         public PoolSemaphore(int permits, boolean fair) {
-            super(permits,fair);
+            super(permits, fair);
         }
-        public void interruptWaitingThreads(){
+
+        public void interruptWaitingThreads() {
             Iterator<Thread> iterator = super.getQueuedThreads().iterator();
-            while(iterator.hasNext()){
+            while (iterator.hasNext()) {
                 Thread thread = iterator.next();
-                State state=thread.getState();
-                if(state==State.WAITING ||state==State.TIMED_WAITING){
+                State state = thread.getState();
+                if (state == State.WAITING || state == State.TIMED_WAITING) {
                     thread.interrupt();
                 }
             }
@@ -739,12 +741,12 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private final class PoolServantThread extends Thread {
         public void run() {
             while (poolState.get() != POOL_CLOSED) {
-                while (servantThreadState.get() == THREAD_WORKING  && !waitQueue.isEmpty()) {
+                while (servantThreadState.get() == THREAD_WORKING && !waitQueue.isEmpty()) {
                     try {
                         PooledEntry pooledEntry = searchOrCreate();
                         if (pooledEntry != null) recycle(pooledEntry);
                     } catch (Throwable e) {
-                        transferException((e instanceof BeeObjectException) ? (BeeObjectException) e : new BeeObjectException(e));
+                        transferException(e instanceof BeeObjectException ? (BeeObjectException) e : new BeeObjectException(e));
                     }
                 }
 
