@@ -69,6 +69,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private AtomicInteger poolState = new AtomicInteger(POOL_UNINIT);
     private AtomicInteger idleThreadState = new AtomicInteger(THREAD_WORKING);
     private PoolServantThread servantThread = new PoolServantThread();
+    private AtomicInteger servantThreadWorkCount = new AtomicInteger(0);
     private AtomicInteger servantThreadState = new AtomicInteger(THREAD_WORKING);
     private Properties createProperties;
     private Set<String> excludeMethodNames;
@@ -326,6 +327,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     private final void wakeupServantThread() {
+        servantThreadWorkCount.incrementAndGet();
         if (servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING,THREAD_WORKING))
             unpark(servantThread);
     }
@@ -381,6 +383,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      */
     public void abandonOnReturn(PooledEntry pooledEntry) {
         removePooledEntry(pooledEntry, DESC_RM_BAD);
+        if(!waitQueue.isEmpty())wakeupServantThread();
     }
 
     /**
@@ -391,6 +394,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private final boolean testOnBorrow(PooledEntry pooledEntry) {
         if (currentTimeMillis() - pooledEntry.lastAccessTime - objectTestInterval >= 0L && !objectFactory.isAlive(pooledEntry, objectTestTimeout)) {
             removePooledEntry(pooledEntry, DESC_RM_BAD);
+            if(!waitQueue.isEmpty())wakeupServantThread();
             return false;
         } else {
             return true;
@@ -464,6 +468,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     boolean isTimeoutInIdle =currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getIdleTimeout() >= 0;
                     if (isTimeoutInIdle && ObjStUpd.compareAndSet(pooledEntry, state, OBJECT_CLOSED)) {//need close idle
                         removePooledEntry(pooledEntry, DESC_RM_IDLE);
+                        if(!waitQueue.isEmpty())wakeupServantThread();
                     }
                 } else if (state == OBJECT_USING) {
                     if (currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0L) {//hold timeout
@@ -472,10 +477,12 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                             tryClosedProxyHandle(proxyHandle);
                         } else {
                             removePooledEntry(pooledEntry, DESC_RM_BAD);
+                            if(!waitQueue.isEmpty())wakeupServantThread();
                         }
                     }
                 } else if (state == OBJECT_CLOSED) {
                     removePooledEntry(pooledEntry, DESC_RM_CLOSED);
+                    if(!waitQueue.isEmpty())wakeupServantThread();
                 }
             }
 
