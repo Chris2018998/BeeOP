@@ -23,7 +23,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.concurrent.locks.LockSupport;
 
 import static cn.beeop.pool.StaticCenter.*;
 import static java.lang.System.*;
@@ -67,7 +66,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
     private String poolName = "";
     private String poolMode = "";
-    private PoolServantThread servantThread=new PoolServantThread();
+    private PoolServantThread servantThread = new PoolServantThread();
     private AtomicInteger poolState = new AtomicInteger(POOL_UNINIT);
     private AtomicInteger idleThreadState = new AtomicInteger(THREAD_WORKING);
     private AtomicInteger servantThreadState = new AtomicInteger(THREAD_WORKING);
@@ -267,9 +266,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             BeeObjectException cause = null;
             Thread cth = borrower.thread;
             borrower.state = BOWER_NORMAL;
-			waitQueue.offer(borrower);
+            waitQueue.offer(borrower);
             int spinSize = (waitQueue.peek() == borrower) ? maxTimedSpins : 0;
-			if(spinSize>0)wakeupServantThread();
+            if (spinSize > 0) wakeupServantThread();
             do {
                 Object state = borrower.state;
                 if (state instanceof PooledEntry) {
@@ -340,13 +339,14 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     public final void recycle(PooledEntry pEntry) {
         transferPolicy.beforeTransfer(pEntry);
         Iterator<Borrower> iterator = waitQueue.iterator();
-        W:while (iterator.hasNext()) {
+        W:
+        while (iterator.hasNext()) {
             Borrower borrower = (Borrower) iterator.next();
             while (pEntry.state == this.unCatchStateCode) {
                 Object state = borrower.state;
                 if (!(state instanceof BorrowerState)) continue W;
                 if (BorrowStUpd.compareAndSet(borrower, state, pEntry)) {
-                    if (state ==BOWER_WAITING)unpark(borrower.thread);
+                    if (state == BOWER_WAITING) unpark(borrower.thread);
                     return;
                 }
             }
@@ -363,16 +363,17 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      */
     private void transferException(BeeObjectException e) {
         Iterator<Borrower> iterator = waitQueue.iterator();
-        W:while (iterator.hasNext()) {
+        W:
+        while (iterator.hasNext()) {
             Borrower borrower = (Borrower) iterator.next();
             do {
                 Object state = borrower.state;
                 if (!(state instanceof BorrowerState)) continue W;
                 if (BorrowStUpd.compareAndSet(borrower, state, e)) {
-                    if (state ==BOWER_WAITING)unpark(borrower.thread);
+                    if (state == BOWER_WAITING) unpark(borrower.thread);
                     return;
                 }
-            }while(true);
+            } while (true);
         }
     }
 
@@ -590,7 +591,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         return monitorVo;
     }
 
-    public int getPoolState() { return poolState.get(); }
+    public int getPoolState() {
+        return poolState.get();
+    }
 
     public int getTotalSize() {
         return poolEntryArray.length;
@@ -722,6 +725,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         public PoolSemaphore(int permits, boolean fair) {
             super(permits, fair);
         }
+
         public void interruptWaitingThreads() {
             Iterator<Thread> iterator = super.getQueuedThreads().iterator();
             while (iterator.hasNext()) {
@@ -748,7 +752,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     servantThreadWorkCount.decrementAndGet();
                     try {
                         PooledEntry pEntry = pool.searchOrCreate();
-                        if (pEntry != null) pool.recycle(pEntry);              
+                        if (pEntry != null) pool.recycle(pEntry);
                     } catch (Throwable e) {
                         transferException(e instanceof BeeObjectException ? (BeeObjectException) e : new BeeObjectException(e));
                     }
