@@ -267,9 +267,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             BeeObjectException cause = null;
             Thread cth = borrower.thread;
             borrower.state = BOWER_NORMAL;
-            waitQueue.offer(borrower);
-            wakeupServantThread();
+			waitQueue.offer(borrower);
             int spinSize = (waitQueue.peek() == borrower) ? maxTimedSpins : 0;
+			if(spinSize>0)wakeupServantThread();
             do {
                 Object state = borrower.state;
                 if (state instanceof PooledEntry) {
@@ -748,7 +748,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     servantThreadWorkCount.decrementAndGet();
                     try {
                         PooledEntry pEntry = pool.searchOrCreate();
-                        if (pEntry != null) pool.recycle(pEntry);
+                        if (pEntry != null) pool.recycle(pEntry);              
                     } catch (Throwable e) {
                         transferException(e instanceof BeeObjectException ? (BeeObjectException) e : new BeeObjectException(e));
                     }
