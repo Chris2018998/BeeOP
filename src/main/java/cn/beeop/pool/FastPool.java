@@ -268,8 +268,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             Thread cth = borrower.thread;
             borrower.state = BOWER_NORMAL;
             waitQueue.offer(borrower);
-            int spinSize = (waitQueue.peek() == borrower) ? maxTimedSpins : 0;
             wakeupServantThread();
+            int spinSize = (waitQueue.peek() == borrower) ? maxTimedSpins : 0;
             do {
                 Object state = borrower.state;
                 if (state instanceof PooledEntry) {
