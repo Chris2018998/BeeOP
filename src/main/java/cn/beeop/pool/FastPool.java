@@ -251,7 +251,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             threadLocal.set(new WeakReference<Borrower>(borrower));
         }
 
-        final long deadlineNanos = nanoTime() + maxWaitNanos;
+        long acquireTime = nanoTime();
         try {
             if (!semaphore.tryAcquire(maxWaitNanos, NANOSECONDS))
                 throw RequestTimeoutException;
@@ -260,6 +260,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         }
         try {//semaphore acquired
             //2:try search one or create one
+            final long deadlineNanos = acquireTime + maxWaitNanos;
             PooledEntry pooledEntry = this.searchOrCreate();
             if (pooledEntry != null) return createObjectHandle(pooledEntry, borrower);
 
