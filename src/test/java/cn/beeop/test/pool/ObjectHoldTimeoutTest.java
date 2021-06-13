@@ -19,11 +19,13 @@ import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.pool.FastPool;
 import cn.beeop.pool.PoolMonitorVo;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.JavaBook;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
@@ -51,9 +53,12 @@ public class ObjectHoldTimeoutTest extends TestCase {
     public void test() throws InterruptedException, Exception {
         BeeObjectHandle handle = null;
         try {
+            FastPool pool = (FastPool) TestUtil.getFieldValue(obs, "pool");
+            CountDownLatch poolThreadLatch=(CountDownLatch) TestUtil.getFieldValue(pool, "poolThreadLatch");
+            if(poolThreadLatch.getCount()>0)poolThreadLatch.await();
+
             handle = obs.getObject();
             PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
-
             if (monitorVo.getIdleSize() + monitorVo.getUsingSize() != 1)
                 TestUtil.assertError("Total connections not as expected 1");
             if (monitorVo.getUsingSize() != 1)

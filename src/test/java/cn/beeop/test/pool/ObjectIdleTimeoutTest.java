@@ -17,11 +17,13 @@ package cn.beeop.test.pool;
 
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.pool.FastPool;
 import cn.beeop.pool.PoolMonitorVo;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.JavaBook;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
@@ -49,6 +51,10 @@ public class ObjectIdleTimeoutTest extends TestCase {
     }
 
     public void test() throws InterruptedException, Exception {
+        FastPool pool = (FastPool) TestUtil.getFieldValue(obs, "pool");
+        CountDownLatch poolThreadLatch=(CountDownLatch) TestUtil.getFieldValue(pool, "poolThreadLatch");
+        if(poolThreadLatch.getCount()>0)poolThreadLatch.await();
+
         PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
         int usingSize = monitorVo.getUsingSize();
         int idleSize = monitorVo.getIdleSize();
