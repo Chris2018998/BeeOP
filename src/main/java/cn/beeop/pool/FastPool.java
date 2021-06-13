@@ -260,7 +260,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         }
         try {//semaphore acquired
             //2:try search one or create one
-            final long deadlineNanos = acquireTime + maxWaitNanos;
             PooledEntry pooledEntry = this.searchOrCreate();
             if (pooledEntry != null) return createObjectHandle(pooledEntry, borrower);
 
@@ -271,6 +270,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             waitQueue.offer(borrower);
             int spinSize = (waitQueue.peek() == borrower) ? maxTimedSpins : 0;
             if (spinSize > 0) wakeupServantThread();
+            final long deadlineNanos = acquireTime + maxWaitNanos;
             do {
                 Object state = borrower.state;
                 if (state instanceof PooledEntry) {
@@ -281,7 +281,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     }
                 } else if (state instanceof Throwable) {
                     waitQueue.remove(borrower);
-                    throw state instanceof BeeObjectException? (BeeObjectException) state : new BeeObjectException((Throwable) state);
+                    throw state instanceof BeeObjectException ? (BeeObjectException) state : new BeeObjectException((Throwable) state);
                 }
                 if (failed) {
                     if (borrower.state == state)
@@ -748,7 +748,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
             pool.poolThreadLatch.countDown();
             while (poolState.get() != POOL_CLOSED) {
-                while (servantThreadState.get() == THREAD_WORKING &&!waitQueue.isEmpty()&&servantThreadWorkCount.get() > 0) {
+                while (servantThreadState.get() == THREAD_WORKING && !waitQueue.isEmpty() && servantThreadWorkCount.get() > 0) {
                     servantThreadWorkCount.decrementAndGet();
                     try {
                         PooledEntry pEntry = pool.searchOrCreate();
