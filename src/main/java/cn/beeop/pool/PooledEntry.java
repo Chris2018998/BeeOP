@@ -8,9 +8,6 @@ package cn.beeop.pool;
 
 import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectFactory;
-
-import java.sql.SQLException;
-
 import static cn.beeop.pool.StaticCenter.OBJECT_CLOSED;
 import static cn.beeop.pool.StaticCenter.commonLog;
 import static java.lang.System.currentTimeMillis;
@@ -69,7 +66,7 @@ class PooledEntry {
             pool.recycle(this);
         } catch (Throwable e) {
             pool.abandonOnReturn(this);
-            if (e instanceof SQLException) {
+            if (e instanceof BeeObjectException) {
                 throw (BeeObjectException) e;
             } else {
                 throw new BeeObjectException(e);

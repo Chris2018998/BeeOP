@@ -19,6 +19,7 @@ import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -66,6 +67,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
     private String poolName = "";
     private String poolMode = "";
+    private CountDownLatch poolThreadLatch = new CountDownLatch(2);
     private PoolServantThread servantThread = new PoolServantThread();
     private AtomicInteger poolState = new AtomicInteger(POOL_UNINIT);
     private AtomicInteger idleThreadState = new AtomicInteger(THREAD_WORKING);
@@ -140,7 +142,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             servantThread.setName(this.poolName + "-workServant");
             servantThread.setDaemon(true);
             servantThread.start();
-            while (!this.isAlive() || !servantThread.isAlive()) ;
             poolState.set(POOL_NORMAL);
         } else {
             throw new BeeObjectException("Pool has initialized");
@@ -174,20 +175,20 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         if (arrayLen < poolMaxSize) {
             if (isDebugEnabled)
                 commonLog.debug("BeeOP({}))begin to create a new pooled object,state:{}", poolName, conState);
-            Object con = null;
+            Object rawObj;
             try {
-                con = objectFactory.create(this.createProperties);
+                rawObj = objectFactory.create(this.createProperties);
             } catch (Throwable e) {
                 throw new ObjectCreateFailedException(e);
             }
             try {
-                objectFactory.setDefault(con);
+                objectFactory.setDefault(rawObj);
             } catch (Throwable e) {
-                objectFactory.destroy(con);
+                objectFactory.destroy(rawObj);
                 throw e;
             }
 
-            PooledEntry pooledEntry = new PooledEntry(con, conState, this, objectFactory);// registerStatement
+            PooledEntry pooledEntry = new PooledEntry(rawObj, conState, this, objectFactory);// registerStatement
             if (isDebugEnabled)
                 commonLog.debug("BeeOP({}))has created a new pooled object:{},state:{}", poolName, pooledEntry, conState);
             PooledEntry[] arrayNew = new PooledEntry[arrayLen + 1];
@@ -263,7 +264,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             if (pooledEntry != null) return createObjectHandle(pooledEntry, borrower);
 
             boolean failed = false;
-            BeeObjectException cause = null;
+            Throwable cause = null;
             Thread cth = borrower.thread;
             borrower.state = BOWER_NORMAL;
             waitQueue.offer(borrower);
@@ -277,9 +278,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                         waitQueue.remove(borrower);
                         return createObjectHandle(pooledEntry, borrower);
                     }
-                } else if (state instanceof BeeObjectException) {
+                } else if (state instanceof Throwable) {
                     waitQueue.remove(borrower);
-                    throw (BeeObjectException) state;
+                    throw state instanceof BeeObjectException? (BeeObjectException) state : new BeeObjectException((Throwable) state);
                 }
                 if (failed) {
                     if (borrower.state == state)
@@ -334,7 +335,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     /**
      * return object to pool after borrower end of use object
      *
-     * @param pooledEntry target object need release
+     * @param pEntry target object need release
      */
     public final void recycle(PooledEntry pEntry) {
         transferPolicy.beforeTransfer(pEntry);
@@ -361,7 +362,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      *
      * @param e: transfer Exception to waiter
      */
-    private void transferException(BeeObjectException e) {
+    private void transferException(Throwable e) {
         Iterator<Borrower> iterator = waitQueue.iterator();
         W:
         while (iterator.hasNext()) {
@@ -445,6 +446,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     public void run() {
+        poolThreadLatch.countDown();
         final long checkTimeIntervalNanos = MILLISECONDS.toNanos(poolConfig.getIdleCheckTimeInterval());
         while (idleThreadState.get() == THREAD_WORKING) {
             parkNanos(checkTimeIntervalNanos);
@@ -589,10 +591,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         monitorVo.setSemaphoreWaiterSize(getSemaphoreWaitingSize());
         monitorVo.setTransferWaiterSize(getTransferWaitingSize());
         return monitorVo;
-    }
-
-    public int getPoolState() {
-        return poolState.get();
     }
 
     public int getTotalSize() {
@@ -747,6 +745,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             final AtomicInteger servantThreadState = pool.servantThreadState;
             final AtomicInteger servantThreadWorkCount = pool.servantThreadWorkCount;
 
+            pool.poolThreadLatch.countDown();
             while (poolState.get() != POOL_CLOSED) {
                 while (servantThreadState.get() == THREAD_WORKING && servantThreadWorkCount.get() > 0 && !waitQueue.isEmpty()) {
                     servantThreadWorkCount.decrementAndGet();
@@ -754,7 +753,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                         PooledEntry pEntry = pool.searchOrCreate();
                         if (pEntry != null) pool.recycle(pEntry);
                     } catch (Throwable e) {
-                        transferException(e instanceof BeeObjectException ? (BeeObjectException) e : new BeeObjectException(e));
+                        transferException(e);
                     }
                 }
 

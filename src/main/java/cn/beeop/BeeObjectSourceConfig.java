@@ -29,13 +29,14 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //poolName index
     private static final AtomicInteger poolNameIndex = new AtomicInteger(1);
+    private static final Class[] EMPTY_CLASSES = new Class[0];
+    private static final String[] EMPTY_CLASS_NAMES = new String[0];
     //user name
     private String username;
     //password
     private String password;
     //server url
     private String serverUrl;
-
     //pool name
     private String poolName;
     //true:first arrive first take
@@ -62,7 +63,6 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     private boolean forceCloseUsingOnClear;
     //milliseconds:delay time for next clear pooled entry when exists using entry and 'forceCloseUsingOnClear' is false
     private long delayTimeForNextClear = 3000L;
-
     //object class
     private Class objectClass;
     //object class name
@@ -255,7 +255,6 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             this.delayTimeForNextClear = delayTimeForNextClear;
     }
 
-
     public Class getObjectClass() {
         return objectClass;
     }
@@ -273,13 +272,12 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public Class[] getObjectInterfaces() {
-        if (objectInterfaces == null) {
-            return null;
-        } else {
-            Class[] tempInterfaces = new Class[objectInterfaces.length];
-            System.arraycopy(objectInterfaces, 0, tempInterfaces, 0, objectInterfaces.length);
-            return tempInterfaces;
-        }
+        if (objectInterfaces == null)
+            return EMPTY_CLASSES;
+
+        Class[] tempInterfaces = new Class[objectInterfaces.length];
+        System.arraycopy(objectInterfaces, 0, tempInterfaces, 0, objectInterfaces.length);
+        return tempInterfaces;
     }
 
     public void setObjectInterfaces(Class[] interfaces) {
@@ -297,13 +295,11 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public String[] getObjectInterfaceNames() {
-        if (objectInterfaceNames == null) {
-            return null;
-        } else {
-            String[] tempInterfaceNames = new String[objectInterfaceNames.length];
-            System.arraycopy(objectInterfaceNames, 0, tempInterfaceNames, 0, objectInterfaceNames.length);
-            return tempInterfaceNames;
-        }
+        if (objectInterfaceNames == null) return EMPTY_CLASS_NAMES;
+
+        String[] tempInterfaceNames = new String[objectInterfaceNames.length];
+        System.arraycopy(objectInterfaceNames, 0, tempInterfaceNames, 0, objectInterfaceNames.length);
+        return tempInterfaceNames;
     }
 
     public void setObjectInterfaceNames(String[] interfaceNames) {
