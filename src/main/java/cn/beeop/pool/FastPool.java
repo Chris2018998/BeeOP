@@ -141,6 +141,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             this.start();
             servantThread.setName(this.poolName + "-workServant");
             servantThread.setDaemon(true);
+            servantThread.setPriority(Thread.MIN_PRIORITY);
             servantThread.start();
             poolState.set(POOL_NORMAL);
         } else {
@@ -251,7 +252,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             threadLocal.set(new WeakReference<Borrower>(borrower));
         }
 
-        long acquireTime = nanoTime();
+        long deadlineNanos = nanoTime();
         try {
             if (!semaphore.tryAcquire(maxWaitNanos, NANOSECONDS))
                 throw RequestTimeoutException;
@@ -268,9 +269,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             Thread cth = borrower.thread;
             borrower.state = BOWER_NORMAL;
             waitQueue.offer(borrower);
+            wakeupServantThread();
+            deadlineNanos +=maxWaitNanos;
             int spinSize = (waitQueue.peek() == borrower) ? maxTimedSpins : 0;
-            if (spinSize > 0) wakeupServantThread();
-            final long deadlineNanos = acquireTime + maxWaitNanos;
             do {
                 Object state = borrower.state;
                 if (state instanceof PooledEntry) {
