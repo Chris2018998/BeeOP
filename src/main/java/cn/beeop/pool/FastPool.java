@@ -252,7 +252,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             threadLocal.set(new WeakReference<Borrower>(borrower));
         }
 
-        long deadlineNanos = nanoTime();
+        long deadline = nanoTime();
         try {
             if (!semaphore.tryAcquire(maxWaitNanos, NANOSECONDS))
                 throw RequestTimeoutException;
@@ -270,7 +270,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             borrower.state = BOWER_NORMAL;
             waitQueue.offer(borrower);
             wakeupServantThread();
-            deadlineNanos +=maxWaitNanos;
+            deadline +=maxWaitNanos;
             int spinSize = (waitQueue.peek() == borrower) ? maxTimedSpins : 0;
             do {
                 Object state = borrower.state;
@@ -291,7 +291,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     borrower.state = BOWER_NORMAL;
                     yield();
                 } else {//here:(state == BOWER_NORMAL)
-                    long timeout = deadlineNanos - nanoTime();
+                    long timeout = deadline - nanoTime();
                     if (timeout > 0L) {
                         if (spinSize > 0) {
                             --spinSize;
