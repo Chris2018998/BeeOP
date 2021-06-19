@@ -52,7 +52,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private final ThreadLocal<WeakReference<Borrower>> threadLocal = new ThreadLocal<WeakReference<Borrower>>();
     private final PoolMonitorVo monitorVo = new PoolMonitorVo();
     private int poolMaxSize;
-    private long maxWaitNanos;//nanoseconds
+    private long maxWaitNs;//nanoseconds
+    private long idleTimeoutMs;//milliseconds
+    private long holdTimeoutMs;//milliseconds
     private int unCatchStateCode;
     private int objectTestTimeout;//seconds
     private long objectTestInterval;//milliseconds
@@ -65,8 +67,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private BeeObjectFactory objectFactory;
     private volatile PooledEntry[] poolEntryArray = new PooledEntry[0];
 
-    private String poolName = "";
-    private String poolMode = "";
+    private String poolName;
+    private String poolMode;
     private CountDownLatch poolThreadLatch = new CountDownLatch(2);
     private PoolServantThread servantThread = new PoolServantThread();
     private AtomicInteger poolState = new AtomicInteger(POOL_UNINIT);
@@ -102,7 +104,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             createProperties = poolConfig.getCreateProperties();
             excludeMethodNames = poolConfig.getExcludeMethodNames();
 
-            maxWaitNanos = MILLISECONDS.toNanos(poolConfig.getMaxWait());
+            idleTimeoutMs = poolConfig.getIdleTimeout();
+            holdTimeoutMs = poolConfig.getHoldTimeout();
+            maxWaitNs = MILLISECONDS.toNanos(poolConfig.getMaxWait());
             delayTimeForNextClearNanos = MILLISECONDS.toNanos(poolConfig.getDelayTimeForNextClear());
             objectTestInterval = poolConfig.getObjectTestInterval();
             if (poolConfig.isFairMode()) {
@@ -254,7 +258,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
         long deadline = nanoTime();
         try {
-            if (!semaphore.tryAcquire(maxWaitNanos, NANOSECONDS))
+            if (!semaphore.tryAcquire(maxWaitNs, NANOSECONDS))
                 throw RequestTimeoutException;
         } catch (InterruptedException e) {
             throw RequestInterruptException;
@@ -270,7 +274,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             borrower.state = BOWER_NORMAL;
             waitQueue.offer(borrower);
             wakeupServantThread();
-            deadline +=maxWaitNanos;
+            deadline += maxWaitNs;
             int spinSize=waitQueue.peek() == borrower? maxTimedSpins : 0;
             do {
                 Object state = borrower.state;
@@ -474,13 +478,13 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 PooledEntry pooledEntry = array[i];
                 int state = pooledEntry.state;
                 if (state == OBJECT_IDLE && !existBorrower()) {
-                    boolean isTimeoutInIdle = currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getIdleTimeout() >= 0;
+                    boolean isTimeoutInIdle = currentTimeMillis() - pooledEntry.lastAccessTime - idleTimeoutMs >= 0L;
                     if (isTimeoutInIdle && ObjStUpd.compareAndSet(pooledEntry, state, OBJECT_CLOSED)) {//need close idle
                         removePooledEntry(pooledEntry, DESC_RM_IDLE);
                         wakeupServantThread();
                     }
                 } else if (state == OBJECT_USING) {
-                    if (currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0L) {//hold timeout
+                    if (currentTimeMillis() - pooledEntry.lastAccessTime -holdTimeoutMs >= 0L) {//hold timeout
                         BeeObjectHandle proxyHandle = pooledEntry.objectHandle;
                         if (proxyHandle != null) {
                             tryClosedProxyHandle(proxyHandle);
@@ -540,7 +544,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 } else if (pooledEntry.state == OBJECT_USING) {
                     BeeObjectHandle proxyHandle = pooledEntry.objectHandle;
                     if (proxyHandle != null) {
-                        if (force || currentTimeMillis() - pooledEntry.lastAccessTime - poolConfig.getHoldTimeout() >= 0L)
+                        if (force || currentTimeMillis() - pooledEntry.lastAccessTime -holdTimeoutMs >= 0L)
                             tryClosedProxyHandle(proxyHandle);
                     } else {
                         removePooledEntry(pooledEntry, source);
