@@ -351,6 +351,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 if (BorrowStUpd.compareAndSet(borrower, state, pEntry)) {
                     if (state == BOWER_WAITING) unpark(borrower.thread);
                     return;
+                }else{
+                    yield();
                 }
             }
             return;
@@ -375,6 +377,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 if (BorrowStUpd.compareAndSet(borrower, state, e)) {
                     if (state == BOWER_WAITING) unpark(borrower.thread);
                     return;
+                }else{
+                    yield();
                 }
             } while (true);
         }
