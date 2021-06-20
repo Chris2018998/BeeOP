@@ -296,7 +296,6 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
     public String[] getObjectInterfaceNames() {
         if (objectInterfaceNames == null) return EMPTY_CLASS_NAMES;
-
         String[] tempInterfaceNames = new String[objectInterfaceNames.length];
         System.arraycopy(objectInterfaceNames, 0, tempInterfaceNames, 0, objectInterfaceNames.length);
         return tempInterfaceNames;
@@ -338,11 +337,13 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void removeCreateProperty(String key) {
+        if (!isBlank(key))
         createProperties.remove(key);
     }
 
     public void addCreateProperty(String key, Object value) {
-        createProperties.put(key, value);
+        if (!isBlank(key) && value!=null)
+            createProperties.put(key, value);
     }
 
     public Properties getCreateProperties() {
@@ -354,10 +355,12 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void addExcludeMethodName(String methodName) {
+        if (!isBlank(methodName))
         excludeMethodNames.add(methodName);
     }
 
     public void removeExcludeMethodName(String methodName) {
+        if (!isBlank(methodName))
         excludeMethodNames.remove(methodName);
     }
 
