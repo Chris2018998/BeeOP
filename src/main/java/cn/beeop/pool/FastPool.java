@@ -51,6 +51,12 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private final ConcurrentLinkedQueue<Borrower> waitQueue = new ConcurrentLinkedQueue<Borrower>();
     private final ThreadLocal<WeakReference<Borrower>> threadLocal = new ThreadLocal<WeakReference<Borrower>>();
     private final PoolMonitorVo monitorVo = new PoolMonitorVo();
+    private final AtomicInteger poolState = new AtomicInteger(POOL_UNINIT);
+    private final AtomicInteger idleThreadState = new AtomicInteger(THREAD_WORKING);
+    private final AtomicInteger servantThreadState = new AtomicInteger(THREAD_WORKING);
+    private final AtomicInteger servantThreadWorkCount = new AtomicInteger(0);
+    private final PoolServantThread servantThread = new PoolServantThread(this);
+
     private int poolMaxSize;
     private long maxWaitNs;//nanoseconds
     private long idleTimeoutMs;//milliseconds
@@ -70,11 +76,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private String poolName;
     private String poolMode;
     private CountDownLatch poolThreadLatch = new CountDownLatch(2);
-    private PoolServantThread servantThread = new PoolServantThread();
-    private AtomicInteger poolState = new AtomicInteger(POOL_UNINIT);
-    private AtomicInteger idleThreadState = new AtomicInteger(THREAD_WORKING);
-    private AtomicInteger servantThreadState = new AtomicInteger(THREAD_WORKING);
-    private AtomicInteger servantThreadWorkCount = new AtomicInteger(0);
     private Properties createProperties;
     private Set<String> excludeMethodNames;
     private ReflectProxyFactory reflectProxyFactory;
@@ -748,8 +749,12 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
     //create pooled connection by asyn
     private final class PoolServantThread extends Thread {
+        private FastPool pool;
+        public PoolServantThread(FastPool pool) {
+            this.pool = pool;
+        }
+
         public void run() {
-            final FastPool pool = FastPool.this;
             final AtomicInteger poolState = pool.poolState;
             final ConcurrentLinkedQueue<Borrower> waitQueue = pool.waitQueue;
             final AtomicInteger servantThreadState = pool.servantThreadState;
