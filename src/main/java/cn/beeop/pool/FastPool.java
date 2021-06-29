@@ -269,6 +269,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             PooledEntry pooledEntry = this.searchOrCreate();
             if (pooledEntry != null) return createObjectHandle(pooledEntry, borrower);
 
+            //3:try to get one transferred one
             boolean failed = false;
             Throwable cause = null;
             deadline += maxWaitNs;

@@ -18,13 +18,13 @@ import static java.lang.System.currentTimeMillis;
  * @author Chris.Liao
  * @version 1.0
  */
-class PooledEntry {
-    Object rawObject;
-    Class rawObjectClass;
-    volatile int state;
+final class PooledEntry {
+    public Object rawObject;
+    public Class rawObjectClass;
+    public volatile int state;
 
-    ObjectHandle objectHandle;//chang when object borrowed out
-    volatile long lastAccessTime;//read in pool
+    public ObjectHandle objectHandle;//chang when object borrowed out
+    public volatile long lastAccessTime;//read in pool
     private ObjectPool pool;
     private BeeObjectFactory objectFactory;
 
