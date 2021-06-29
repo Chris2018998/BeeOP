@@ -270,14 +270,14 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             if (pooledEntry != null) return createObjectHandle(pooledEntry, borrower);
 
             boolean failed = false;
-            boolean firstWait=true;
             Throwable cause = null;
+            deadline += maxWaitNs;
             Thread cth = borrower.thread;
             borrower.state = BOWER_NORMAL;
             waitQueue.offer(borrower);
-            wakeupServantThread();
-            deadline += maxWaitNs;
             int spinSize=waitQueue.peek() == borrower? maxTimedSpins : 0;
+            wakeupServantThread();
+            
             do {
                 Object state = borrower.state;
                 if (state instanceof PooledEntry) {
@@ -302,10 +302,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                         if (spinSize > 0) {
                             --spinSize;
                         } else if (borrower.state == BOWER_NORMAL && timeout > spinForTimeoutThreshold && BorrowStUpd.compareAndSet(borrower, BOWER_NORMAL, BOWER_WAITING)) {
-                            if(firstWait){
-                                firstWait=false;
-                                wakeupServantThread();
-                            }
                             parkNanos(timeout);
                             if (cth.isInterrupted()) {
                                 failed = true;
