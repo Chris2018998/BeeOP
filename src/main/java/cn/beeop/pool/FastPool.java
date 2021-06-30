@@ -39,7 +39,6 @@ import static java.util.concurrent.locks.LockSupport.*;
  */
 public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private static final long spinForTimeoutThreshold = 1000L;
-    private static final int maxTimedSpins = (Runtime.getRuntime().availableProcessors() < 2) ? 0 : 32;
     private static final AtomicIntegerFieldUpdater<PooledEntry> ObjStUpd = AtomicIntegerFieldUpdater.newUpdater(PooledEntry.class, "state");
     private static final AtomicReferenceFieldUpdater<Borrower, Object> BorrowStUpd = AtomicReferenceFieldUpdater.newUpdater(Borrower.class, Object.class, "state");
     private static final String DESC_RM_INIT = "init";
@@ -266,7 +265,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         }
         try {//semaphore acquired
             //2:try search one or create one
-            PooledEntry pooledEntry = this.searchOrCreate();
+            PooledEntry pooledEntry = searchOrCreate();
             if (pooledEntry != null) return createObjectHandle(pooledEntry, borrower);
 
             //3:try to get one transferred one
@@ -276,9 +275,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             Thread cth = borrower.thread;
             borrower.state = BOWER_NORMAL;
             waitQueue.offer(borrower);
-            int spinSize=waitQueue.peek() == borrower? maxTimedSpins : 0;
             wakeupServantThread();
-            
+
             do {
                 Object state = borrower.state;
                 if (state instanceof PooledEntry) {
@@ -300,9 +298,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 } else {//here:(state == BOWER_NORMAL)
                     long timeout = deadline - nanoTime();
                     if (timeout > 0L) {
-                        if (spinSize > 0) {
-                            --spinSize;
-                        } else if (borrower.state == BOWER_NORMAL && timeout > spinForTimeoutThreshold && BorrowStUpd.compareAndSet(borrower, BOWER_NORMAL, BOWER_WAITING)) {
+                        if (timeout > spinForTimeoutThreshold && borrower.state == BOWER_NORMAL && BorrowStUpd.compareAndSet(borrower, BOWER_NORMAL, BOWER_WAITING)) {
                             parkNanos(timeout);
                             if (cth.isInterrupted()) {
                                 failed = true;
@@ -358,7 +354,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 if (BorrowStUpd.compareAndSet(borrower, state, pEntry)) {
                     if (state == BOWER_WAITING) unpark(borrower.thread);
                     return;
-                }else{
+                } else {
                     yield();
                 }
             }
@@ -384,7 +380,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 if (BorrowStUpd.compareAndSet(borrower, state, e)) {
                     if (state == BOWER_WAITING) unpark(borrower.thread);
                     return;
-                }else{
+                } else {
                     yield();
                 }
             } while (true);
@@ -487,7 +483,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                         wakeupServantThread();
                     }
                 } else if (state == OBJECT_USING) {
-                    if (currentTimeMillis() - pooledEntry.lastAccessTime -holdTimeoutMs >= 0L) {//hold timeout
+                    if (currentTimeMillis() - pooledEntry.lastAccessTime - holdTimeoutMs >= 0L) {//hold timeout
                         BeeObjectHandle proxyHandle = pooledEntry.objectHandle;
                         if (proxyHandle != null) {
                             tryClosedProxyHandle(proxyHandle);
@@ -547,7 +543,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 } else if (pooledEntry.state == OBJECT_USING) {
                     BeeObjectHandle proxyHandle = pooledEntry.objectHandle;
                     if (proxyHandle != null) {
-                        if (force || currentTimeMillis() - pooledEntry.lastAccessTime -holdTimeoutMs >= 0L)
+                        if (force || currentTimeMillis() - pooledEntry.lastAccessTime - holdTimeoutMs >= 0L)
                             tryClosedProxyHandle(proxyHandle);
                     } else {
                         removePooledEntry(pooledEntry, source);
@@ -752,6 +748,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     //create pooled connection by asyn
     private final class PoolServantThread extends Thread {
         private FastPool pool;
+
         public PoolServantThread(FastPool pool) {
             this.pool = pool;
         }
