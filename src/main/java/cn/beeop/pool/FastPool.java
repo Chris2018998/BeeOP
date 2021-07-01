@@ -403,7 +403,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      * @return object alive state,true,alive
      */
     private final boolean testOnBorrow(PooledEntry pooledEntry) {
-        if (currentTimeMillis() - pooledEntry.lastAccessTime - objectTestInterval >= 0L && !objectFactory.isAlive(pooledEntry, objectTestTimeout)) {
+        if (currentTimeMillis() - pooledEntry.lastAccessTime - objectTestInterval > 0L && !objectFactory.isAlive(pooledEntry, objectTestTimeout)) {
             removePooledEntry(pooledEntry, DESC_RM_BAD);
             wakeupServantThread();
             return false;
