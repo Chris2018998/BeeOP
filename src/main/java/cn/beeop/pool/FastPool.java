@@ -290,15 +290,14 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     throw state instanceof BeeObjectException ? (BeeObjectException) state : new BeeObjectException((Throwable) state);
                 }
                 if (failed) {
-                    if (borrower.state == state)
-                        BorrowStUpd.compareAndSet(borrower, state, cause);
+                    BorrowStUpd.compareAndSet(borrower, state, cause);
                 } else if (state instanceof PooledEntry) {
                     borrower.state = BOWER_NORMAL;
                     yield();
                 } else {//here:(state == BOWER_NORMAL)
                     long timeout = deadline - nanoTime();
                     if (timeout > 0L) {
-                        if (timeout > spinForTimeoutThreshold && borrower.state == BOWER_NORMAL && BorrowStUpd.compareAndSet(borrower, BOWER_NORMAL, BOWER_WAITING)) {
+                        if (timeout > spinForTimeoutThreshold && borrower.state==BOWER_NORMAL&& BorrowStUpd.compareAndSet(borrower, BOWER_NORMAL, BOWER_WAITING)) {
                             parkNanos(timeout);
                             if (cth.isInterrupted()) {
                                 failed = true;
@@ -345,22 +344,20 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     public final void recycle(PooledEntry pEntry) {
         transferPolicy.beforeTransfer(pEntry);
         Iterator<Borrower> iterator = waitQueue.iterator();
-        W:
+        tryNext:
         while (iterator.hasNext()) {
             Borrower borrower = (Borrower) iterator.next();
-            while (pEntry.state == this.unCatchStateCode) {
+            while(pEntry.state == unCatchStateCode) {
                 Object state = borrower.state;
-                if (!(state instanceof BorrowerState)) continue W;
+                if (!(state instanceof BorrowerState)) continue tryNext;
                 if (BorrowStUpd.compareAndSet(borrower, state, pEntry)) {
                     if (state == BOWER_WAITING) unpark(borrower.thread);
                     return;
-                } else {
-                    yield();
                 }
             }
             return;
         }
-        this.transferPolicy.onFailedTransfer(pEntry);
+        transferPolicy.onFailedTransfer(pEntry);
     }
 
     /**
@@ -371,17 +368,15 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      */
     private void transferException(Throwable e) {
         Iterator<Borrower> iterator = waitQueue.iterator();
-        W:
+        tryNext:
         while (iterator.hasNext()) {
             Borrower borrower = (Borrower) iterator.next();
             do {
                 Object state = borrower.state;
-                if (!(state instanceof BorrowerState)) continue W;
+                if (!(state instanceof BorrowerState)) continue tryNext;
                 if (BorrowStUpd.compareAndSet(borrower, state, e)) {
                     if (state == BOWER_WAITING) unpark(borrower.thread);
                     return;
-                } else {
-                    yield();
                 }
             } while (true);
         }
