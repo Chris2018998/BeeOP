@@ -51,7 +51,6 @@ public class StaticCenter {
     public static final Class[] EmptyParamTypes = new Class[0];
     public static final Object[] EmptyParamValues = new Object[0];
     public static final Logger commonLog = LoggerFactory.getLogger(StaticCenter.class);
-    public static final boolean isDebugEnabled = commonLog.isDebugEnabled();
     public static final String OS_Config_Prop_Separator_MiddleLine = "-";
     public static final String OS_Config_Prop_Separator_UnderLine = "_";
     static final ConcurrentHashMap<Object, Method> ObjectMethodMap = new ConcurrentHashMap<Object, Method>(16);

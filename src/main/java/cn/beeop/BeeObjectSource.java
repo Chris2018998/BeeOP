@@ -90,6 +90,10 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
         return (pool != null) ? pool.isClosed() : true;
     }
 
+    public void setEnableRuntimeLog(boolean enableRuntimeLog) {
+        if (pool != null) pool.setEnableRuntimeLog(enableRuntimeLog);
+    }
+
     /**
      * @return pool monitor vo
      * @throws BeeObjectException if pool not be initialized

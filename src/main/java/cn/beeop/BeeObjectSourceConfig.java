@@ -83,6 +83,10 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     private String poolImplementClassName;
     //indicator,whether register pool to jmx
     private boolean enableJmx;
+    //indicator,whether print pool config info
+    private boolean enableConfigLog;
+    //indicator,whether print pool runtime info
+    private boolean enableRuntimeLog;
 
     public BeeObjectSourceConfig() {
         excludeMethodNames.add("close");
@@ -338,11 +342,11 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
     public void removeCreateProperty(String key) {
         if (!isBlank(key))
-        createProperties.remove(key);
+            createProperties.remove(key);
     }
 
     public void addCreateProperty(String key, Object value) {
-        if (!isBlank(key) && value!=null)
+        if (!isBlank(key) && value != null)
             createProperties.put(key, value);
     }
 
@@ -356,12 +360,12 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
     public void addExcludeMethodName(String methodName) {
         if (!isBlank(methodName))
-        excludeMethodNames.add(methodName);
+            excludeMethodNames.add(methodName);
     }
 
     public void removeExcludeMethodName(String methodName) {
         if (!isBlank(methodName))
-        excludeMethodNames.remove(methodName);
+            excludeMethodNames.remove(methodName);
     }
 
     @Override
@@ -386,6 +390,19 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         return (value == null) ? null : value.trim();
     }
 
+    public void setEnableConfigLog(boolean enableConfigLog) {
+        this.enableConfigLog = enableConfigLog;
+    }
+
+    public boolean isEnableRuntimeLog() {
+        return enableRuntimeLog;
+    }
+
+    public void setEnableRuntimeLog(boolean enableRuntimeLog) {
+        this.enableRuntimeLog = enableRuntimeLog;
+    }
+
+
     void copyTo(BeeObjectSourceConfig config) {
         //container type field
         List<String> excludeMethodNameList = new ArrayList(4);
@@ -401,7 +418,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             if (!excludeMethodNameList.contains(field.getName())) {
                 try {
                     Object fieldValue = field.get(this);
-                    commonLog.debug("BeeObjectSourceConfig.{}={}", field.getName(), fieldValue);
+                    if (enableConfigLog) commonLog.info("{}.{}={}", poolName, field.getName(), fieldValue);
                     field.set(config, fieldValue);
                 } catch (Exception e) {
                     throw new BeeObjectSourceConfigException("Failed to copy field[" + field.getName() + "]", e);
@@ -413,7 +430,8 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         Iterator<Map.Entry<Object, Object>> iterator = createProperties.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<Object, Object> entry = iterator.next();
-            commonLog.debug("BeeObjectSourceConfig.createProperties.{}={}", entry.getKey(), entry.getValue());
+            if (enableConfigLog)
+                commonLog.info("{}.createProperties.{}={}", poolName, entry.getKey(), entry.getValue());
             config.addCreateProperty((String) entry.getKey(), entry.getValue());
         }
 
@@ -421,14 +439,14 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         int index = 0;
         for (String methodName : excludeMethodNames) {
             config.addExcludeMethodName(methodName);
-            commonLog.debug("BeeObjectSourceConfig.excludeMethodNames[{}]={}", index++, methodName);
+            if (enableConfigLog) commonLog.info("{}.excludeMethodNames[{}]={}", poolName, index++, methodName);
         }
         //4:copy 'objectInterfaces'
         Class[] interfaces = (objectInterfaces == null) ? null : new Class[objectInterfaces.length];
         if (interfaces != null) {
             System.arraycopy(objectInterfaces, 0, interfaces, 0, interfaces.length);
             for (int i = 0, l = interfaces.length; i < l; i++)
-                commonLog.debug("BeeObjectSourceConfig.objectInterfaces[{}]={}", i, interfaces[i]);
+                if (enableConfigLog) commonLog.info("{}.objectInterfaces[{}]={}", poolName, i, interfaces[i]);
         }
         config.setObjectInterfaces(interfaces);
 
@@ -437,7 +455,8 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         if (interfaceNames != null) {
             System.arraycopy(objectInterfaceNames, 0, interfaceNames, 0, interfaceNames.length);
             for (int i = 0, l = objectInterfaceNames.length; i < l; i++)
-                commonLog.debug("BeeObjectSourceConfig.objectInterfaceNames[{}]={}", i, objectInterfaceNames[i]);
+                if (enableConfigLog)
+                    commonLog.info("{}.objectInterfaceNames[{}]={}", poolName, i, objectInterfaceNames[i]);
         }
         config.setObjectInterfaceNames(interfaceNames);
     }
@@ -553,7 +572,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
                 if (!isBlank(excludeMethodName)) {
                     excludeMethodName = excludeMethodName.trim();
                     this.addExcludeMethodName(excludeMethodName);
-                    commonLog.info("add excludeMethodName:{}", excludeMethodName);
+                    commonLog.debug("add excludeMethodName:{}", excludeMethodName);
                 }
             }
         }
@@ -585,7 +604,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
                 String[] pairs = attribute.split("=");
                 if (pairs.length == 2) {
                     this.addCreateProperty(pairs[0].trim(), pairs[1].trim());
-                    commonLog.info("beeop.createProperties.{}={}", pairs[0].trim(), pairs[1].trim());
+                    commonLog.debug("beeop.createProperties.{}={}", pairs[0].trim(), pairs[1].trim());
                 }
             }
         }
@@ -603,7 +622,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     private final String readConfig(Properties configProperties, String propertyName) {
         String value = configProperties.getProperty(propertyName);
         if (!isBlank(value)) {
-            commonLog.info("beeop.{}={}", propertyName, value);
+            commonLog.debug("beeop.{}={}", propertyName, value);
             return value.trim();
         } else {
             return null;

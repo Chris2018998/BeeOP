@@ -32,5 +32,8 @@ public interface PoolJmxBean {
     //return waiter size for transferred object
     int getTransferWaitingSize();
 
+    //enable Runtime Log
+    void setEnableRuntimeLog(boolean indicator);
+
 }
 

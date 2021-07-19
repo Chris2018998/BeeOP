@@ -10,6 +10,8 @@ import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSourceConfig;
 
+import java.sql.SQLException;
+
 /**
  * object pool interface
  *
@@ -78,6 +80,14 @@ public interface ObjectPool {
      * @param forceCloseUsingOnClear close using objects directly
      */
     void clearAllObjects(boolean forceCloseUsingOnClear);
+
+    /**
+     * enable Runtime Log
+     *
+     * @param indicator indicator,whether print pool runtime info
+     * @throws SQLException
+     */
+    void setEnableRuntimeLog(boolean indicator);
 
 }
 	
