@@ -70,6 +70,13 @@ public interface ObjectPool {
     PoolMonitorVo getMonitorVo();
 
     /**
+     * enable Runtime Log
+     *
+     * @param indicator indicator,whether print pool runtime info
+     */
+    void setEnableRuntimeLog(boolean indicator);
+
+    /**
      * Clear all objects from pool
      */
     void clearAllObjects();
@@ -80,14 +87,6 @@ public interface ObjectPool {
      * @param forceCloseUsingOnClear close using objects directly
      */
     void clearAllObjects(boolean forceCloseUsingOnClear);
-
-    /**
-     * enable Runtime Log
-     *
-     * @param indicator indicator,whether print pool runtime info
-     * @throws SQLException
-     */
-    void setEnableRuntimeLog(boolean indicator);
 
 }
 	

@@ -142,7 +142,12 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     semaphoreSize,
                     poolConfig.getMaxWait());
 
-
+            idleScanThread.setDaemon(true);
+            idleScanThread.setName(this.poolName + "-idleCheck");
+            idleScanThread.start();
+            this.setDaemon(true);
+            this.setName(this.poolName + "-workServant");
+            this.start();
             poolState.set(POOL_NORMAL);
         } else {
             throw new BeeObjectException("Pool has initialized");
