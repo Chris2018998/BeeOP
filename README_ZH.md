@@ -7,7 +7,7 @@ Maven坐标（Java7及更高版本)
 <dependency>
    <groupId>com.github.chris2018998</groupId>
    <artifactId>beeop</artifactId>
-   <version>1.0.7</version>
+   <version>1.0.8</version>
 </dependency>
 ```
 ---
