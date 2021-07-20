@@ -532,9 +532,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         if (poolState.compareAndSet(POOL_NORMAL, POOL_CLEARING)) {
             commonLog.info("BeeOP({})begin to remove objects", poolName);
             clearAllObjects(force, DESC_RM_CLEAR);
-            commonLog.info("BeeOP({})all objects were removed", poolName);
             poolState.set(POOL_NORMAL);// restore state;
-            commonLog.info("BeeOP({})restore to accept new requests", poolName);
+            commonLog.info("BeeOP({})all objects were removed and restored to accept new requests", poolName);
         }
     }
 
