@@ -300,12 +300,14 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                         if (timeout > spinForTimeoutThreshold && BorrowStUpd.compareAndSet(borrower, BOWER_NORMAL, BOWER_WAITING)) {
                             if (servantThreadTryCount.get() > 0 && servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
                                 unpark(this);
+
                             parkNanos(timeout);
-                            if (borrower.state == BOWER_WAITING) {
+                            if (cth.isInterrupted()) {
                                 failed = true;
-                                cause = cth.isInterrupted() ? RequestInterruptException : RequestTimeoutException;
-                                BorrowStUpd.compareAndSet(borrower,BOWER_WAITING, cause);
+                                cause = RequestInterruptException;
                             }
+                            if (borrower.state == BOWER_WAITING)
+                                BorrowStUpd.compareAndSet(borrower, BOWER_WAITING, failed ? cause : BOWER_NORMAL);//reset to normal
                         }
                     } else {//timeout
                         failed = true;
