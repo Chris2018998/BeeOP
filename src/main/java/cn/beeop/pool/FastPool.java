@@ -270,13 +270,13 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             if (pooledEntry != null) return createObjectHandle(pooledEntry, borrower);
 
             //3:try to get one transferred one
+			borrower.state = BOWER_NORMAL;
+            waitQueue.offer(borrower);
             boolean failed = false;
             Throwable cause = null;
             deadline += maxWaitNs;
             Thread cth = borrower.thread;
-            borrower.state = BOWER_NORMAL;
-            waitQueue.offer(borrower);
-
+			
             do {
                 Object state = borrower.state;
                 if (state instanceof PooledEntry) {
@@ -300,7 +300,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                         if (timeout > spinForTimeoutThreshold && BorrowStUpd.compareAndSet(borrower, BOWER_NORMAL, BOWER_WAITING)) {
                             if (servantThreadTryCount.get() > 0 && servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
                                 unpark(this);
-
                             parkNanos(timeout);
                             if (cth.isInterrupted()) {
                                 failed = true;
@@ -346,7 +345,6 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      *
      * @param p target object need release
      */
-
     public final void recycle(PooledEntry p) {
         Iterator<Borrower> iterator = waitQueue.iterator();
         transferPolicy.beforeTransfer(p);
