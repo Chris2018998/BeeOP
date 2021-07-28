@@ -177,8 +177,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
     //create one pooled object
     private synchronized final PooledEntry createPooledEntry(int conState) throws BeeObjectException {
-        int arrayLen = poolEntryArray.length;
-        if (arrayLen < poolMaxSize) {
+        int l = poolEntryArray.length;
+        if (l < poolMaxSize) {
             if (printRuntimeLog)
                 commonLog.debug("BeeOP({}))begin to create a new pooled object,state:{}", poolName, conState);
             Object rawObj;
@@ -197,9 +197,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             PooledEntry pooledEntry = new PooledEntry(rawObj, conState, this, objectFactory);// registerStatement
             if (printRuntimeLog)
                 commonLog.debug("BeeOP({}))has created a new pooled object:{},state:{}", poolName, pooledEntry, conState);
-            PooledEntry[] arrayNew = new PooledEntry[arrayLen + 1];
-            arraycopy(poolEntryArray, 0, arrayNew, 0, arrayLen);
-            arrayNew[arrayLen] = pooledEntry;// tail
+            PooledEntry[] arrayNew = new PooledEntry[l + 1];
+            arraycopy(poolEntryArray, 0, arrayNew, 0, l);
+            arrayNew[l] = pooledEntry;// tail
             poolEntryArray = arrayNew;
             return pooledEntry;
         } else {
@@ -208,23 +208,23 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     //remove one pooled object
-    private synchronized void removePooledEntry(PooledEntry pooledEntry, String removeType) {
+    private synchronized void removePooledEntry(PooledEntry p, String removeType) {
         if (printRuntimeLog)
-            commonLog.debug("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, pooledEntry, removeType);
+            commonLog.debug("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, p, removeType);
 
-        pooledEntry.onBeforeRemove();
-        int oLen = poolEntryArray.length;
-        PooledEntry[] arrayNew = new PooledEntry[oLen - 1];
-        for (int i = 0; i < oLen; i++) {
-            if (poolEntryArray[i] == pooledEntry) {
+        p.onBeforeRemove();
+        int l = poolEntryArray.length;
+        PooledEntry[] arrayNew = new PooledEntry[l - 1];
+        for (int i = 0; i < l; i++) {
+            if (poolEntryArray[i] == p) {
                 arraycopy(poolEntryArray, 0, arrayNew, 0, i);
-                int m = oLen - i - 1;
+                int m = l - i - 1;
                 if (m > 0) arraycopy(poolEntryArray, i + 1, arrayNew, i, m);
                 break;
             }
         }
         if (printRuntimeLog)
-            commonLog.debug("BeeOP({}))has removed pooled object:{},reason:{}", poolName, pooledEntry, removeType);
+            commonLog.debug("BeeOP({}))has removed pooled object:{},reason:{}", poolName, p, removeType);
         poolEntryArray = arrayNew;
     }
 
@@ -244,17 +244,17 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     public final BeeObjectHandle getObject() throws BeeObjectException {
         if (poolState.get() != POOL_NORMAL) throw PoolCloseException;
         //0:try to get from threadLocal cache
-        WeakReference<Borrower> ref = threadLocal.get();
-        Borrower borrower = (ref != null) ? ref.get() : null;
-        if (borrower != null) {
-            PooledEntry pooledEntry = borrower.lastUsedEntry;
-            if (pooledEntry != null && pooledEntry.state == OBJECT_IDLE && ObjStUpd.compareAndSet(pooledEntry, OBJECT_IDLE, OBJECT_USING)) {
-                if (testOnBorrow(pooledEntry)) return createObjectHandle(pooledEntry, borrower);
-                borrower.lastUsedEntry = null;
+        WeakReference<Borrower> r = threadLocal.get();
+        Borrower b = (r != null) ? r.get() : null;
+        if (b != null) {
+            PooledEntry p = b.lastUsed;
+            if (p != null && p.state == OBJECT_IDLE && ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING)) {
+                if (testOnBorrow(p)) return createObjectHandle(p, b);
+                b.lastUsed = null;
             }
         } else {
-            borrower = new Borrower();
-            threadLocal.set(new WeakReference<Borrower>(borrower));
+            b = new Borrower();
+            threadLocal.set(new WeakReference<Borrower>(b));
         }
 
         long deadline = nanoTime();
@@ -266,47 +266,47 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         }
         try {//semaphore acquired
             //2:try search one or create one
-            PooledEntry pooledEntry = searchOrCreate();
-            if (pooledEntry != null) return createObjectHandle(pooledEntry, borrower);
+            PooledEntry p = searchOrCreate();
+            if (p != null) return createObjectHandle(p, b);
 
             //3:try to get one transferred one
-			borrower.state = BOWER_NORMAL;
-            waitQueue.offer(borrower);
+			b.state = BOWER_NORMAL;
+            waitQueue.offer(b);
             boolean failed = false;
             Throwable cause = null;
             deadline += maxWaitNs;
-            Thread cth = borrower.thread;
+            Thread cth = b.thread;
 			
             do {
-                Object state = borrower.state;
-                if (state instanceof PooledEntry) {
-                    pooledEntry = (PooledEntry) state;
-                    if (transferPolicy.tryCatch(pooledEntry) && testOnBorrow(pooledEntry)) {
-                        waitQueue.remove(borrower);
-                        return createObjectHandle(pooledEntry, borrower);
+                Object s = b.state;
+                if (s instanceof PooledEntry) {
+                    p = (PooledEntry) s;
+                    if (transferPolicy.tryCatch(p) && testOnBorrow(p)) {
+                        waitQueue.remove(b);
+                        return createObjectHandle(p, b);
                     }
-                } else if (state instanceof Throwable) {
-                    waitQueue.remove(borrower);
-                    throw state instanceof BeeObjectException ? (BeeObjectException) state : new BeeObjectException((Throwable) state);
+                } else if (s instanceof Throwable) {
+                    waitQueue.remove(b);
+                    throw s instanceof BeeObjectException ? (BeeObjectException) s : new BeeObjectException((Throwable) s);
                 }
                 if (failed) {
-                    BorrowStUpd.compareAndSet(borrower, state, cause);
-                } else if (state instanceof PooledEntry) {
-                    borrower.state = BOWER_NORMAL;
+                    BorrowStUpd.compareAndSet(b, s, cause);
+                } else if (s instanceof PooledEntry) {
+                    b.state = BOWER_NORMAL;
                     yield();
                 } else {//here:(state == BOWER_NORMAL)
-                    long timeout = deadline - nanoTime();
-                    if (timeout > 0L) {
-                        if (timeout > spinForTimeoutThreshold && BorrowStUpd.compareAndSet(borrower, BOWER_NORMAL, BOWER_WAITING)) {
+                    long t = deadline - nanoTime();
+                    if (t > 0L) {
+                        if (t > spinForTimeoutThreshold && BorrowStUpd.compareAndSet(b, BOWER_NORMAL, BOWER_WAITING)) {
                             if (servantThreadTryCount.get() > 0 && servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
                                 unpark(this);
-                            parkNanos(timeout);
+                            parkNanos(t);
                             if (cth.isInterrupted()) {
                                 failed = true;
                                 cause = RequestInterruptException;
                             }
-                            if (borrower.state == BOWER_WAITING)
-                                BorrowStUpd.compareAndSet(borrower, BOWER_WAITING, failed ? cause : BOWER_NORMAL);//reset to normal
+                            if (b.state == BOWER_WAITING)
+                                BorrowStUpd.compareAndSet(b, BOWER_WAITING, failed ? cause : BOWER_NORMAL);//reset to normal
                         }
                     } else {//timeout
                         failed = true;
@@ -320,10 +320,10 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     private final PooledEntry searchOrCreate() throws BeeObjectException {
-        PooledEntry[] elements = poolEntryArray;
-        int l = elements.length;
+        PooledEntry[] array = poolEntryArray;
+        int l = array.length;
         for (int i = 0; i < l; ++i) {
-            PooledEntry p = elements[i];
+            PooledEntry p = array[i];
             if (p.state == OBJECT_IDLE && ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(p))
                 return p;
         }
@@ -333,11 +333,13 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     private final void tryWakeupServantThread() {
-        if (servantThreadTryCount.get() < poolMaxSize) {
-            servantThreadTryCount.incrementAndGet();
-            if (!waitQueue.isEmpty() && servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
-                unpark(this);
-        }
+        int c;
+        do {
+            c = servantThreadTryCount.get();
+            if (c >= poolMaxSize) return;
+        } while (!servantThreadTryCount.compareAndSet(c, c + 1));
+        if (!waitQueue.isEmpty() && servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
+            unpark(this);
     }
 
     /**
@@ -346,19 +348,19 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      * @param p target object need release
      */
     public final void recycle(PooledEntry p) {
-        Iterator<Borrower> iterator = waitQueue.iterator();
+        Iterator<Borrower> it = waitQueue.iterator();
         transferPolicy.beforeTransfer(p);
         tryNext:
-        while (iterator.hasNext()) {
-            Borrower b = iterator.next();
-            Object state;
+        while (it.hasNext()) {
+            Borrower b = it.next();
+            Object s;
             do {
-                state = b.state;
-                if (state != BOWER_NORMAL && state != BOWER_WAITING)
+                s = b.state;
+                if (s != BOWER_NORMAL && s != BOWER_WAITING)
                     continue tryNext;
                 if (p.state != unCatchStateCode) return;
-            } while (!BorrowStUpd.compareAndSet(b, state, p));
-            if (state == BOWER_WAITING) unpark(b.thread);
+            } while (!BorrowStUpd.compareAndSet(b, s, p));
+            if (s == BOWER_WAITING) unpark(b.thread);
             return;
         }
         transferPolicy.onFailedTransfer(p);
@@ -372,17 +374,17 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      * @param e: transfer Exception to waiter
      */
     private void transferException(Throwable e) {
-        Iterator<Borrower> iterator = waitQueue.iterator();
+        Iterator<Borrower> it = waitQueue.iterator();
         tryNext:
-        while (iterator.hasNext()) {
-            Borrower b = iterator.next();
-            Object state;
+        while (it.hasNext()) {
+            Borrower b = it.next();
+            Object s;
             do {
-                state = b.state;
-                if (state != BOWER_NORMAL && state != BOWER_WAITING)
+                s = b.state;
+                if (s != BOWER_NORMAL && s != BOWER_WAITING)
                     continue tryNext;
-            } while (!BorrowStUpd.compareAndSet(b, state, e));
-            if (state == BOWER_WAITING) unpark(b.thread);
+            } while (!BorrowStUpd.compareAndSet(b, s, e));
+            if (s == BOWER_WAITING) unpark(b.thread);
             return;
         }
     }
@@ -390,10 +392,10 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     /**
      * remove object when exception occur in return
      *
-     * @param pooledEntry target object need release
+     * @param p target object need release
      */
-    public void abandonOnReturn(PooledEntry pooledEntry) {
-        removePooledEntry(pooledEntry, DESC_RM_BAD);
+    public void abandonOnReturn(PooledEntry p) {
+        removePooledEntry(p, DESC_RM_BAD);
         tryWakeupServantThread();
     }
 
@@ -402,9 +404,9 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      *
      * @return object alive state,true,alive
      */
-    private final boolean testOnBorrow(PooledEntry pooledEntry) {
-        if (currentTimeMillis() - pooledEntry.lastAccessTime - objectTestInterval > 0L && !objectFactory.isAlive(pooledEntry, objectTestTimeout)) {
-            removePooledEntry(pooledEntry, DESC_RM_BAD);
+    private final boolean testOnBorrow(PooledEntry p) {
+        if (currentTimeMillis() - p.lastAccessTime - objectTestInterval > 0L && !objectFactory.isAlive(p, objectTestTimeout)) {
+            removePooledEntry(p, DESC_RM_BAD);
             tryWakeupServantThread();
             return false;
         } else {
@@ -415,17 +417,17 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     /**
      * create one wrapper around one borrowed object.
      *
-     * @param pEntry   borrowed pooled object
-     * @param borrower
+     * @param p   borrowed pooled object
+     * @param b
      * @return object handle
      */
-    private final BeeObjectHandle createObjectHandle(PooledEntry pEntry, Borrower borrower) {
-        ObjectHandle handle = new ObjectHandle(pEntry, excludeMethodNames);
-        borrower.lastUsedEntry = pEntry;
-        pEntry.objectHandle = handle;
+    private final BeeObjectHandle createObjectHandle(PooledEntry p, Borrower b) {
+        ObjectHandle handle = new ObjectHandle(p, excludeMethodNames);
+        b.lastUsed = p;
+        p.objectHandle = handle;
 
         try {
-            handle.setProxyObject(reflectProxyFactory.createProxyObject(pEntry, handle, excludeMethodNames));
+            handle.setProxyObject(reflectProxyFactory.createProxyObject(p, handle, excludeMethodNames));
         } catch (Throwable e) {
             commonLog.warn("BeeOP({})failed to create reflect proxy instance:", poolName, e);
         }
@@ -483,26 +485,26 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         if (poolState.get() == POOL_NORMAL) {
             PooledEntry[] array = poolEntryArray;
             for (int i = 0, len = array.length; i < len; i++) {
-                PooledEntry pooledEntry = array[i];
-                int state = pooledEntry.state;
+                PooledEntry p = array[i];
+                int state = p.state;
                 if (state == OBJECT_IDLE && !existBorrower()) {
-                    boolean isTimeoutInIdle = currentTimeMillis() - pooledEntry.lastAccessTime - idleTimeoutMs >= 0L;
-                    if (isTimeoutInIdle && ObjStUpd.compareAndSet(pooledEntry, state, OBJECT_CLOSED)) {//need close idle
-                        removePooledEntry(pooledEntry, DESC_RM_IDLE);
+                    boolean isTimeoutInIdle = currentTimeMillis() - p.lastAccessTime - idleTimeoutMs >= 0L;
+                    if (isTimeoutInIdle && ObjStUpd.compareAndSet(p, state, OBJECT_CLOSED)) {//need close idle
+                        removePooledEntry(p, DESC_RM_IDLE);
                         tryWakeupServantThread();
                     }
                 } else if (state == OBJECT_USING) {
-                    if (currentTimeMillis() - pooledEntry.lastAccessTime - holdTimeoutMs >= 0L) {//hold timeout
-                        BeeObjectHandle proxyHandle = pooledEntry.objectHandle;
+                    if (currentTimeMillis() - p.lastAccessTime - holdTimeoutMs >= 0L) {//hold timeout
+                        BeeObjectHandle proxyHandle = p.objectHandle;
                         if (proxyHandle != null) {
                             tryClosedProxyHandle(proxyHandle);
                         } else {
-                            removePooledEntry(pooledEntry, DESC_RM_BAD);
+                            removePooledEntry(p, DESC_RM_BAD);
                             tryWakeupServantThread();
                         }
                     }
                 } else if (state == OBJECT_CLOSED) {
-                    removePooledEntry(pooledEntry, DESC_RM_CLOSED);
+                    removePooledEntry(p, DESC_RM_CLOSED);
                     tryWakeupServantThread();
                 }
             }

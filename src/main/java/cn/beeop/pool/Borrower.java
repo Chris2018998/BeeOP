@@ -14,6 +14,6 @@ package cn.beeop.pool;
  */
 final class Borrower {
     public volatile Object state;
-    public PooledEntry lastUsedEntry;
+    public PooledEntry lastUsed;
     public Thread thread = Thread.currentThread();
 }
