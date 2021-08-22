@@ -180,7 +180,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         int l = poolEntryArray.length;
         if (l < poolMaxSize) {
             if (printRuntimeLog)
-                commonLog.debug("BeeOP({}))begin to create a new pooled object,state:{}", poolName, conState);
+                commonLog.info("BeeOP({}))begin to create a new pooled object,state:{}", poolName, conState);
             Object rawObj;
             try {
                 rawObj = objectFactory.create(this.createProperties);
@@ -196,7 +196,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
             PooledEntry pooledEntry = new PooledEntry(rawObj, conState, this, objectFactory);// registerStatement
             if (printRuntimeLog)
-                commonLog.debug("BeeOP({}))has created a new pooled object:{},state:{}", poolName, pooledEntry, conState);
+                commonLog.info("BeeOP({}))has created a new pooled object:{},state:{}", poolName, pooledEntry, conState);
             PooledEntry[] arrayNew = new PooledEntry[l + 1];
             arraycopy(poolEntryArray, 0, arrayNew, 0, l);
             arrayNew[l] = pooledEntry;// tail
@@ -210,7 +210,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     //remove one pooled object
     private synchronized void removePooledEntry(PooledEntry p, String removeType) {
         if (printRuntimeLog)
-            commonLog.debug("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, p, removeType);
+            commonLog.info("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, p, removeType);
 
         p.onBeforeRemove();
         int l = poolEntryArray.length;
@@ -224,7 +224,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             }
         }
         if (printRuntimeLog)
-            commonLog.debug("BeeOP({}))has removed pooled object:{},reason:{}", poolName, p, removeType);
+            commonLog.info("BeeOP({}))has removed pooled object:{},reason:{}", poolName, p, removeType);
         poolEntryArray = arrayNew;
     }
 
@@ -350,14 +350,14 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     public final void recycle(PooledEntry p) {
         Iterator<Borrower> it = waitQueue.iterator();
         transferPolicy.beforeTransfer(p);
-        tryNext:
+        W:
         while (it.hasNext()) {
             Borrower b = it.next();
             Object s;
             do {
                 s = b.state;
                 if (s != BOWER_NORMAL && s != BOWER_WAITING)
-                    continue tryNext;
+                    continue W;
                 if (p.state != unCatchStateCode) return;
             } while (!BorrowStUpd.compareAndSet(b, s, p));
             if (s == BOWER_WAITING) unpark(b.thread);
@@ -375,14 +375,14 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      */
     private void transferException(Throwable e) {
         Iterator<Borrower> it = waitQueue.iterator();
-        tryNext:
+        W:
         while (it.hasNext()) {
             Borrower b = it.next();
             Object s;
             do {
                 s = b.state;
                 if (s != BOWER_NORMAL && s != BOWER_WAITING)
-                    continue tryNext;
+                    continue W;
             } while (!BorrowStUpd.compareAndSet(b, s, e));
             if (s == BOWER_WAITING) unpark(b.thread);
             return;
@@ -429,7 +429,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         try {
             handle.setProxyObject(reflectProxyFactory.createProxyObject(p, handle, excludeMethodNames));
         } catch (Throwable e) {
-            commonLog.warn("BeeOP({})failed to create reflect proxy instance:", poolName, e);
+           if(printRuntimeLog)
+               commonLog.warn("BeeOP({})failed to create reflect proxy instance:", poolName, e);
         }
 
         return handle;
@@ -511,7 +512,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
             PoolMonitorVo vo = this.getMonitorVo();
             if (printRuntimeLog)
-                commonLog.debug("BeeOP({})idle:{},using:{},semaphore-waiter:{},wait-transfer:{}", poolName, vo.getIdleSize(), vo.getUsingSize(), vo.getSemaphoreWaiterSize(), vo.getTransferWaiterSize());
+                commonLog.info("BeeOP({})idle:{},using:{},semaphore-waiter:{},wait-transfer:{}", poolName, vo.getIdleSize(), vo.getUsingSize(), vo.getSemaphoreWaiterSize(), vo.getTransferWaiterSize());
         }
     }
 
