@@ -1,4 +1,4 @@
-<a href="https://github.com/Chris2018998/BeeCP/blob/master/README.md">English</a>|<a href="https://github.com/Chris2018998/BeeCP/blob/master/README_ZH.md">中文</a>
+<a href="https://github.com/Chris2018998/BeeOP/blob/master/README.md">English</a>|<a href="https://github.com/Chris2018998/BeeOP/blob/master/README_ZH.md">中文</a>
 <img height="20px" width="20px" align="bottom" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img>
 
 <p align="left">
