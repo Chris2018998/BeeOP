@@ -1,6 +1,18 @@
-<img height="50px" width="50px" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img> <a href="https://github.com/Chris2018998/BeeOP/blob/master/README.md">English</a>
+<a href="https://github.com/Chris2018998/BeeOP/blob/master/README.md">English</a>|<a href="https://github.com/Chris2018998/BeeOP/blob/master/README_ZH.md">中文</a>
+<img height="20px" width="20px" align="bottom" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img>
+
+<p align="left">
+ <a><img src="https://img.shields.io/badge/JDK-1.7+-green.svg"></a>
+ <a><img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg"></a>
+ <a><img src="https://maven-badges.herokuapp.com/maven-central/com.github.chris2018998/beeop/badge.svg"></a>
+ <a><img src="https://img.shields.io/github/v/release/Chris2018998/beeop.svg"></a> 
+</p> 
+
+## :coffee: 简介 
 
 小蜜蜂对象池：一款轻量高性能Java对象池 
+
+## :arrow_down: 下载 
 
 Maven坐标（Java7及更高版本)
 ```xml
@@ -10,9 +22,10 @@ Maven坐标（Java7及更高版本)
    <version>1.0.8</version>
 </dependency>
 ```
----
 
-### 性能测试
+
+## 性能测试
+
 100万次借用/归还(1000线程 x1000次),获取时间分布,平均时间
 |  对象池名    | commons-pool2-2.9.0 | BeeOP0.3_Fair      | BeeOP0.3_Compete  |
 | ----------- |----------------     | -------------------| -------------      |  
@@ -24,9 +37,8 @@ Maven坐标（Java7及更高版本)
 
 源码位置：[https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/BeeOP_Test.rar](https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/BeeOP_Test.rar)
 
----
 
-### 范例
+## 范例
 
  ```java
 public interface Book {
@@ -90,8 +102,8 @@ public class JavaBookFactory implements BeeObjectFactory {
  }
  
 ```
----
-### 功能支持
+
+## 功能支持
 
 1：对象借用超时
 
@@ -113,7 +125,7 @@ public class JavaBookFactory implements BeeObjectFactory {
 
  
 ---
-### 配置项说明
+## 配置项说明
 
 |             配置项      |   描述                          |   备注                                                      |
 | ---------------------  | ----------------------------    | -----------------------------------------------------------|
@@ -131,8 +143,8 @@ public class JavaBookFactory implements BeeObjectFactory {
 | objectFactoryClassName |自定义的对象工厂类名                |默认为空                                                    |
 | enableJmx              |JMX监控支持开关                    |默认false                                                  |
 
----
-### 捐助
+
+## 捐助
 
 如果您觉得此作品不错，可以捐赠请我们喝杯咖啡吧，在此表示感谢^_^。
 
