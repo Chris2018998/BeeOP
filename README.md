@@ -1,6 +1,18 @@
-<img height="50px" width="50px" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img> <a href="https://github.com/Chris2018998/BeeOP/blob/main/README_ZH.md">中文</a>
+<a href="https://github.com/Chris2018998/BeeCP/blob/master/README.md">English</a>|<a href="https://github.com/Chris2018998/BeeCP/blob/master/README_ZH.md">中文</a>
+<img height="20px" width="20px" align="bottom" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/bee.png"></img>
+
+<p align="left">
+ <a><img src="https://img.shields.io/badge/JDK-1.7+-green.svg"></a>
+ <a><img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg"></a>
+ <a><img src="https://maven-badges.herokuapp.com/maven-central/com.github.chris2018998/beeop/badge.svg"></a>
+ <a><img src="https://img.shields.io/github/v/release/Chris2018998/beeop.svg"></a> 
+</p> 
+
+## :coffee: Introduction 
 
 BeeOP：A light high-performance java object pool
+
+## :arrow_down: Download 
 
 Maven artifactId(Java7 and higher)
 ```xml
@@ -12,7 +24,8 @@ Maven artifactId(Java7 and higher)
 ```
 ---
 
-### Performance 
+## Performance 
+
 One million borrow/return (1000 threads x 1000 times)
 |    Pool type     |commons-pool2-2.9.0  |  BeeOP-0.3_Fair    | BeeOP-0.3_Compete |
 | -----------------|---------------------| -------------------| ----------------- |  
@@ -26,7 +39,7 @@ Test source：[https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/BeeOP_Te
 
 ---
 
-### Example
+## Example
 
 ```java
 public interface Book {
@@ -90,8 +103,8 @@ public class JavaBookFactory implements BeeObjectFactory {
  }
  
 ```
----
-### Features
+
+## Features
 
 1：Borrow timeout
 
@@ -112,8 +125,8 @@ public class JavaBookFactory implements BeeObjectFactory {
 9：Jmx support
 
  
----
-### configuration
+## configuration
+
 |     Field name         |       Description                               |   Remark                                                    |
 | ---------------------  | ------------------------------------------------| -----------------------------------------------------------|
 |poolName               |pool name                                         | name auto generated when not set                          |
@@ -128,8 +141,8 @@ public class JavaBookFactory implements BeeObjectFactory {
 |objectFactoryClassName  |object factory class name                      |default is null                                              |
 |enableJmx               |JMX boolean indicator for pool                 |default is false                                             |
 
----
-### Donate
+
+## Donate
 
 If the software can help you, please donate fee of one coffe to us,thanks.
 
