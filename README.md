@@ -22,7 +22,6 @@ Maven artifactId(Java7 and higher)
    <version>1.0.8</version>
 </dependency>
 ```
----
 
 ## Performance 
 
@@ -37,7 +36,6 @@ Test log file：[https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/Object
 
 Test source：[https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/BeeOP_Test.rar](https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/BeeOP_Test.rar)
 
----
 
 ## Example
 
