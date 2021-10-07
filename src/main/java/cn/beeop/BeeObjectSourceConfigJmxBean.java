@@ -31,15 +31,15 @@ public interface BeeObjectSourceConfigJmxBean {
 
     long getHoldTimeout();
 
-    int getObjectTestTimeout();
+    int getValidTestTimeout();
 
-    long getObjectTestInterval();
+    long getValidAssumeTime();
 
     boolean isForceCloseUsingOnClear();
 
     long getDelayTimeForNextClear();
 
-    long getIdleCheckTimeInterval();
+    long getTimerCheckInterval();
 
     String getPoolImplementClassName();
 

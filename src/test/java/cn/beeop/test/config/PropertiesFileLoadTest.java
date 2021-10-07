@@ -48,9 +48,9 @@ public class PropertiesFileLoadTest extends TestCase {
         if(testConfig.getMaxWait()!=8000)throw new BeeObjectSourceConfigException("maxWait error");
         if(testConfig.getIdleTimeout()!=18000)throw new BeeObjectSourceConfigException("idleTimeout error");
         if(testConfig.getHoldTimeout()!=30000)throw new BeeObjectSourceConfigException("holdTimeout error");
-        if(testConfig.getObjectTestTimeout()!=3)throw new BeeObjectSourceConfigException("objectTestTimeout error");
-        if(testConfig.getObjectTestInterval()!=500)throw new BeeObjectSourceConfigException("objectTestInterval error");
-        if(testConfig.getIdleCheckTimeInterval()!=30000)throw new BeeObjectSourceConfigException("idleCheckTimeInterval error");
+        if(testConfig.getValidTestTimeout()!=3)throw new BeeObjectSourceConfigException("objectTestTimeout error");
+        if(testConfig.getValidAssumeTime()!=500)throw new BeeObjectSourceConfigException("objectTestInterval error");
+        if(testConfig.getTimerCheckInterval()!=30000)throw new BeeObjectSourceConfigException("idleCheckTimeInterval error");
         if(!testConfig.isForceCloseUsingOnClear())throw new BeeObjectSourceConfigException("forceCloseUsingOnClear error");
         if(testConfig.getDelayTimeForNextClear()!=3000)throw new BeeObjectSourceConfigException("delayTimeForNextClear error");
 

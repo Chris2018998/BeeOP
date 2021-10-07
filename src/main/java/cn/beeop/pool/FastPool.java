@@ -101,7 +101,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             commonLog.info("BeeOP({})starting....", poolName);
             poolMaxSize = poolConfig.getMaxActive();
             objectFactory = poolConfig.getObjectFactory();
-            objectTestTimeout = poolConfig.getObjectTestTimeout();
+            objectTestTimeout = poolConfig.getValidTestTimeout();
             createProperties = poolConfig.getCreateProperties();
             excludeMethodNames = poolConfig.getExcludeMethodNames();
 
@@ -109,7 +109,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             holdTimeoutMs = poolConfig.getHoldTimeout();
             maxWaitNs = MILLISECONDS.toNanos(poolConfig.getMaxWait());
             delayTimeForNextClearNanos = MILLISECONDS.toNanos(poolConfig.getDelayTimeForNextClear());
-            objectTestInterval = poolConfig.getObjectTestInterval();
+            objectTestInterval = poolConfig.getValidAssumeTime();
             if (poolConfig.isFairMode()) {
                 poolMode = "fair";
                 transferPolicy = new FairTransferPolicy();
@@ -771,7 +771,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
         public void run() {
             pool.poolThreadLatch.countDown();
-            final long checkTimeIntervalNanos = MILLISECONDS.toNanos(pool.poolConfig.getIdleCheckTimeInterval());
+            final long checkTimeIntervalNanos = MILLISECONDS.toNanos(pool.poolConfig.getTimerCheckInterval());
             final AtomicInteger idleScanThreadState = pool.idleScanThreadState;
             while (idleScanThreadState.get() == THREAD_WORKING) {
                 parkNanos(checkTimeIntervalNanos);

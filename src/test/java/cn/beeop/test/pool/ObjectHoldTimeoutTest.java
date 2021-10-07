@@ -40,7 +40,7 @@ public class ObjectHoldTimeoutTest extends TestCase {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setInitialSize(0);
         config.setHoldTimeout(1000);// hold and not using connection;
-        config.setIdleCheckTimeInterval(1000L);//one second interval
+        config.setTimerCheckInterval(1000L);//one second interval
         config.setDelayTimeForNextClear(1);
         config.setObjectClassName(JavaBook.class.getName());
         obs = new BeeObjectSource(config);

@@ -53,13 +53,15 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     private long idleTimeout = MINUTES.toMillis(3);
     //milliseconds:long time not active object hold by borrower will closed by pool
     private long holdTimeout = MINUTES.toMillis(3);
+
     //seconds:max time to get check active result
-    private int objectTestTimeout = 3;
+    private int validTestTimeout = 3;
     //milliseconds:object test interval time from last active time
-    private long objectTestInterval = 500L;
+    private long validAssumeTime = 500L;
     //milliseconds:interval time to run check task in scheduledThreadPoolExecutor
-    private long idleCheckTimeInterval = MINUTES.toMillis(1);
+    private long timerCheckInterval = MINUTES.toMillis(1);
     //using object close indicator,true,close directly;false,delay close util them becoming idle or hold timeout
+
     private boolean forceCloseUsingOnClear;
     //milliseconds:delay time for next clear pooled entry when exists using entry and 'forceCloseUsingOnClear' is false
     private long delayTimeForNextClear = 3000L;
@@ -211,33 +213,33 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     @Override
-    public int getObjectTestTimeout() {
-        return objectTestTimeout;
+    public int getValidTestTimeout() {
+        return validTestTimeout;
     }
 
-    public void setObjectTestTimeout(int objectTestTimeout) {
-        if (objectTestTimeout >= 0)
-            this.objectTestTimeout = objectTestTimeout;
-    }
-
-    @Override
-    public long getObjectTestInterval() {
-        return objectTestInterval;
-    }
-
-    public void setObjectTestInterval(long objectTestInterval) {
-        if (objectTestInterval >= 0)
-            this.objectTestInterval = objectTestInterval;
+    public void setValidTestTimeout(int validTestTimeout) {
+        if (validTestTimeout >= 0)
+            this.validTestTimeout = validTestTimeout;
     }
 
     @Override
-    public long getIdleCheckTimeInterval() {
-        return idleCheckTimeInterval;
+    public long getValidAssumeTime() {
+        return validAssumeTime;
     }
 
-    public void setIdleCheckTimeInterval(long idleCheckTimeInterval) {
-        if (idleCheckTimeInterval > 0)
-            this.idleCheckTimeInterval = idleCheckTimeInterval;
+    public void setValidAssumeTime(long validAssumeTime) {
+        if (validAssumeTime >= 0)
+            this.validAssumeTime = validAssumeTime;
+    }
+
+    @Override
+    public long getTimerCheckInterval() {
+        return timerCheckInterval;
+    }
+
+    public void setTimerCheckInterval(long timerCheckInterval) {
+        if (timerCheckInterval > 0)
+            this.timerCheckInterval = timerCheckInterval;
     }
 
     @Override

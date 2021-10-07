@@ -40,7 +40,7 @@ public class ObjectIdleTimeoutTest extends TestCase {
         config.setInitialSize(initSize);
         config.setMaxActive(initSize);
         config.setIdleTimeout(1000);
-        config.setIdleCheckTimeInterval(1000L);// two seconds interval
+        config.setTimerCheckInterval(1000L);// two seconds interval
         config.setDelayTimeForNextClear(1);
         config.setObjectClassName(JavaBook.class.getName());
         obs = new BeeObjectSource(config);
