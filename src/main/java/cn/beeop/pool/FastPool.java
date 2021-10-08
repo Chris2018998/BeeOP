@@ -448,13 +448,13 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     }
 
     private void shutdownPoolThread() {
-        int curState = idleScanThreadState.get();
-        idleScanThreadState.set(THREAD_EXIT);
-        if (curState == THREAD_WAITING) unpark(idleScanThread);
-
-        curState = servantThreadState.get();
+        int curState = servantThreadState.get();
         servantThreadState.set(THREAD_EXIT);
         if (curState == THREAD_WAITING) unpark(this);
+
+         curState = idleScanThreadState.get();
+        idleScanThreadState.set(THREAD_EXIT);
+        if (curState == THREAD_WAITING) unpark(idleScanThread);
     }
 
     public void run() {
