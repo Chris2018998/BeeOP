@@ -27,7 +27,7 @@ import static cn.beeop.pool.StaticCenter.isBlank;
 public class BeeObjectSource extends BeeObjectSourceConfig {
     private volatile boolean inited;
     private volatile ObjectPool pool;
-    private BeeObjectException failedCause;
+    private volatile BeeObjectException failedCause;
     private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private ReentrantReadWriteLock.ReadLock readLock = lock.readLock();
     private ReentrantReadWriteLock.WriteLock writeLock = lock.writeLock();
