@@ -24,6 +24,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.locks.LockSupport;
 
 import static cn.beeop.pool.StaticCenter.*;
 import static java.lang.System.*;
@@ -348,22 +349,21 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      * @param p target object need release
      */
     public final void recycle(PooledEntry p) {
-        Iterator<Borrower> it = waitQueue.iterator();
+        Iterator<Borrower> iterator = waitQueue.iterator();
         transferPolicy.beforeTransfer(p);
         W:
-        while (it.hasNext()) {
-            Borrower b = it.next();
-            Object s;
+        while (iterator.hasNext()) {
+            Borrower b = (Borrower) iterator.next();
+            Object state;
             do {
-                s = b.state;
-                if (s != BOWER_NORMAL && s != BOWER_WAITING)
-                    continue W;
                 if (p.state != unCatchStateCode) return;
-            } while (!BorrowStUpd.compareAndSet(b, s, p));
-            if (s == BOWER_WAITING) unpark(b.thread);
+                state = b.state;
+                if (!(state instanceof BorrowerState)) continue W;
+            } while (!BorrowStUpd.compareAndSet(b, state, p));
+            if (state == BOWER_WAITING) LockSupport.unpark(b.thread);
             return;
         }
-        transferPolicy.onFailedTransfer(p);
+        transferPolicy.onTransferFail(p);
         tryWakeupServantThread();
     }
 
@@ -374,17 +374,16 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      * @param e: transfer Exception to waiter
      */
     private void transferException(Throwable e) {
-        Iterator<Borrower> it = waitQueue.iterator();
+        final Iterator<Borrower> iterator = waitQueue.iterator();
         W:
-        while (it.hasNext()) {
-            Borrower b = it.next();
-            Object s;
+        while (iterator.hasNext()) {
+            Borrower b = (Borrower) iterator.next();
+            Object state;
             do {
-                s = b.state;
-                if (s != BOWER_NORMAL && s != BOWER_WAITING)
-                    continue W;
-            } while (!BorrowStUpd.compareAndSet(b, s, e));
-            if (s == BOWER_WAITING) unpark(b.thread);
+                state = b.state;
+                if (!(state instanceof BorrowerState)) continue W;
+            } while (!BorrowStUpd.compareAndSet(b, state, e));
+            if (state == BOWER_WAITING) LockSupport.unpark(b.thread);
             return;
         }
     }
@@ -405,7 +404,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
      * @return object alive state,true,alive
      */
     private final boolean testOnBorrow(PooledEntry p) {
-        if (currentTimeMillis() - p.lastAccessTime - objectTestInterval > 0L && !objectFactory.isAlive(p, objectTestTimeout)) {
+        if (currentTimeMillis() - p.lastAccessTime > objectTestInterval && !objectFactory.isAlive(p, objectTestTimeout)) {
             removePooledEntry(p, DESC_RM_BAD);
             tryWakeupServantThread();
             return false;
@@ -706,7 +705,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
 
         boolean tryCatch(PooledEntry p);
 
-        void onFailedTransfer(PooledEntry p);
+        void onTransferFail(PooledEntry p);
     }
 
     static final class CompeteTransferPolicy implements TransferPolicy {
@@ -722,7 +721,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             return ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING);
         }
 
-        public final void onFailedTransfer(PooledEntry p) {
+        public final void onTransferFail(PooledEntry p) {
         }
     }
 
@@ -738,7 +737,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             return p.state == OBJECT_USING;
         }
 
-        public final void onFailedTransfer(PooledEntry p) {
+        public final void onTransferFail(PooledEntry p) {
             p.state = OBJECT_IDLE;
         }
 
