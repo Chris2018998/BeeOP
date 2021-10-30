@@ -142,12 +142,12 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     semaphoreSize,
                     poolConfig.getMaxWait());
 
-            idleScanThread.setDaemon(true);
-            idleScanThread.setName(this.poolName + "-idleCheck");
-            idleScanThread.start();
             this.setDaemon(true);
             this.setName(this.poolName + "-workServant");
             this.start();
+            idleScanThread.setDaemon(true);
+            idleScanThread.setName(this.poolName + "-idleCheck");
+            idleScanThread.start();
             poolState.set(POOL_NORMAL);
         } else {
             throw new BeeObjectException("Pool has initialized");
@@ -296,8 +296,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     yield();
                 } else {//here:(state == BOWER_NORMAL)
                     long t = deadline - nanoTime();
-                    if (t > 0L) {
-                        if (t > spinForTimeoutThreshold && BorrowStUpd.compareAndSet(b, BOWER_NORMAL, BOWER_WAITING)) {
+                    if (t > spinForTimeoutThreshold) {
+                        if (BorrowStUpd.compareAndSet(b, BOWER_NORMAL, BOWER_WAITING)) {
                             if (servantThreadTryCount.get() > 0 && servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
                                 unpark(this);
                             parkNanos(t);
@@ -308,7 +308,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                             if (b.state == BOWER_WAITING)
                                 BorrowStUpd.compareAndSet(b, BOWER_WAITING, failed ? cause : BOWER_NORMAL);//reset to normal
                         }
-                    } else {//timeout
+                    } else if(t<=0){//timeout
                         failed = true;
                         cause = RequestTimeoutException;
                     }
