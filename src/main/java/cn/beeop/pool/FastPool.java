@@ -48,8 +48,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private static final String DESC_RM_CLOSED = "closed";
     private static final String DESC_RM_CLEAR = "clear";
     private static final String DESC_RM_DESTROY = "destroy";
-    private static final int NCPUS = Runtime.getRuntime().availableProcessors();
-    private static final int maxTimedSpins = (NCPUS < 2) ? 0 : 32;
+    private static final int maxTimedSpins = Runtime.getRuntime().availableProcessors() < 2? 0 : 32;
     private final ConcurrentLinkedQueue<Borrower> waitQueue = new ConcurrentLinkedQueue<Borrower>();
     private final ThreadLocal<WeakReference<Borrower>> threadLocal = new ThreadLocal<WeakReference<Borrower>>();
     private final PoolMonitorVo monitorVo = new PoolMonitorVo();
