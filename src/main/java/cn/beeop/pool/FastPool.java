@@ -276,7 +276,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             boolean failed = false;
             Throwable cause = null;
             deadline += maxWaitNs;
-            Thread cth= b.thread;
+            Thread cth = b.thread;
             b.state = BOWER_NORMAL;
             waitQueue.offer(b);
             int spinSize = (waitQueue.peek() == b) ? maxTimedSpins : 0;
@@ -303,9 +303,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                     if (t > spinForTimeoutThreshold) {
                         if (spinSize > 0) {
                             spinSize--;
-                            continue;
-                        }
-                        if (BorrowStUpd.compareAndSet(b, BOWER_NORMAL, BOWER_WAITING)) {
+                        } else if (BorrowStUpd.compareAndSet(b, BOWER_NORMAL, BOWER_WAITING)) {
                             if (servantThreadTryCount.get() > 0 && servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
                                 unpark(this);
                             parkNanos(t);
@@ -316,7 +314,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                             if (b.state == BOWER_WAITING)
                                 BorrowStUpd.compareAndSet(b, BOWER_WAITING, failed ? cause : BOWER_NORMAL);//reset to normal
                         }
-                    } else if(t<=0){//timeout
+                    } else if (t <= 0) {//timeout
                         failed = true;
                         cause = RequestTimeoutException;
                     }
@@ -423,7 +421,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     /**
      * create one wrapper around one borrowed object.
      *
-     * @param p   borrowed pooled object
+     * @param p borrowed pooled object
      * @param b
      * @return object handle
      */
@@ -435,8 +433,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         try {
             handle.setProxyObject(reflectProxyFactory.createProxyObject(p, handle, excludeMethodNames));
         } catch (Throwable e) {
-           if(printRuntimeLog)
-               commonLog.warn("BeeOP({})failed to create reflect proxy instance:", poolName, e);
+            if (printRuntimeLog)
+                commonLog.warn("BeeOP({})failed to create reflect proxy instance:", poolName, e);
         }
 
         return handle;
@@ -458,7 +456,7 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
         servantThreadState.set(THREAD_EXIT);
         if (curState == THREAD_WAITING) unpark(this);
 
-         curState = idleScanThreadState.get();
+        curState = idleScanThreadState.get();
         idleScanThreadState.set(THREAD_EXIT);
         if (curState == THREAD_WAITING) unpark(idleScanThread);
     }
