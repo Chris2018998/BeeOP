@@ -48,6 +48,8 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
     private static final String DESC_RM_CLOSED = "closed";
     private static final String DESC_RM_CLEAR = "clear";
     private static final String DESC_RM_DESTROY = "destroy";
+    private static final int NCPUS = Runtime.getRuntime().availableProcessors();
+    private static final int maxTimedSpins = (NCPUS < 2) ? 0 : 32;
     private final ConcurrentLinkedQueue<Borrower> waitQueue = new ConcurrentLinkedQueue<Borrower>();
     private final ThreadLocal<WeakReference<Borrower>> threadLocal = new ThreadLocal<WeakReference<Borrower>>();
     private final PoolMonitorVo monitorVo = new PoolMonitorVo();
@@ -271,13 +273,14 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
             if (p != null) return createObjectHandle(p, b);
 
             //3:try to get one transferred one
-			b.state = BOWER_NORMAL;
-            waitQueue.offer(b);
             boolean failed = false;
             Throwable cause = null;
             deadline += maxWaitNs;
-            Thread cth = b.thread;
-			
+            Thread cth= b.thread;
+            b.state = BOWER_NORMAL;
+            waitQueue.offer(b);
+            int spinSize = (waitQueue.peek() == b) ? maxTimedSpins : 0;
+
             do {
                 Object s = b.state;
                 if (s instanceof PooledEntry) {
@@ -298,6 +301,10 @@ public final class FastPool extends Thread implements PoolJmxBean, ObjectPool {
                 } else {//here:(state == BOWER_NORMAL)
                     long t = deadline - nanoTime();
                     if (t > spinForTimeoutThreshold) {
+                        if (spinSize > 0) {
+                            spinSize--;
+                            continue;
+                        }
                         if (BorrowStUpd.compareAndSet(b, BOWER_NORMAL, BOWER_WAITING)) {
                             if (servantThreadTryCount.get() > 0 && servantThreadState.get() == THREAD_WAITING && servantThreadState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
                                 unpark(this);
