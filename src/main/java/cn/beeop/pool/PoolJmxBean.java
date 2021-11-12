@@ -33,7 +33,7 @@ public interface PoolJmxBean {
     int getTransferWaitingSize();
 
     //enable Runtime Log
-    void setEnableRuntimeLog(boolean indicator);
+    void setPrintRuntimeLog(boolean indicator);
 
 }
 
