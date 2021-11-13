@@ -43,8 +43,8 @@ public class ObjectIdleTimeoutTest extends TestCase {
 
     public void test() throws InterruptedException, Exception {
         FastObjectPool pool = (FastObjectPool) TestUtil.getFieldValue(obs, "pool");
-        CountDownLatch poolThreadLatch = (CountDownLatch) TestUtil.getFieldValue(pool, "poolThreadLatch");
-        if (poolThreadLatch.getCount() > 0) poolThreadLatch.await();
+//        CountDownLatch poolThreadLatch = (CountDownLatch) TestUtil.getFieldValue(pool, "poolThreadLatch");
+//        if (poolThreadLatch.getCount() > 0) poolThreadLatch.await();
 
         PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
         int usingSize = monitorVo.getUsingSize();

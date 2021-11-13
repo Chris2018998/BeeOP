@@ -45,8 +45,6 @@ public class ObjectHoldTimeoutTest extends TestCase {
         BeeObjectHandle handle = null;
         try {
             FastObjectPool pool = (FastObjectPool) TestUtil.getFieldValue(obs, "pool");
-            CountDownLatch poolThreadLatch = (CountDownLatch) TestUtil.getFieldValue(pool, "poolThreadLatch");
-            if (poolThreadLatch.getCount() > 0) poolThreadLatch.await();
 
             handle = obs.getObject();
             PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
