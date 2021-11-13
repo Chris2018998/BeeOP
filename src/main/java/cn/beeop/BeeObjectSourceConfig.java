@@ -280,7 +280,10 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setObjectInterfaces(Class[] interfaces) {
-        if (interfaces == null || interfaces.length == 0) this.objectInterfaces = null;
+        if (interfaces == null || interfaces.length == 0){
+            this.objectInterfaces = null;
+            return ;
+        }
 
         for (int i = 0, l = interfaces.length; i < l; i++) {
             if (interfaces[i] == null)
@@ -302,7 +305,10 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setObjectInterfaceNames(String[] interfaceNames) {
-        if (interfaceNames == null || interfaceNames.length == 0) this.objectInterfaceNames = null;
+        if (interfaceNames == null || interfaceNames.length == 0) {
+            this.objectInterfaceNames = null;
+            return ;
+        }
 
         for (int i = 0, l = interfaceNames.length; i < l; i++) {
             if (isBlank(interfaceNames[i]))
