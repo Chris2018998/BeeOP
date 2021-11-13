@@ -1,23 +1,14 @@
 /*
- * Copyright Chris2018998
+ * Copyright(C) Chris2018998
+ * Contact:Chris2018998@tom.com
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Licensed under GNU Lesser General Public License v2.1
  */
 package cn.beeop.test.pool;
 
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.pool.FastPool;
+import cn.beeop.pool.FastObjectPool;
 import cn.beeop.pool.PoolMonitorVo;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
@@ -51,9 +42,9 @@ public class ObjectIdleTimeoutTest extends TestCase {
     }
 
     public void test() throws InterruptedException, Exception {
-        FastPool pool = (FastPool) TestUtil.getFieldValue(obs, "pool");
-        CountDownLatch poolThreadLatch=(CountDownLatch) TestUtil.getFieldValue(pool, "poolThreadLatch");
-        if(poolThreadLatch.getCount()>0)poolThreadLatch.await();
+        FastObjectPool pool = (FastObjectPool) TestUtil.getFieldValue(obs, "pool");
+        CountDownLatch poolThreadLatch = (CountDownLatch) TestUtil.getFieldValue(pool, "poolThreadLatch");
+        if (poolThreadLatch.getCount() > 0) poolThreadLatch.await();
 
         PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
         int usingSize = monitorVo.getUsingSize();
