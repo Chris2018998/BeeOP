@@ -14,19 +14,11 @@ package cn.beeop;
  */
 public class BeeObjectSourceConfigException extends RuntimeException {
 
-    public BeeObjectSourceConfigException() {
-        super();
-    }
-
     public BeeObjectSourceConfigException(String s) {
         super(s);
     }
 
     public BeeObjectSourceConfigException(String message, Throwable cause) {
         super(message, cause);
-    }
-
-    public BeeObjectSourceConfigException(Throwable cause) {
-        super(cause);
     }
 }

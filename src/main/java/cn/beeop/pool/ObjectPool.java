@@ -37,16 +37,16 @@ public interface ObjectPool {
     /**
      * return object to pool after used
      *
-     * @param pConn release object to pool
+     * @param entry release object to pool
      */
-    void recycle(PooledEntry pConn);
+    void recycle(PooledEntry entry);
 
     /**
      * remove failed object
      *
-     * @param pConn release object to pool
+     * @param entry release object to pool
      */
-    void abandonOnReturn(PooledEntry pConn);
+    void abandonOnReturn(PooledEntry entry);
 
     /**
      * close pool

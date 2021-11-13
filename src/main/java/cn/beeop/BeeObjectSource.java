@@ -6,14 +6,14 @@
  */
 package cn.beeop;
 
-import cn.beeop.pool.FastPool;
+import cn.beeop.pool.FastObjectPool;
 import cn.beeop.pool.ObjectPool;
 import cn.beeop.pool.PoolMonitorVo;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static cn.beeop.pool.StaticCenter.commonLog;
-import static cn.beeop.pool.StaticCenter.isBlank;
+import static cn.beeop.pool.PoolStaticCenter.commonLog;
+import static cn.beeop.pool.PoolStaticCenter.isBlank;
 
 /**
  * Bee Object object source
@@ -28,6 +28,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     private volatile boolean inited;
     private volatile ObjectPool pool;
     private volatile BeeObjectException failedCause;
+
     private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private ReentrantReadWriteLock.ReadLock readLock = lock.readLock();
     private ReentrantReadWriteLock.WriteLock writeLock = lock.writeLock();
@@ -59,7 +60,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
                     inited = true;
                 }
             } catch (Throwable e) {//why?
-                failedCause = (e instanceof BeeObjectException) ? (BeeObjectException) e : new BeeObjectException(e);
+                failedCause = e instanceof BeeObjectException ? (BeeObjectException) e : new BeeObjectException(e);
                 throw failedCause;
             } finally {
                 writeLock.unlock();
@@ -72,7 +73,6 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
                 readLock.unlock();
             }
         }
-
         return pool.getObject();
     }
 
@@ -90,8 +90,8 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
         return (pool != null) ? pool.isClosed() : true;
     }
 
-    public void setEnableRuntimeLog(boolean enableRuntimeLog) {
-        if (pool != null) pool.setEnableRuntimeLog(enableRuntimeLog);
+    public void setPrintRuntimeLog(boolean printRuntimeLog) {
+        if (pool != null) pool.setPrintRuntimeLog(printRuntimeLog);
     }
 
     /**
@@ -126,7 +126,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     //try to create pool instance by config
     private final ObjectPool createPool(BeeObjectSourceConfig config) throws BeeObjectException {
         String poolImplementClassName = config.getPoolImplementClassName();
-        if (isBlank(poolImplementClassName)) poolImplementClassName = FastPool.class.getName();
+        if (isBlank(poolImplementClassName)) poolImplementClassName = FastObjectPool.class.getName();
 
         try {
             Class<?> poolClass = Class.forName(poolImplementClassName, true, getClass().getClassLoader());

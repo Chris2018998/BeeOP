@@ -9,7 +9,7 @@ package cn.beeop;
 import java.util.Properties;
 
 /**
- * Bee raw object factory
+ * Object instance factory
  *
  * @author Chris
  * @version 1.0
@@ -25,8 +25,8 @@ public interface BeeObjectFactory {
     //reset some changed properties in raw object on returning
     public void reset(Object obj) throws BeeObjectException;
 
-    //test raw object
-    public boolean isAlive(Object obj, int timeout);
+    //test raw object valid
+    public boolean isValid(Object obj, int timeout);
 
     //destroy raw object on removed from pool
     public void destroy(Object obj);
