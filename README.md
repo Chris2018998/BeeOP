@@ -3,7 +3,7 @@
 
 <p align="left">
  <a><img src="https://img.shields.io/badge/JDK-1.7+-green.svg"></a>
- <a><img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg"></a>
+ <a><img src="https://img.shields.io/badge/License-LGPL%202.1-blue.svg"></a>
  <a><img src="https://maven-badges.herokuapp.com/maven-central/com.github.chris2018998/beeop/badge.svg"></a>
  <a><img src="https://img.shields.io/github/v/release/Chris2018998/beeop.svg"></a> 
 </p> 
@@ -19,7 +19,7 @@ Maven artifactId(Java7 and higher)
 <dependency>
    <groupId>com.github.chris2018998</groupId>
    <artifactId>beeop</artifactId>
-   <version>1.0.8</version>
+   <version>1.1.0</version>
 </dependency>
 ```
 
