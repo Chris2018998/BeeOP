@@ -142,9 +142,3 @@ public class JavaBookFactory implements RawObjectFactory {
 |objectFactoryClassName  |object factory class name                      |default is null                                              |
 |enableJmx               |JMX boolean indicator for pool                 |default is false                                             |
 
-
-## Donate
-
-If the software can help you, please donate fee of one coffe to us,thanks.
-
-<img height="50%" width="50%" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/donate.png"> 
