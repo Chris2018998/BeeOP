@@ -6,25 +6,23 @@
  */
 package cn.beeop.test.object;
 
-import cn.beeop.BeeObjectException;
-import cn.beeop.BeeObjectFactory;
-
-import java.util.Properties;
+import cn.beeop.RawObjectFactory;
+import cn.beeop.pool.ObjectException;
 
 /**
  * ObjectFactory subclass
  *
  * @author chris.liao
  */
-public class JavaBookFactory implements BeeObjectFactory {
-    public Object create(Properties prop) throws BeeObjectException {
+public class JavaBookFactory implements RawObjectFactory {
+    public Object create() throws ObjectException {
         return new JavaBook("Java核心技术·卷1", System.currentTimeMillis());
     }
 
-    public void setDefault(Object obj) throws BeeObjectException {
+    public void setDefault(Object obj) throws ObjectException {
     }
 
-    public void reset(Object obj) throws BeeObjectException {
+    public void reset(Object obj) throws ObjectException {
     }
 
     public void destroy(Object obj) {

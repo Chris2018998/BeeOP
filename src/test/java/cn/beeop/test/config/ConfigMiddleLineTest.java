@@ -18,7 +18,7 @@ import java.net.URL;
  */
 public class ConfigMiddleLineTest extends TestCase {
     public void test() throws Exception {
-        String filename = "ConfigMiddleLineTest.properties";
+        String filename = "beeop/ConfigMiddleLineTest.properties";
         URL url = ConfigMiddleLineTest.class.getResource(filename);
         url = ConfigMiddleLineTest.class.getClassLoader().getResource(filename);
 

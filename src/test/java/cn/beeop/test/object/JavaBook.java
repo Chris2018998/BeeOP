@@ -11,8 +11,8 @@ package cn.beeop.test.object;
  * @version 1.0
  */
 public class JavaBook {
-    private String name;
-    private long number;
+    private final String name;
+    private final long number;
 
     public JavaBook() {
         this("Java核心技术·卷2", System.currentTimeMillis());

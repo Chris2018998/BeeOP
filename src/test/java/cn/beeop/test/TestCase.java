@@ -42,7 +42,7 @@ public class TestCase {
         for (int i = 0; i < methods.length; i++) {
             if (methods[i].getName().startsWith("test") && methods[i].getParameterTypes().length == 0) {
                 try {
-                    methods[i].invoke(this, new Object[0]);
+                    methods[i].invoke(this);
                     successCount++;
                 } catch (Throwable e) {
                     failedCount++;

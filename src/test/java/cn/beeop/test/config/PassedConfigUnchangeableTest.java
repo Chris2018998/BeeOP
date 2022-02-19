@@ -14,10 +14,10 @@ import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.JavaBookFactory;
 
 public class PassedConfigUnchangeableTest extends TestCase {
+    private final int initSize = 5;
+    private final int maxSize = 20;
     BeeObjectSourceConfig testConfig;
     private BeeObjectSource ds;
-    private int initSize = 5;
-    private int maxSize = 20;
 
     public void setUp() throws Throwable {
         testConfig = new BeeObjectSourceConfig();
@@ -32,7 +32,7 @@ public class PassedConfigUnchangeableTest extends TestCase {
         ds.close();
     }
 
-    public void test() throws InterruptedException, Exception {
+    public void test() throws Exception {
         testConfig.setInitialSize(10);
         testConfig.setMaxActive(50);
 

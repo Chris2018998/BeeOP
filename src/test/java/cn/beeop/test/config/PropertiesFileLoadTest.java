@@ -10,9 +10,7 @@ import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.BeeObjectSourceConfigException;
 import cn.beeop.test.TestCase;
 
-import java.lang.reflect.Field;
 import java.net.URL;
-import java.util.Properties;
 
 /**
  * @author Chris.Liao
@@ -20,17 +18,12 @@ import java.util.Properties;
  */
 public class PropertiesFileLoadTest extends TestCase {
     public void test() throws Exception {
-        String filename = "PropertiesFileLoadTest.properties";
+        String filename = "beeop/PropertiesFileLoadTest.properties";
         URL url = PropertiesFileLoadTest.class.getClassLoader().getResource(filename);
         if (url == null) url = PropertiesFileLoadTest.class.getResource(filename);
 
         BeeObjectSourceConfig testConfig = new BeeObjectSourceConfig();
         testConfig.loadFromPropertiesFile(url.getFile());
-
-        if (!"root".equals(testConfig.getUsername())) throw new BeeObjectSourceConfigException("username error");
-        if (!"root".equals(testConfig.getPassword())) throw new BeeObjectSourceConfigException("password error");
-        if (!"http://www.xxx".equals(testConfig.getServerUrl()))
-            throw new BeeObjectSourceConfigException("jdbcUrl error");
 
         if (!"Pool1".equals(testConfig.getPoolName())) throw new BeeObjectSourceConfigException("poolName error");
         if (!testConfig.isFairMode()) throw new BeeObjectSourceConfigException("fairMode error");
@@ -56,18 +49,9 @@ public class PropertiesFileLoadTest extends TestCase {
         //if(!"cn.beeop.test.object.JavaBook".equals(testConfig.getObjectClass().getClass().getName()))throw new BeeObjectSourceConfigException("objectClass error");
         if (!"cn.beeop.test.object.JavaBookFactory".equals(testConfig.getObjectFactoryClassName()))
             throw new BeeObjectSourceConfigException("objectFactoryClassName error");
-        if (!"cn.beeop.test.object.JavaBookFactory".equals(testConfig.getObjectFactory().getClass().getName()))
-            throw new BeeObjectSourceConfigException("objectFactory error");
         if (!"cn.beeop.pool.FastObjectPool".equals(testConfig.getPoolImplementClassName()))
             throw new BeeObjectSourceConfigException("xaConnectionFactoryClassName error");
         if (!testConfig.isEnableJmx()) throw new BeeObjectSourceConfigException("enableJmx error");
 
-        Field connectPropertiesField = BeeObjectSourceConfig.class.getDeclaredField("createProperties");
-        connectPropertiesField.setAccessible(true);
-        Properties connectProperties = (Properties) connectPropertiesField.get(testConfig);
-        if (!"true".equals(connectProperties.getProperty("cachePrepStmts")))
-            throw new BeeObjectSourceConfigException("connectProperties error");
-        if (!"50".equals(connectProperties.getProperty("prepStmtCacheSize")))
-            throw new BeeObjectSourceConfigException("connectProperties error");
     }
 }

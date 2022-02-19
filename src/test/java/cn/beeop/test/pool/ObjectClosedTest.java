@@ -6,10 +6,10 @@
  */
 package cn.beeop.test.pool;
 
-import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.pool.ObjectException;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.JavaBookFactory;
@@ -25,7 +25,7 @@ public class ObjectClosedTest extends TestCase {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
         config.setInitialSize(5);
         config.setIdleTimeout(3000);
-        config.setObjectFactory(new JavaBookFactory());
+        config.setObjectFactoryClass(JavaBookFactory.class);
         obs = new BeeObjectSource(config);
     }
 
@@ -33,14 +33,14 @@ public class ObjectClosedTest extends TestCase {
         obs.close();
     }
 
-    public void test() throws InterruptedException, Exception {
+    public void test() throws Exception {
         BeeObjectHandle handle = null;
         try {
             handle = obs.getObject();
             handle.close();
             handle.call("toString", new Class[0], new Object[0]);
             TestUtil.assertError("Closed test failed");
-        } catch (BeeObjectException e) {
+        } catch (ObjectException e) {
         } finally {
             if (handle != null)
                 handle.close();

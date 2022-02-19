@@ -15,7 +15,7 @@ import java.util.*;
  * @version 1.0
  */
 public class TestRunner {
-    private static String defaultFilename = "testCase.properties";
+    private static final String defaultFilename = "beeop/testCase.properties";
 
     @SuppressWarnings("rawtypes")
     private static Class[] getTestCaseClasses() throws Exception {
@@ -83,7 +83,7 @@ public class TestRunner {
 
 @SuppressWarnings("serial")
 class SortKeyProperties extends Properties {
-    private Vector<Object> keyVector = new Vector<Object>();
+    private final Vector<Object> keyVector = new Vector<Object>();
 
     public synchronized Enumeration<Object> keys() {
         return keyVector.elements();
@@ -98,8 +98,7 @@ class SortKeyProperties extends Properties {
 
     public synchronized Object remove(Object key) {
         Object value = super.remove(key);
-        if (keyVector.contains(key))
-            keyVector.remove(key);
+        keyVector.remove(key);
         return value;
     }
 }

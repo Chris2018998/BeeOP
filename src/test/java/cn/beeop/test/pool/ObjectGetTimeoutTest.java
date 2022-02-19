@@ -6,10 +6,10 @@
  */
 package cn.beeop.test.pool;
 
-import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.pool.ObjectException;
 import cn.beeop.pool.ObjectHandle;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
@@ -36,7 +36,7 @@ public class ObjectGetTimeoutTest extends TestCase {
         obs.close();
     }
 
-    public void test() throws InterruptedException, Exception {
+    public void test() throws Exception {
         BeeObjectHandle handle = null;
         try {
             handle = obs.getObject();
@@ -56,7 +56,7 @@ public class ObjectGetTimeoutTest extends TestCase {
     }
 
     class TestThread extends Thread {
-        BeeObjectException e = null;
+        Exception e = null;
         CountDownLatch lacth;
 
         TestThread(CountDownLatch lacth) {
@@ -67,13 +67,13 @@ public class ObjectGetTimeoutTest extends TestCase {
             ObjectHandle proxy = null;
             try {
                 proxy = (ObjectHandle) obs.getObject();
-            } catch (BeeObjectException e) {
+            } catch (Exception e) {
                 this.e = e;
             } finally {
                 if (proxy != null)
                     try {
                         proxy.close();
-                    } catch (BeeObjectException e1) {
+                    } catch (ObjectException e1) {
                         e1.printStackTrace();
                     }
             }

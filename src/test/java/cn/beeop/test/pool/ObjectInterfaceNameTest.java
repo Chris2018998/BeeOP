@@ -6,10 +6,10 @@
  */
 package cn.beeop.test.pool;
 
-import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
+import cn.beeop.pool.ObjectException;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.Book;
@@ -34,15 +34,15 @@ public class ObjectInterfaceNameTest extends TestCase {
         obs.close();
     }
 
-    public void test() throws InterruptedException, Exception {
+    public void test() throws Exception {
         BeeObjectHandle handle = null;
         try {
             handle = obs.getObject();
             if (handle == null)
                 TestUtil.assertError("Failed to get object");
 
-            Book book = (Book) handle.getProxyObject();
-        } catch (BeeObjectException e) {
+            Book book = (Book) handle.getReflectProxy();
+        } catch (ObjectException e) {
         } finally {
             if (handle != null)
                 handle.close();

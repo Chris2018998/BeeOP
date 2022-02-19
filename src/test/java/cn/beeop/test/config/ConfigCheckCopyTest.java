@@ -9,12 +9,14 @@ package cn.beeop.test.config;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.BeeObjectSourceConfigException;
 import cn.beeop.test.TestCase;
+import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.JavaBook;
 
 import java.lang.reflect.Field;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * @author Chris.Liao
@@ -28,8 +30,7 @@ public class ConfigCheckCopyTest extends TestCase {
 
         if (config2 == config) throw new Exception("Configuration check copy failed");
 
-        List<String> excludeNames = new LinkedList<>();
-        excludeNames.add("createProperties");
+        List<String> excludeNames = new LinkedList<String>();
         excludeNames.add("objectFactory");
         excludeNames.add("objectInterfaces");
         excludeNames.add("objectInterfaceNames");
@@ -47,12 +48,9 @@ public class ConfigCheckCopyTest extends TestCase {
         }
 
         //2:test container type properties
-        if (config.getCreateProperties() == config2.getCreateProperties())
-            throw new Exception("Configuration 'createProperties'check copy failed");
-        if (!Objects.deepEquals(config.getCreateProperties(), config2.getCreateProperties()))
-            throw new Exception("Configuration 'createProperties' check copy failed");
-
-        if (!Objects.deepEquals(config.getExcludeMethodNames(), config2.getExcludeMethodNames()))
+        Set<String> excludeMethodNames1 = (Set<String>) TestUtil.getFieldValue(config, "excludeMethodNames");
+        Set<String> excludeMethodNames2 = (Set<String>) TestUtil.getFieldValue(config2, "excludeMethodNames");
+        if (!Objects.deepEquals(excludeMethodNames1, excludeMethodNames2))
             throw new Exception("Configuration 'excludeMethodNames' check copy failed");
         if (!Objects.deepEquals(config.getObjectInterfaceNames(), config2.getObjectInterfaceNames()))
             throw new Exception("Configuration 'objectInterfaceNames' check copy failed");

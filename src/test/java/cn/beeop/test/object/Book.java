@@ -11,7 +11,7 @@ package cn.beeop.test.object;
  * @version 1.0
  */
 public interface Book {
-    public String getName();
+    String getName();
 
-    public long getNumber();
+    long getNumber();
 }

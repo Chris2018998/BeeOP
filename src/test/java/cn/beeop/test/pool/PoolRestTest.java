@@ -8,7 +8,7 @@ package cn.beeop.test.pool;
 
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.pool.PoolMonitorVo;
+import cn.beeop.pool.ObjectPoolMonitorVo;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.JavaBook;
@@ -18,8 +18,8 @@ import cn.beeop.test.object.JavaBook;
  * @version 1.0
  */
 public class PoolRestTest extends TestCase {
+    private final int initSize = 5;
     private BeeObjectSource obs;
-    private int initSize = 5;
 
     public void setUp() throws Throwable {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
@@ -32,8 +32,8 @@ public class PoolRestTest extends TestCase {
         obs.close();
     }
 
-    public void test() throws InterruptedException, Exception {
-        PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
+    public void test() throws Exception {
+        ObjectPoolMonitorVo monitorVo = obs.getPoolMonitorVo();
         int usingSize = monitorVo.getUsingSize();
         int idleSize = monitorVo.getIdleSize();
         int totalSize = usingSize + idleSize;
@@ -43,7 +43,7 @@ public class PoolRestTest extends TestCase {
         if (idleSize != initSize)
             TestUtil.assertError("idle expected:%s,current is:%s", initSize, idleSize);
 
-        obs.clearAllObjects();
+        obs.clear();
 
         monitorVo = obs.getPoolMonitorVo();
         usingSize = monitorVo.getUsingSize();

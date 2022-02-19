@@ -9,12 +9,11 @@ package cn.beeop.test.pool;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.FastObjectPool;
-import cn.beeop.pool.PoolMonitorVo;
+import cn.beeop.pool.ObjectPoolMonitorVo;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.JavaBook;
 
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
@@ -23,8 +22,8 @@ import java.util.concurrent.locks.LockSupport;
  * @version 1.0
  */
 public class ObjectIdleTimeoutTest extends TestCase {
+    private final int initSize = 5;
     private BeeObjectSource obs;
-    private int initSize = 5;
 
     public void setUp() throws Throwable {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
@@ -41,12 +40,12 @@ public class ObjectIdleTimeoutTest extends TestCase {
         obs.close();
     }
 
-    public void test() throws InterruptedException, Exception {
+    public void test() throws Exception {
         FastObjectPool pool = (FastObjectPool) TestUtil.getFieldValue(obs, "pool");
 //        CountDownLatch poolThreadLatch = (CountDownLatch) TestUtil.getFieldValue(pool, "poolThreadLatch");
 //        if (poolThreadLatch.getCount() > 0) poolThreadLatch.await();
 
-        PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
+        ObjectPoolMonitorVo monitorVo = obs.getPoolMonitorVo();
         int usingSize = monitorVo.getUsingSize();
         int idleSize = monitorVo.getIdleSize();
         int totalSize = usingSize + idleSize;

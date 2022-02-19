@@ -6,17 +6,16 @@
  */
 package cn.beeop.test.pool;
 
-import cn.beeop.BeeObjectException;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.FastObjectPool;
-import cn.beeop.pool.PoolMonitorVo;
+import cn.beeop.pool.ObjectException;
+import cn.beeop.pool.ObjectPoolMonitorVo;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.JavaBook;
 
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
@@ -41,13 +40,13 @@ public class ObjectHoldTimeoutTest extends TestCase {
         obs.close();
     }
 
-    public void test() throws InterruptedException, Exception {
+    public void test() throws Exception {
         BeeObjectHandle handle = null;
         try {
             FastObjectPool pool = (FastObjectPool) TestUtil.getFieldValue(obs, "pool");
 
             handle = obs.getObject();
-            PoolMonitorVo monitorVo = obs.getPoolMonitorVo();
+            ObjectPoolMonitorVo monitorVo = obs.getPoolMonitorVo();
             if (monitorVo.getIdleSize() + monitorVo.getUsingSize() != 1)
                 TestUtil.assertError("Total connections not as expected 1");
             if (monitorVo.getUsingSize() != 1)
@@ -62,7 +61,7 @@ public class ObjectHoldTimeoutTest extends TestCase {
                 System.out.println("handle isClosed:" + handle.isClosed());
 
                 TestUtil.assertError("must throw closed exception");
-            } catch (BeeObjectException e) {
+            } catch (ObjectException e) {
                 System.out.println(e);
             }
 
