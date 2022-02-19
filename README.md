@@ -71,16 +71,12 @@ public class JavaBookFactory implements RawObjectFactory {
     public Object create() throws ObjectException {
         return new JavaBook("Java核心技术·卷1", System.currentTimeMillis());
     }
-
     public void setDefault(Object obj) throws ObjectException {
     }
-
     public void reset(Object obj) throws ObjectException {
     }
-
     public void destroy(Object obj) {
     }
-
     public boolean isValid(Object obj, int timeout) {
         return true;
     }
