@@ -19,7 +19,7 @@ Maven artifactId(Java7 and higher)
 <dependency>
    <groupId>com.github.chris2018998</groupId>
    <artifactId>beeop</artifactId>
-   <version>1.1.0</version>
+   <version>1.2.0</version>
 </dependency>
 ```
 
@@ -67,14 +67,21 @@ public class JavaBook implements Book{
 ```
  
 ```java
-public class JavaBookFactory implements BeeObjectFactory {
-    public Object create(Properties prop) throws BeeObjectException {
+public class JavaBookFactory implements RawObjectFactory {
+    public Object create() throws ObjectException {
         return new JavaBook("Java核心技术·卷1", System.currentTimeMillis());
     }
-    public void setDefault(Object obj) throws BeeObjectException { }
-    public void reset(Object obj) throws BeeObjectException { }
-    public void destroy(Object obj) { }
-    public boolean isAlive(Object obj, int timeout) {
+
+    public void setDefault(Object obj) throws ObjectException {
+    }
+
+    public void reset(Object obj) throws ObjectException {
+    }
+
+    public void destroy(Object obj) {
+    }
+
+    public boolean isValid(Object obj, int timeout) {
         return true;
     }
 }
@@ -84,7 +91,7 @@ public class JavaBookFactory implements BeeObjectFactory {
  public class TestBookPool{
    public static void main(String[]){
        BeeObjectSourceConfig config = new BeeObjectSourceConfig();
-       config.setObjectFactory(new JavaBookFactory());
+       config.setObjectFactoryClass(JavaBookFactory.class);
        BeeObjectSource obs = new BeeObjectSource(config);
        
        BeeObjectHandle handle = null;
