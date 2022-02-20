@@ -149,5 +149,4 @@ public class JavaBookFactory implements RawObjectFactory {
 ## 捐助
 
 如果您觉得此作品不错，可以捐赠请我们喝杯咖啡吧，在此表示感谢^_^。
-
-<img height="50%" width="50%" src="https://github.com/Chris2018998/BeeCP/blob/master/doc/individual/donate.png"> 
+![图片](https://user-images.githubusercontent.com/32663325/154846693-26abaee0-f114-4ee0-8ac6-873c961edfb3.png)
