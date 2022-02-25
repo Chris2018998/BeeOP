@@ -136,9 +136,12 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
         this.setDaemon(true);
         this.setName(poolName + "-workServant");
-        this.start();
+        this.setPriority(Thread.MIN_PRIORITY);
         idleScanThread.setDaemon(true);
         idleScanThread.setName(poolName + "-idleCheck");
+        idleScanThread.setPriority(Thread.MIN_PRIORITY);
+
+        this.start();
         idleScanThread.start();
         poolState = POOL_READY;
 
@@ -345,14 +348,16 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         W:
         while (iterator.hasNext()) {
             Borrower b = iterator.next();
-            Object state;
-            do {
-                if (p.state != stateCodeOnRelease) return;
-                state = b.state;
-                if (!(state instanceof BorrowerState)) continue W;
-            } while (!BorrowStUpd.compareAndSet(b, state, p));
-            if (state == BOWER_WAITING) LockSupport.unpark(b.thread);
-            Thread.yield();
+            while (p.state == this.stateCodeOnRelease) {
+                Object state = b.state;
+                if (!(state instanceof BorrowerState))
+                    continue W;
+                if (BorrowStUpd.compareAndSet(b, state, p)) {
+                    if (state == BOWER_WAITING) LockSupport.unpark(b.thread);
+                    return;
+                }
+                Thread.yield();
+            }
             return;
         }
         transferPolicy.onTransferFail(p);
@@ -366,18 +371,19 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
      * @param e: transfer Exception to waiter
      */
     private void transferException(Throwable e) {
-        Iterator<Borrower> iterator = waitQueue.iterator();
-        W:
+        Iterator iterator = this.waitQueue.iterator();
         while (iterator.hasNext()) {
-            Borrower b = iterator.next();
-            Object state;
-            do {
-                state = b.state;
-                if (!(state instanceof BorrowerState)) continue W;
-            } while (!BorrowStUpd.compareAndSet(b, state, e));
-            if (state == BOWER_WAITING) LockSupport.unpark(b.thread);
-            Thread.yield();
-            return;
+            Borrower b = (Borrower) iterator.next();
+            while (true) {
+                Object state = b.state;
+                if (!(state instanceof BorrowerState))
+                    break;
+                if (BorrowStUpd.compareAndSet(b, state, e)) {
+                    if (state == BOWER_WAITING) LockSupport.unpark(b.thread);
+                    return;
+                }
+                Thread.yield();
+            }
         }
     }
 
