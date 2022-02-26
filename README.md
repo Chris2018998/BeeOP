@@ -19,7 +19,7 @@ Maven artifactId(Java7 and higher)
 <dependency>
    <groupId>com.github.chris2018998</groupId>
    <artifactId>beeop</artifactId>
-   <version>1.2.0</version>
+   <version>1.2.1</version>
 </dependency>
 ```
 
