@@ -134,10 +134,8 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
         this.setDaemon(true);
         this.setName(poolName + "-workServant");
-        this.setPriority(Thread.MIN_PRIORITY);
         idleScanThread.setDaemon(true);
         idleScanThread.setName(poolName + "-idleCheck");
-        idleScanThread.setPriority(Thread.MIN_PRIORITY);
 
         this.start();
         idleScanThread.start();
@@ -343,15 +341,16 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     public final void recycle(PooledObject p) {
         Iterator<Borrower> iterator = this.waitQueue.iterator();
         this.transferPolicy.beforeTransfer(p);
-        W:while(iterator.hasNext()) {
-            Borrower b = (Borrower)iterator.next();
+        W:
+        while (iterator.hasNext()) {
+            Borrower b = iterator.next();
             Object state;
             do {
-                if (p.state != this.stateCodeOnRelease)return;
+                if (p.state != this.stateCodeOnRelease) return;
                 state = b.state;
-                if (!(state instanceof BorrowerState))continue W;
-            } while(!BorrowStUpd.compareAndSet(b, state, p));
-            if (state == BOWER_WAITING)LockSupport.unpark(b.thread);
+                if (!(state instanceof BorrowerState)) continue W;
+            } while (!BorrowStUpd.compareAndSet(b, state, p));
+            if (state == BOWER_WAITING) LockSupport.unpark(b.thread);
             return;
         }
         this.transferPolicy.onTransferFail(p);
@@ -367,14 +366,15 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
      */
     private void transferException(Throwable e) {
         Iterator iterator = this.waitQueue.iterator();
-        W:while(iterator.hasNext()) {
-            Borrower b = (Borrower)iterator.next();
+        W:
+        while (iterator.hasNext()) {
+            Borrower b = (Borrower) iterator.next();
             Object state;
             do {
                 state = b.state;
-                if (!(state instanceof BorrowerState))continue W;
-            } while(!BorrowStUpd.compareAndSet(b, state, e));
-            if (state == BOWER_WAITING)LockSupport.unpark(b.thread);
+                if (!(state instanceof BorrowerState)) continue W;
+            } while (!BorrowStUpd.compareAndSet(b, state, e));
+            if (state == BOWER_WAITING) LockSupport.unpark(b.thread);
             return;
         }
     }
@@ -435,7 +435,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     //Method-3.3: pool servant thread run method
     public void run() {
         while (poolState != POOL_CLOSED) {
-            while (servantState.get() == THREAD_WORKING && servantTryCount.get() > 0) {
+            while (servantState.get() == THREAD_WORKING && !waitQueue.isEmpty() && servantTryCount.get() > 0) {
                 try {
                     servantTryCount.decrementAndGet();
                     PooledObject p = searchOrCreate();
@@ -448,6 +448,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
             if (servantState.get() == THREAD_EXIT)
                 break;
             if (servantState.compareAndSet(THREAD_WORKING, THREAD_WAITING)) {
+                servantTryCount.set(0);
                 LockSupport.park();
             }
         }
