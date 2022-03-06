@@ -145,8 +145,3 @@ public class JavaBookFactory implements RawObjectFactory {
 | objectFactoryClassName |自定义的对象工厂类名                |默认为空                                                    |
 | enableJmx              |JMX监控支持开关                    |默认false                                                  |
 
-
-## 捐助
-
-如果您觉得此作品不错，可以捐赠请我们喝杯咖啡吧，在此表示感谢^_^。
-![图片](https://user-images.githubusercontent.com/32663325/154846693-26abaee0-f114-4ee0-8ac6-873c961edfb3.png)
