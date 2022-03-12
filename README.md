@@ -4,7 +4,6 @@
  <a><img src="https://img.shields.io/badge/JDK-1.7+-green.svg"></a>
  <a><img src="https://img.shields.io/badge/License-LGPL%202.1-blue.svg"></a>
  <a><img src="https://maven-badges.herokuapp.com/maven-central/com.github.chris2018998/beeop/badge.svg"></a>
- <a><img src="https://img.shields.io/github/v/release/Chris2018998/beeop.svg"></a> 
 </p> 
 
 ## :coffee: Introduction 
