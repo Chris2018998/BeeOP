@@ -10,11 +10,10 @@
 
 ## :coffee: Introduction 
 
-BeeOP：A light high-performance java object pool
+BeeOP is a lightweight JAVA object pool
 
 ## :arrow_down: Download 
-
-Maven artifactId(Java7 and higher)
+Java7 or higher
 ```xml
 <dependency>
    <groupId>com.github.chris2018998</groupId>
