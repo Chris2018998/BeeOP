@@ -5,16 +5,14 @@
  <a><img src="https://img.shields.io/badge/JDK-1.7+-green.svg"></a>
  <a><img src="https://img.shields.io/badge/License-LGPL%202.1-blue.svg"></a>
  <a><img src="https://maven-badges.herokuapp.com/maven-central/com.github.chris2018998/beeop/badge.svg"></a>
- <a><img src="https://img.shields.io/github/v/release/Chris2018998/beeop.svg"></a> 
 </p> 
 
 ## :coffee: 简介 
 
-小蜜蜂对象池：一款轻量高性能Java对象池 
+小蜜蜂对象池：一款轻量级Java对象池 
 
 ## :arrow_down: 下载 
-
-Maven坐标（Java7及更高版本)
+Java7或更高
 ```xml
 <dependency>
    <groupId>com.github.chris2018998</groupId>
@@ -22,7 +20,6 @@ Maven坐标（Java7及更高版本)
    <version>1.2.2</version>
 </dependency>
 ```
-
 
 ## 性能测试
 
