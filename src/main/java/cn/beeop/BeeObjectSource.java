@@ -6,7 +6,10 @@
  */
 package cn.beeop;
 
-import cn.beeop.pool.*;
+import cn.beeop.pool.FastObjectPool;
+import cn.beeop.pool.ObjectPool;
+import cn.beeop.pool.ObjectPoolException;
+import cn.beeop.pool.ObjectPoolMonitorVo;
 
 import static cn.beeop.pool.PoolStaticCenter.*;
 
@@ -20,6 +23,7 @@ import static cn.beeop.pool.PoolStaticCenter.*;
  * @version 1.0
  */
 public class BeeObjectSource extends BeeObjectSourceConfig {
+    private final Object synLock = new Object();
     private volatile boolean ready;
     private ObjectPool pool;
 
@@ -31,14 +35,9 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
 
     public BeeObjectSource(BeeObjectSourceConfig config) throws Exception {
         config.copyTo(this);
-        pool = createPool(this);
-        ready = true;
+        createPool(this);
     }
 
-    //***************************************************************************************************************//
-    //                                          4: pool create methods(1)                                            //
-    //***************************************************************************************************************//
-    //try to create pool instance by config
     private static ObjectPool createPool(BeeObjectSource os) throws Exception {
         String poolImplementClassName = os.getPoolImplementClassName();
         if (isBlank(poolImplementClassName)) poolImplementClassName = FastObjectPool.class.getName();
@@ -53,11 +52,11 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
             os.ready = true;
             return pool;
         } catch (ClassNotFoundException e) {
-            throw new ObjectPoolException("Not found pool class:" + poolImplementClassName);
+            throw new ObjectPoolException("Not found object pool class:" + poolImplementClassName);
         } catch (InstantiationException e) {
-            throw new ObjectPoolException("Failed to instantiate pool by class:" + poolImplementClassName, e);
+            throw new ObjectPoolException("Failed to instantiate object pool by class:" + poolImplementClassName, e);
         } catch (IllegalAccessException e) {
-            throw new ObjectPoolException("Failed to instantiate pool by class:" + poolImplementClassName, e);
+            throw new ObjectPoolException("Illegal access object pool class:" + poolImplementClassName, e);
         }
     }
 
@@ -66,7 +65,10 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     //***************************************************************************************************************//
     public BeeObjectHandle getObject() throws Exception {
         if (ready) return pool.getObject();
-        return createPool(this).getObject();
+        synchronized (synLock) {
+            if (pool != null) return pool.getObject();
+            return createPool(this).getObject();
+        }
     }
 
     //***************************************************************************************************************//
@@ -102,20 +104,5 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     public ObjectPoolMonitorVo getPoolMonitorVo() throws Exception {
         if (pool == null) throw new ObjectPoolException("Object pool not initialized");
         return pool.getPoolMonitorVo();
-    }
-
-
-    //***************************************************************************************************************//
-    //                                          4: pool create methods(1)                                            //
-    //***************************************************************************************************************//
-    private synchronized ObjectPool tryCreatePoolByLock() throws Exception {
-        if (pool != null) return pool;
-        try {
-            pool = createPool(this);
-            ready = true;
-            return pool;
-        } catch (Throwable e) {
-            throw e instanceof Exception ? (Exception) e : new ObjectException(e);
-        }
     }
 }
