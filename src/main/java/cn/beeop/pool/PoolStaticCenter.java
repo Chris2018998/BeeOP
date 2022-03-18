@@ -9,7 +9,7 @@ package cn.beeop.pool;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSourceConfigException;
 import cn.beeop.pool.exception.ObjectException;
-import cn.beeop.pool.exception.PoolInternalException;
+import cn.beeop.pool.exception.PoolClosedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,10 +52,9 @@ public class PoolStaticCenter {
     static final String DESC_RM_DESTROY = "destroy";
     static final Class[] EmptyParamTypes = new Class[0];
     static final Object[] EmptyParamValues = new Object[0];
-
-    static final Exception RequestTimeoutException = new PoolInternalException("Request timeout");
-    static final Exception RequestInterruptException = new PoolInternalException("Request interrupted");
-    static final Exception PoolCloseException = new PoolInternalException("Pool has shut down or in clearing");
+    static final Exception RequestTimeoutException = new ObjectException("Request timeout");
+    static final Exception RequestInterruptException = new ObjectException("Request interrupted");
+    static final Exception PoolCloseException = new PoolClosedException("Pool has shut down or in clearing");
     static final Exception ObjectClosedException = new ObjectException("No operations allowed after object handle closed");
     static final Exception ObjectMethodForbiddenException = new ObjectException("Method illegal access");
     private static final String Separator_MiddleLine = "-";
