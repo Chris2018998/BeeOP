@@ -9,7 +9,6 @@ package cn.beeop.test.pool;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.pool.ObjectException;
 import cn.beeop.pool.ObjectHandle;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
@@ -73,7 +72,7 @@ public class ObjectGetTimeoutTest extends TestCase {
                 if (proxy != null)
                     try {
                         proxy.close();
-                    } catch (ObjectException e1) {
+                    } catch (Exception e1) {
                         e1.printStackTrace();
                     }
             }

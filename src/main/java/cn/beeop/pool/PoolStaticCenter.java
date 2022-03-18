@@ -8,6 +8,8 @@ package cn.beeop.pool;
 
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSourceConfigException;
+import cn.beeop.pool.exception.ObjectException;
+import cn.beeop.pool.exception.PoolInternalException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +28,7 @@ import java.util.*;
  */
 public class PoolStaticCenter {
     public static final Logger CommonLog = LoggerFactory.getLogger(PoolStaticCenter.class);
-    public static final ClassLoader Pool_ClassLoader = FastObjectPool.class.getClassLoader();
+    public static final ClassLoader PoolClassLoader = FastObjectPool.class.getClassLoader();
 
     //pool object state
     static final int OBJECT_IDLE = 0;
@@ -51,11 +53,11 @@ public class PoolStaticCenter {
     static final Class[] EmptyParamTypes = new Class[0];
     static final Object[] EmptyParamValues = new Object[0];
 
-    static final ObjectPoolException RequestTimeoutException = new ObjectPoolException("Request timeout");
-    static final ObjectPoolException RequestInterruptException = new ObjectPoolException("Request interrupted");
-    static final ObjectPoolException PoolCloseException = new ObjectPoolException("Pool has shut down or in clearing");
-    static final ObjectException ObjectClosedException = new ObjectException("No operations allowed after object handle closed");
-    static final ObjectException ObjectMethodForbiddenException = new ObjectException("Method illegal access");
+    static final Exception RequestTimeoutException = new PoolInternalException("Request timeout");
+    static final Exception RequestInterruptException = new PoolInternalException("Request interrupted");
+    static final Exception PoolCloseException = new PoolInternalException("Pool has shut down or in clearing");
+    static final Exception ObjectClosedException = new ObjectException("No operations allowed after object handle closed");
+    static final Exception ObjectMethodForbiddenException = new ObjectException("Method illegal access");
     private static final String Separator_MiddleLine = "-";
     private static final String Separator_UnderLine = "_";
 
@@ -198,17 +200,15 @@ public class PoolStaticCenter {
     public static void setPropertiesValue(Object bean, Map<String, Method> setMethodMap, Map<String, Object> valueMap) throws BeeObjectSourceConfigException {
         if (bean == null) throw new BeeObjectSourceConfigException("Bean can't be null");
         if (setMethodMap == null || setMethodMap.isEmpty() || valueMap == null || valueMap.isEmpty()) return;
-
-        Iterator<Map.Entry<String, Method>> iterator = setMethodMap.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<String, Method> entry = iterator.next();
+        for (Map.Entry<String, Method> entry : setMethodMap.entrySet()) {
             String propertyName = entry.getKey();
             Method setMethod = entry.getValue();
 
             Object setValue = getFieldValue(valueMap, propertyName);
             if (setValue != null) {
                 Class type = setMethod.getParameterTypes()[0];
-                try {//1:convert config value to match type of set method
+                try {
+                    //1:convert config value to match type of set method
                     setValue = convert(propertyName, setValue, type);
                 } catch (BeeObjectSourceConfigException e) {
                     throw e;
@@ -264,7 +264,7 @@ public class PoolStaticCenter {
             return new BigDecimal(text);
         } else if (type == Class.class) {
             try {
-                return Class.forName(text);
+                return Class.forName(text, true, PoolClassLoader);
             } catch (ClassNotFoundException e) {
                 throw new BeeObjectSourceConfigException("Not found class:" + text);
             }
@@ -272,16 +272,14 @@ public class PoolStaticCenter {
             return null;
         } else {
             try {
-                Object objInstance = Class.forName(text).newInstance();
+                Object objInstance = Class.forName(text, true, PoolClassLoader).newInstance();
                 if (!type.isInstance(objInstance))
                     throw new BeeObjectSourceConfigException("Config value can't mach property(" + propName + ")type:" + type.getName());
                 return objInstance;
-            } catch (ClassNotFoundException e) {
-                throw new BeeObjectSourceConfigException("Not found class:" + text);
-            } catch (InstantiationException e) {
-                throw new BeeObjectSourceConfigException("Failed to instantiated class:" + text);
-            } catch (IllegalAccessException e) {
-                throw new BeeObjectSourceConfigException("Failed to instantiated class:" + text);
+            } catch (BeeObjectSourceConfigException e) {
+                throw e;
+            } catch (Throwable e) {
+                throw new BeeObjectSourceConfigException("Failed to create property(" + propName + ")value by type:" + text, e);
             }
         }
     }

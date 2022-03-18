@@ -38,6 +38,8 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     private static final int NCPUS = Runtime.getRuntime().availableProcessors();
     //poolName index
     private static final AtomicInteger PoolNameIndex = new AtomicInteger(1);
+
+
     //exclude method names on raw object,which can't be called by user,for example;close,destroy,terminate
     private final Set<String> excludeMethodNames = new HashSet<String>(3);
     //object factory properties
@@ -472,6 +474,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
                 if (!isBlank(excludeMethodName)) {
                     excludeMethodName = excludeMethodName.trim();
                     this.addExcludeMethodName(excludeMethodName);
+
                     CommonLog.debug("add excludeMethodName:{}", excludeMethodName);
                 }
             }
@@ -550,7 +553,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
                 if (printConfigInfo) CommonLog.info("{}.{}={}", poolName, fieldName, fieldValue);
                 field.set(config, fieldValue);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new BeeObjectSourceConfigException("Failed to copy field[" + fieldName + "]", e);
         }
 
@@ -613,13 +616,11 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         if (objectFactoryClass != null) {
             try {
                 checkObjectFactoryClass(objectFactoryClass);//check factory class
-                RawObjectFactory factory = (RawObjectFactory) objectFactoryClass.newInstance();
+                RawObjectFactory factory = (RawObjectFactory) objectFactoryClass.getConstructor().newInstance();
                 setPropertiesValue(factory, factoryProperties);
                 return factory;
-            } catch (InstantiationException e) {
-                throw new BeeObjectSourceConfigException("Failed to create object factory by class:" + objectFactoryClassName, e);
-            } catch (IllegalAccessException e) {
-                throw new BeeObjectSourceConfigException("Failed to create object factory by class:" + objectFactoryClassName, e);
+            } catch (Throwable e) {
+                throw new BeeObjectSourceConfigException("Failed to create object factory by class:" + objectFactoryClass.getName(), e);
             }
         }
 

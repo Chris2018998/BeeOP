@@ -9,7 +9,6 @@ package cn.beeop.test.pool;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.pool.ObjectException;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.Book;
@@ -42,7 +41,6 @@ public class ObjectMethodIllegalAccessTest extends TestCase {
             handle = obs.getObject();
             test1(handle);
             test2(handle);
-        } catch (ObjectException e) {
         } finally {
             if (handle != null)
                 handle.close();
@@ -53,7 +51,7 @@ public class ObjectMethodIllegalAccessTest extends TestCase {
         try {
             handle.call("getName", new Class[0], new Object[0]);
             TestUtil.assertError("Object method illegal access test fail");
-        } catch (ObjectException e) {
+        } catch (Exception e) {
             System.out.println("Handle method illegal access test OK");
         }
     }
@@ -64,7 +62,7 @@ public class ObjectMethodIllegalAccessTest extends TestCase {
             System.out.println(book.getName());
             TestUtil.assertError("Proxy method illegal access test fail");
         } catch (UndeclaredThrowableException e) {
-            if (e.getCause() instanceof ObjectException)
+            if (e.getCause() instanceof Exception)
                 System.out.println("Proxy method illegal access test OK");
             else
                 TestUtil.assertError("Proxy method illegal access test fail");

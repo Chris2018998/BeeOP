@@ -7,6 +7,7 @@
 package cn.beeop.pool;
 
 import cn.beeop.RawObjectFactory;
+import cn.beeop.pool.exception.ObjectException;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -53,7 +54,7 @@ final class PooledObject implements Cloneable {
             Throwable cause = null;
             try {
                 Proxy.newProxyInstance(
-                        Pool_ClassLoader,
+                        PoolClassLoader,
                         objectInterfaces,
                         new ObjectReflectHandler(this, null, excludeMethodNames));
             } catch (Throwable e) {
@@ -63,7 +64,7 @@ final class PooledObject implements Cloneable {
         }
     }
 
-    final PooledObject setDefaultAndCopy(Object raw, int state) throws Exception {
+    PooledObject setDefaultAndCopy(Object raw, int state) throws Exception {
         factory.setDefault(raw);
         PooledObject p = (PooledObject) clone();
 
@@ -81,7 +82,7 @@ final class PooledObject implements Cloneable {
         return raw.toString();
     }
 
-    final void updateAccessTime() {
+    void updateAccessTime() {
         lastAccessTime = currentTimeMillis();
     }
 
@@ -96,7 +97,7 @@ final class PooledObject implements Cloneable {
         }
     }
 
-    final void recycleSelf() throws ObjectException {
+    void recycleSelf() throws ObjectException {
         try {
             handleInUsing = null;
             factory.reset(raw);
@@ -111,14 +112,14 @@ final class PooledObject implements Cloneable {
     //***************************************************************************************************************//
     //                                  3: reflect methods(2)                                                        //                                                                                  //
     //***************************************************************************************************************//
-    final Object createReflectProxy(ObjectHandle handle) {
+    Object createReflectProxy(ObjectHandle handle) {
         return supportReflectProxy ? Proxy.newProxyInstance(
-                Pool_ClassLoader,
+                PoolClassLoader,
                 objectInterfaces,
                 new ObjectReflectHandler(this, handle, excludeMethodNames)) : null;
     }
 
-    final Object call(String name, Class[] types, Object[] params) throws ObjectException {
+    Object call(String name, Class[] types, Object[] params) throws Exception {
         if (excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
 
         Object key = new MethodCacheKey(name, types);

@@ -9,7 +9,6 @@ package cn.beeop.test.pool;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.pool.ObjectException;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.JavaBookFactory;
@@ -37,7 +36,6 @@ public class ObjectFactoryNameTest extends TestCase {
             handle = obs.getObject();
             if (handle == null)
                 TestUtil.assertError("Failed to get object");
-        } catch (ObjectException e) {
         } finally {
             if (handle != null)
                 handle.close();

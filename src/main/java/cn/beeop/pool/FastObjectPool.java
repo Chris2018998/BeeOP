@@ -11,6 +11,8 @@ import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.RawObjectFactory;
 import cn.beeop.pool.atomic.AtomicIntegerFieldUpdaterImpl;
 import cn.beeop.pool.atomic.AtomicReferenceFieldUpdaterImpl;
+import cn.beeop.pool.exception.ObjectException;
+import cn.beeop.pool.exception.PoolCreateFailedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,8 +88,8 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
      * @throws Exception check configuration fail or to create initiated object
      */
     public synchronized void init(BeeObjectSourceConfig config) throws Exception {
-        if (config == null) throw new ObjectPoolException("Configuration can't be null");
-        if (poolState != POOL_NEW) throw new ObjectPoolException("Pool has initialized");
+        if (config == null) throw new PoolCreateFailedException("Configuration can't be null");
+        if (poolState != POOL_NEW) throw new PoolCreateFailedException("Pool has initialized");
 
         poolConfig = config.check();//why need a copy here?
         poolName = poolConfig.getPoolName();
@@ -232,7 +234,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
      * @return pooled object,
      * @throws Exception if pool is closed or waiting timeout,then throw exception
      */
-    public final BeeObjectHandle getObject() throws Exception {
+    public BeeObjectHandle getObject() throws Exception {
         if (poolState != POOL_READY) throw PoolCloseException;
 
         //0:try to get from threadLocal cache
@@ -318,8 +320,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     //Method-2.2: search one idle Object,if not found,then try to create one
     private PooledObject searchOrCreate() throws ObjectException {
         PooledObject[] array = pooledArray;
-        for (int i = 0, l = array.length; i < l; i++) {
-            PooledObject p = array[i];
+        for (PooledObject p : array) {
             if (p.state == OBJECT_IDLE && ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(p))
                 return p;
         }
@@ -340,7 +341,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     }
 
     //Method-2.4: return object to pool after borrower end of use object
-    public final void recycle(PooledObject p) {
+    public void recycle(PooledObject p) {
         Iterator<Borrower> iterator = this.waitQueue.iterator();
         this.transferPolicy.beforeTransfer(p);
         W:
@@ -367,10 +368,10 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
      * @param e: transfer Exception to waiter
      */
     private void transferException(Throwable e) {
-        Iterator iterator = this.waitQueue.iterator();
+        Iterator<Borrower> iterator = this.waitQueue.iterator();
         W:
         while (iterator.hasNext()) {
-            Borrower b = (Borrower) iterator.next();
+            Borrower b = iterator.next();
             Object state;
             do {
                 state = b.state;
@@ -400,15 +401,15 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //Compete Pooled connection transfer
     //private static final class CompeteTransferPolicy implements ObjectTransferPolicy {
-    public final int getStateCodeOnRelease() {
+    public int getStateCodeOnRelease() {
         return OBJECT_IDLE;
     }
 
-    public final void beforeTransfer(PooledObject p) {
+    public void beforeTransfer(PooledObject p) {
         p.state = OBJECT_IDLE;
     }
 
-    public final boolean tryCatch(PooledObject p) {
+    public boolean tryCatch(PooledObject p) {
         return p.state == OBJECT_IDLE && ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING);
     }
 
@@ -463,8 +464,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     private void closeIdleTimeoutPooledEntry() {
         if (poolState == POOL_READY) {
             PooledObject[] array = pooledArray;
-            for (int i = 0, l = array.length; i < l; i++) {
-                PooledObject p = array[i];
+            for (PooledObject p : array) {
                 int state = p.state;
                 if (state == OBJECT_IDLE && !existBorrower()) {
                     boolean isTimeoutInIdle = System.currentTimeMillis() - p.lastAccessTime - idleTimeoutMs >= 0L;
@@ -519,8 +519,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
         while (pooledArray.length > 0) {
             PooledObject[] array = pooledArray;
-            for (int i = 0, l = array.length; i < l; i++) {
-                PooledObject p = array[i];
+            for (PooledObject p : array) {
                 if (ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_CLOSED)) {
                     removePooledEntry(p, source);
                 } else if (p.state == OBJECT_CLOSED) {
@@ -585,8 +584,8 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     public int getIdleSize() {
         int idleSize = 0;
         PooledObject[] array = pooledArray;
-        for (int i = 0, l = array.length; i < l; i++)
-            if (array[i].state == OBJECT_IDLE) idleSize++;
+        for (PooledObject p : array)
+            if (p.state == OBJECT_IDLE) idleSize++;
         return idleSize;
     }
 
@@ -687,14 +686,14 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //class-6.1:Compete Pooled connection transfer
     private static final class FairTransferPolicy implements ObjectTransferPolicy {
-        public final int getStateCodeOnRelease() {
+        public int getStateCodeOnRelease() {
             return OBJECT_USING;
         }
 
-        public final void beforeTransfer(PooledObject p) {
+        public void beforeTransfer(PooledObject p) {
         }
 
-        public final boolean tryCatch(PooledObject p) {
+        public boolean tryCatch(PooledObject p) {
             return p.state == OBJECT_USING;
         }
 

@@ -7,6 +7,7 @@
 package cn.beeop.pool;
 
 import cn.beeop.BeeObjectHandle;
+import cn.beeop.pool.exception.ObjectException;
 
 import static cn.beeop.pool.PoolStaticCenter.*;
 
@@ -38,7 +39,7 @@ public final class ObjectHandle implements BeeObjectHandle {
         return isClosed;
     }
 
-    public final void close() throws ObjectException {
+    public void close() throws ObjectException {
         synchronized (this) {//safe close
             if (isClosed) return;
             isClosed = true;
@@ -46,7 +47,7 @@ public final class ObjectHandle implements BeeObjectHandle {
         p.recycleSelf();
     }
 
-    public synchronized final Object getReflectProxy() throws ObjectException {
+    public synchronized Object getReflectProxy() throws Exception {
         if (isClosed) throw ObjectClosedException;
         if (!reflectProxyCreated) {
             reflectProxy = p.createReflectProxy(this);
@@ -58,11 +59,11 @@ public final class ObjectHandle implements BeeObjectHandle {
     //***************************************************************************************************************//
     //                                 2: raw methods call methods(2)                                                //                                                                                  //
     //***************************************************************************************************************//
-    public final Object call(String methodName) throws ObjectException {
+    public Object call(String methodName) throws Exception {
         return this.call(methodName, EmptyParamTypes, EmptyParamValues);
     }
 
-    public final Object call(String name, Class[] types, Object[] params) throws ObjectException {
+    public Object call(String name, Class[] types, Object[] params) throws Exception {
         if (isClosed) throw ObjectClosedException;
         return p.call(name, types, params);
     }

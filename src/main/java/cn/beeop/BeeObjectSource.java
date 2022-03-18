@@ -8,8 +8,10 @@ package cn.beeop;
 
 import cn.beeop.pool.FastObjectPool;
 import cn.beeop.pool.ObjectPool;
-import cn.beeop.pool.ObjectPoolException;
 import cn.beeop.pool.ObjectPoolMonitorVo;
+import cn.beeop.pool.exception.PoolBaseException;
+import cn.beeop.pool.exception.PoolCreateFailedException;
+import cn.beeop.pool.exception.PoolNotCreateException;
 
 import static cn.beeop.pool.PoolStaticCenter.*;
 
@@ -42,7 +44,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
         String poolImplementClassName = os.getPoolImplementClassName();
         if (isBlank(poolImplementClassName)) poolImplementClassName = FastObjectPool.class.getName();
         try {
-            Class<?> poolClass = Class.forName(poolImplementClassName, true, Pool_ClassLoader);
+            Class<?> poolClass = Class.forName(poolImplementClassName, true, PoolClassLoader);
             String errorMsg = checkClass(poolClass, ObjectPool.class, "pool");
             if (!isBlank(errorMsg)) throw new BeeObjectSourceConfigException(errorMsg);
 
@@ -51,12 +53,10 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
             os.pool = pool;
             os.ready = true;
             return pool;
-        } catch (ClassNotFoundException e) {
-            throw new ObjectPoolException("Not found object pool class:" + poolImplementClassName);
-        } catch (InstantiationException e) {
-            throw new ObjectPoolException("Failed to instantiate object pool by class:" + poolImplementClassName, e);
-        } catch (IllegalAccessException e) {
-            throw new ObjectPoolException("Illegal access object pool class:" + poolImplementClassName, e);
+        } catch (PoolBaseException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new PoolCreateFailedException("Failed to create object pool by class:" + poolImplementClassName, e);
         }
     }
 
@@ -79,7 +79,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     }
 
     public void clear(boolean force) throws Exception {
-        if (pool == null) throw new ObjectPoolException("Object pool not initialized");
+        if (pool == null) throw new PoolNotCreateException("Object pool not initialized");
         pool.clear(force);
     }
 
@@ -102,7 +102,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     }
 
     public ObjectPoolMonitorVo getPoolMonitorVo() throws Exception {
-        if (pool == null) throw new ObjectPoolException("Object pool not initialized");
+        if (pool == null) throw new PoolNotCreateException("Object pool not initialized");
         return pool.getPoolMonitorVo();
     }
 }

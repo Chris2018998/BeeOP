@@ -7,7 +7,6 @@
 package cn.beeop.test.object;
 
 import cn.beeop.RawObjectFactory;
-import cn.beeop.pool.ObjectException;
 
 /**
  * ObjectFactory subclass
@@ -15,14 +14,14 @@ import cn.beeop.pool.ObjectException;
  * @author chris.liao
  */
 public class JavaBookFactory implements RawObjectFactory {
-    public Object create() throws ObjectException {
+    public Object create() throws Exception {
         return new JavaBook("Java核心技术·卷1", System.currentTimeMillis());
     }
 
-    public void setDefault(Object obj) throws ObjectException {
+    public void setDefault(Object obj) throws Exception {
     }
 
-    public void reset(Object obj) throws ObjectException {
+    public void reset(Object obj) throws Exception {
     }
 
     public void destroy(Object obj) {

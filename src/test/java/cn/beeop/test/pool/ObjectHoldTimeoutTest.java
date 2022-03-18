@@ -10,7 +10,6 @@ import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.pool.FastObjectPool;
-import cn.beeop.pool.ObjectException;
 import cn.beeop.pool.ObjectPoolMonitorVo;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
@@ -61,7 +60,7 @@ public class ObjectHoldTimeoutTest extends TestCase {
                 System.out.println("handle isClosed:" + handle.isClosed());
 
                 TestUtil.assertError("must throw closed exception");
-            } catch (ObjectException e) {
+            } catch (Exception e) {
                 System.out.println(e);
             }
 
