@@ -49,7 +49,7 @@ final class PooledObject implements Cloneable {
         this.excludeMethodNames = excludeMethodNames;
 
         if (objectInterfaces == null || objectInterfaces.length == 0) {
-            supportReflectProxy = false;
+            this.supportReflectProxy = false;
         } else {
             Throwable cause = null;
             try {
@@ -60,18 +60,18 @@ final class PooledObject implements Cloneable {
             } catch (Throwable e) {
                 cause = e;
             }
-            supportReflectProxy = cause == null;
+            this.supportReflectProxy = cause == null;
         }
     }
 
     PooledObject setDefaultAndCopy(Object raw, int state) throws Exception {
-        factory.setDefault(raw);
-        PooledObject p = (PooledObject) clone();
+        this.factory.setDefault(raw);
+        PooledObject p = (PooledObject) this.clone();
 
         p.raw = raw;
         p.rawClass = raw.getClass();
         p.state = state;
-        p.lastAccessTime = System.currentTimeMillis();//first time
+        p.lastAccessTime = currentTimeMillis();//first time
         return p;
     }
 
@@ -79,31 +79,31 @@ final class PooledObject implements Cloneable {
     //                                  2: Pooled entry business methods(4)                                          //                                                                                  //
     //***************************************************************************************************************//
     public String toString() {
-        return raw.toString();
+        return this.raw.toString();
     }
 
     void updateAccessTime() {
-        lastAccessTime = currentTimeMillis();
+        this.lastAccessTime = currentTimeMillis();
     }
 
     //called by pool before remove from pool
     void onBeforeRemove() {
         try {
-            this.state = OBJECT_CLOSED;
+            state = OBJECT_CLOSED;
         } catch (Throwable e) {
             CommonLog.error("Object close error", e);
         } finally {
-            factory.destroy(raw);
+            this.factory.destroy(this.raw);
         }
     }
 
     void recycleSelf() throws ObjectException {
         try {
-            handleInUsing = null;
-            factory.reset(raw);
-            pool.recycle(this);
+            this.handleInUsing = null;
+            this.factory.reset(this.raw);
+            this.pool.recycle(this);
         } catch (Throwable e) {
-            pool.abandonOnReturn(this);
+            this.pool.abandonOnReturn(this);
             throw e instanceof ObjectException ? (ObjectException) e : new ObjectException(e);
         }
     }
@@ -113,26 +113,26 @@ final class PooledObject implements Cloneable {
     //                                  3: reflect methods(2)                                                        //                                                                                  //
     //***************************************************************************************************************//
     Object createReflectProxy(ObjectHandle handle) {
-        return supportReflectProxy ? Proxy.newProxyInstance(
+        return this.supportReflectProxy ? Proxy.newProxyInstance(
                 PoolClassLoader,
-                objectInterfaces,
-                new ObjectReflectHandler(this, handle, excludeMethodNames)) : null;
+                this.objectInterfaces,
+                new ObjectReflectHandler(this, handle, this.excludeMethodNames)) : null;
     }
 
     Object call(String name, Class[] types, Object[] params) throws Exception {
-        if (excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
+        if (this.excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
 
-        Object key = new MethodCacheKey(name, types);
-        Method method = ObjectMethodMap.get(key);
+        Object key = new PooledObject.MethodCacheKey(name, types);
+        Method method = PooledObject.ObjectMethodMap.get(key);
         try {
             if (method == null) {
-                method = rawClass.getMethod(name, types);
-                Method mapMethod = ObjectMethodMap.putIfAbsent(key, method);
+                method = this.rawClass.getMethod(name, types);
+                Method mapMethod = PooledObject.ObjectMethodMap.putIfAbsent(key, method);
                 if (mapMethod != null) method = mapMethod;
             }
 
-            Object v = method.invoke(raw, params);
-            updateAccessTime();
+            Object v = method.invoke(this.raw, params);
+            this.updateAccessTime();
             return v;
         } catch (NoSuchMethodException e) {
             throw new ObjectException(e);
@@ -160,17 +160,17 @@ final class PooledObject implements Cloneable {
         }
 
         public int hashCode() {
-            int result = name.hashCode();
-            result = 31 * result + Arrays.hashCode(types);
+            int result = this.name.hashCode();
+            result = 31 * result + Arrays.hashCode(this.types);
             return result;
         }
 
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            MethodCacheKey that = (MethodCacheKey) o;
-            return name.equals(that.name) &&
-                    Arrays.equals(types, that.types);
+            if (o == null || this.getClass() != o.getClass()) return false;
+            PooledObject.MethodCacheKey that = (PooledObject.MethodCacheKey) o;
+            return this.name.equals(that.name) &&
+                    Arrays.equals(this.types, that.types);
         }
     }
 }

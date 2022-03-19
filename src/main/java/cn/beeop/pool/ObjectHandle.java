@@ -32,39 +32,39 @@ public final class ObjectHandle implements BeeObjectHandle {
     //                                  1: override methods(4)                                                       //                                                                                  //
     //***************************************************************************************************************//
     public String toString() {
-        return p.toString();
+        return this.p.toString();
     }
 
     public boolean isClosed() {
-        return isClosed;
+        return this.isClosed;
     }
 
-    public void close() throws ObjectException {
+    public final void close() throws ObjectException {
         synchronized (this) {//safe close
-            if (isClosed) return;
-            isClosed = true;
+            if (this.isClosed) return;
+            this.isClosed = true;
         }
-        p.recycleSelf();
+        this.p.recycleSelf();
     }
 
     public synchronized Object getReflectProxy() throws Exception {
-        if (isClosed) throw ObjectClosedException;
-        if (!reflectProxyCreated) {
-            reflectProxy = p.createReflectProxy(this);
-            reflectProxyCreated = true;
+        if (this.isClosed) throw ObjectClosedException;
+        if (!this.reflectProxyCreated) {
+            this.reflectProxy = this.p.createReflectProxy(this);
+            this.reflectProxyCreated = true;
         }
-        return reflectProxy;
+        return this.reflectProxy;
     }
 
     //***************************************************************************************************************//
     //                                 2: raw methods call methods(2)                                                //                                                                                  //
     //***************************************************************************************************************//
     public Object call(String methodName) throws Exception {
-        return this.call(methodName, EmptyParamTypes, EmptyParamValues);
+        return call(methodName, EMPTY_CLASSES, EMPTY_CLASS_NAMES);
     }
 
     public Object call(String name, Class[] types, Object[] params) throws Exception {
-        if (isClosed) throw ObjectClosedException;
-        return p.call(name, types, params);
+        if (this.isClosed) throw ObjectClosedException;
+        return this.p.call(name, types, params);
     }
 }

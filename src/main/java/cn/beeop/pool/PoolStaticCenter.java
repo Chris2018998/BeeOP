@@ -27,8 +27,10 @@ import java.util.*;
  * @version 1.0
  */
 public class PoolStaticCenter {
+    public static final Class[] EMPTY_CLASSES = new Class[0];
+    public static final String[] EMPTY_CLASS_NAMES = new String[0];
+    public static final int NCPUS = Runtime.getRuntime().availableProcessors();
     public static final Logger CommonLog = LoggerFactory.getLogger(PoolStaticCenter.class);
-    public static final ClassLoader PoolClassLoader = FastObjectPool.class.getClassLoader();
 
     //pool object state
     static final int OBJECT_IDLE = 0;
@@ -50,13 +52,13 @@ public class PoolStaticCenter {
     static final String DESC_RM_CLOSED = "closed";
     static final String DESC_RM_CLEAR = "clear";
     static final String DESC_RM_DESTROY = "destroy";
-    static final Class[] EmptyParamTypes = new Class[0];
-    static final Object[] EmptyParamValues = new Object[0];
+
     static final Exception RequestTimeoutException = new ObjectException("Request timeout");
     static final Exception RequestInterruptException = new ObjectException("Request interrupted");
     static final Exception PoolCloseException = new PoolClosedException("Pool has shut down or in clearing");
     static final Exception ObjectClosedException = new ObjectException("No operations allowed after object handle closed");
     static final Exception ObjectMethodForbiddenException = new ObjectException("Method illegal access");
+    static final ClassLoader PoolClassLoader = FastObjectPool.class.getClassLoader();
     private static final String Separator_MiddleLine = "-";
     private static final String Separator_UnderLine = "_";
 
@@ -128,17 +130,17 @@ public class PoolStaticCenter {
      * @return configuration item value
      */
     public static String getPropertyValue(Properties properties, String propertyName) {
-        String value = readPropertyValue(properties, propertyName);
+        String value = PoolStaticCenter.readPropertyValue(properties, propertyName);
         if (value != null) return value;
 
         propertyName = propertyName.substring(0, 1).toLowerCase(Locale.US) + propertyName.substring(1);
-        value = readPropertyValue(properties, propertyName);
+        value = PoolStaticCenter.readPropertyValue(properties, propertyName);
         if (value != null) return value;
 
-        value = readPropertyValue(properties, propertyNameToFieldId(propertyName, Separator_MiddleLine));
+        value = PoolStaticCenter.readPropertyValue(properties, PoolStaticCenter.propertyNameToFieldId(propertyName, PoolStaticCenter.Separator_MiddleLine));
         if (value != null) return value;
 
-        return readPropertyValue(properties, propertyNameToFieldId(propertyName, Separator_UnderLine));
+        return PoolStaticCenter.readPropertyValue(properties, PoolStaticCenter.propertyNameToFieldId(propertyName, PoolStaticCenter.Separator_UnderLine));
     }
 
     /**
@@ -159,10 +161,10 @@ public class PoolStaticCenter {
         value = valueMap.get(propertyName);
         if (value != null) return value;
 
-        value = valueMap.get(propertyNameToFieldId(propertyName, Separator_MiddleLine));
+        value = valueMap.get(PoolStaticCenter.propertyNameToFieldId(propertyName, PoolStaticCenter.Separator_MiddleLine));
         if (value != null) return value;
 
-        return valueMap.get(propertyNameToFieldId(propertyName, Separator_UnderLine));
+        return valueMap.get(PoolStaticCenter.propertyNameToFieldId(propertyName, PoolStaticCenter.Separator_UnderLine));
     }
 
     private static String propertyNameToFieldId(String property, String separator) {
@@ -181,7 +183,7 @@ public class PoolStaticCenter {
     private static String readPropertyValue(Properties configProperties, String propertyName) {
         String value = configProperties.getProperty(propertyName, null);
         if (value != null) {
-            CommonLog.info("beeop.{}={}", propertyName, value);
+            PoolStaticCenter.CommonLog.info("beeop.{}={}", propertyName, value);
             return value.trim();
         } else {
             return null;
@@ -193,7 +195,7 @@ public class PoolStaticCenter {
     //***************************************************************************************************************//
     public static void setPropertiesValue(Object bean, Map<String, Object> valueMap) throws BeeObjectSourceConfigException {
         if (bean == null) throw new BeeObjectSourceConfigException("Bean can't be null");
-        setPropertiesValue(bean, getClassSetMethodMap(bean.getClass()), valueMap);
+        PoolStaticCenter.setPropertiesValue(bean, PoolStaticCenter.getClassSetMethodMap(bean.getClass()), valueMap);
     }
 
     public static void setPropertiesValue(Object bean, Map<String, Method> setMethodMap, Map<String, Object> valueMap) throws BeeObjectSourceConfigException {
@@ -203,12 +205,12 @@ public class PoolStaticCenter {
             String propertyName = entry.getKey();
             Method setMethod = entry.getValue();
 
-            Object setValue = getFieldValue(valueMap, propertyName);
+            Object setValue = PoolStaticCenter.getFieldValue(valueMap, propertyName);
             if (setValue != null) {
                 Class type = setMethod.getParameterTypes()[0];
                 try {
                     //1:convert config value to match type of set method
-                    setValue = convert(propertyName, setValue, type);
+                    setValue = PoolStaticCenter.convert(propertyName, setValue, type);
                 } catch (BeeObjectSourceConfigException e) {
                     throw e;
                 } catch (Throwable e) {
@@ -263,7 +265,7 @@ public class PoolStaticCenter {
             return new BigDecimal(text);
         } else if (type == Class.class) {
             try {
-                return Class.forName(text, true, PoolClassLoader);
+                return Class.forName(text);
             } catch (ClassNotFoundException e) {
                 throw new BeeObjectSourceConfigException("Not found class:" + text);
             }
@@ -271,7 +273,7 @@ public class PoolStaticCenter {
             return null;
         } else {
             try {
-                Object objInstance = Class.forName(text, true, PoolClassLoader).newInstance();
+                Object objInstance = Class.forName(text).newInstance();
                 if (!type.isInstance(objInstance))
                     throw new BeeObjectSourceConfigException("Config value can't mach property(" + propName + ")type:" + type.getName());
                 return objInstance;
@@ -288,7 +290,7 @@ public class PoolStaticCenter {
     //***************************************************************************************************************//
     //check subclass,if failed,then return error message;
     public static String checkClass(Class objectClass, Class parentClass, String objectClassType) {
-        return checkClass(objectClass, parentClass != null ? new Class[]{parentClass} : null, objectClassType);
+        return PoolStaticCenter.checkClass(objectClass, parentClass != null ? new Class[]{parentClass} : null, objectClassType);
     }
 
     //check subclass,if failed,then return error message;
@@ -303,7 +305,7 @@ public class PoolStaticCenter {
                 }
             }
             if (!isSubClass)
-                return "Error " + objectClassType + " class[" + objectClass.getName() + "],which must extend from one of class[" + getClassName(parentClasses) + "]";
+                return "Error " + objectClassType + " class[" + objectClass.getName() + "],which must extend from one of class[" + PoolStaticCenter.getClassName(parentClasses) + "]";
         }
 
         //2:check class abstract modifier
@@ -314,7 +316,7 @@ public class PoolStaticCenter {
             return "Error " + objectClassType + " class[" + objectClass.getName() + "],which must be a public class";
         //4:check class constructor
         try {
-            objectClass.getConstructor();
+            objectClass.getConstructor(PoolStaticCenter.EMPTY_CLASSES);
         } catch (NoSuchMethodException e) {
             return "Error " + objectClassType + " class[" + objectClass.getName() + "],which must provide a constructor without parameter";
         }

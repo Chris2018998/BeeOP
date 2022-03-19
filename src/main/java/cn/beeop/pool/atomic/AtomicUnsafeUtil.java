@@ -36,14 +36,14 @@ class AtomicUnsafeUtil {
     }
 
     public static Unsafe getUnsafe() {
-        return unsafe;
+        return AtomicUnsafeUtil.unsafe;
     }
 
     public static void parkNanos(long nanos) {
-        unsafe.park(false, nanos);
+        AtomicUnsafeUtil.unsafe.park(false, nanos);
     }
 
     public static void unpark(Thread thread) {
-        unsafe.unpark(thread);
+        AtomicUnsafeUtil.unsafe.unpark(thread);
     }
 }

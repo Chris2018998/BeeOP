@@ -52,7 +52,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     private int poolMaxSize;
     private volatile int poolState;
     private int semaphoreSize;
-    private PoolSemaphore semaphore;
+    private FastObjectPool.PoolSemaphore semaphore;
     private long maxWaitNs;//nanoseconds
     private long idleTimeoutMs;//milliseconds
     private long holdTimeoutMs;//milliseconds
@@ -69,12 +69,12 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     private AtomicInteger servantState;
     private AtomicInteger servantTryCount;
     private AtomicInteger idleScanState;
-    private IdleTimeoutScanThread idleScanThread;
+    private FastObjectPool.IdleTimeoutScanThread idleScanThread;
     private ConcurrentLinkedQueue<Borrower> waitQueue;
     private ThreadLocal<WeakReference<Borrower>> threadLocal;
     private BeeObjectSourceConfig poolConfig;
     private ObjectPoolMonitorVo monitorVo;
-    private ObjectPoolHook exitHook;
+    private FastObjectPool.ObjectPoolHook exitHook;
     private boolean printRuntimeLog;
 
     //***************************************************************************************************************//
@@ -89,69 +89,69 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
      */
     public synchronized void init(BeeObjectSourceConfig config) throws Exception {
         if (config == null) throw new PoolCreateFailedException("Configuration can't be null");
-        if (poolState != POOL_NEW) throw new PoolCreateFailedException("Pool has initialized");
+        if (this.poolState != POOL_NEW) throw new PoolCreateFailedException("Pool has initialized");
 
-        poolConfig = config.check();//why need a copy here?
-        poolName = poolConfig.getPoolName();
-        Log.info("BeeOP({})starting....", poolName);
-        poolMaxSize = poolConfig.getMaxActive();
-        objectFactory = poolConfig.getObjectFactory();
-        pooledArray = new PooledObject[0];
-        templatePooledObject = new PooledObject(this,
-                objectFactory,
-                poolConfig.getObjectInterfaces(),
-                poolConfig.getExcludeMethodNames());
-        createInitObjects(poolConfig.getInitialSize());
+        this.poolConfig = config.check();//why need a copy here?
+        this.poolName = this.poolConfig.getPoolName();
+        FastObjectPool.Log.info("BeeOP({})starting....", this.poolName);
+        this.poolMaxSize = this.poolConfig.getMaxActive();
+        this.objectFactory = this.poolConfig.getObjectFactory();
+        this.pooledArray = new PooledObject[0];
+        this.templatePooledObject = new PooledObject(this,
+                this.objectFactory,
+                this.poolConfig.getObjectInterfaces(),
+                this.poolConfig.getExcludeMethodNames());
+        this.createInitObjects(this.poolConfig.getInitialSize());
 
         String poolMode;
-        if (poolConfig.isFairMode()) {
+        if (this.poolConfig.isFairMode()) {
             poolMode = "fair";
-            transferPolicy = new FairTransferPolicy();
+            this.transferPolicy = new FastObjectPool.FairTransferPolicy();
         } else {
             poolMode = "compete";
-            transferPolicy = this;
+            this.transferPolicy = this;
         }
-        stateCodeOnRelease = transferPolicy.getStateCodeOnRelease();
+        this.stateCodeOnRelease = this.transferPolicy.getStateCodeOnRelease();
 
-        idleTimeoutMs = poolConfig.getIdleTimeout();
-        holdTimeoutMs = poolConfig.getHoldTimeout();
-        maxWaitNs = TimeUnit.MILLISECONDS.toNanos(poolConfig.getMaxWait());
-        delayTimeForNextClearNs = TimeUnit.MILLISECONDS.toNanos(poolConfig.getDelayTimeForNextClear());
-        validAssumeTime = poolConfig.getValidAssumeTime();
-        validTestTimeout = poolConfig.getValidTestTimeout();
-        printRuntimeLog = poolConfig.isPrintRuntimeLog();
+        this.idleTimeoutMs = this.poolConfig.getIdleTimeout();
+        this.holdTimeoutMs = this.poolConfig.getHoldTimeout();
+        this.maxWaitNs = TimeUnit.MILLISECONDS.toNanos(this.poolConfig.getMaxWait());
+        this.delayTimeForNextClearNs = TimeUnit.MILLISECONDS.toNanos(this.poolConfig.getDelayTimeForNextClear());
+        this.validAssumeTime = this.poolConfig.getValidAssumeTime();
+        this.validTestTimeout = this.poolConfig.getValidTestTimeout();
+        this.printRuntimeLog = this.poolConfig.isPrintRuntimeLog();
 
-        semaphoreSize = poolConfig.getBorrowSemaphoreSize();
-        semaphore = new PoolSemaphore(semaphoreSize, poolConfig.isFairMode());
-        waitQueue = new ConcurrentLinkedQueue<Borrower>();
-        threadLocal = new ThreadLocal<WeakReference<Borrower>>();
-        servantTryCount = new AtomicInteger(0);
-        servantState = new AtomicInteger(THREAD_WORKING);
-        idleScanState = new AtomicInteger(THREAD_WORKING);
-        idleScanThread = new IdleTimeoutScanThread(this);
-        monitorVo = createPoolMonitorVo(poolMode);
-        exitHook = new ObjectPoolHook(this);
-        Runtime.getRuntime().addShutdownHook(exitHook);
-        registerJmx();
+        this.semaphoreSize = this.poolConfig.getBorrowSemaphoreSize();
+        this.semaphore = new FastObjectPool.PoolSemaphore(this.semaphoreSize, this.poolConfig.isFairMode());
+        this.waitQueue = new ConcurrentLinkedQueue<Borrower>();
+        this.threadLocal = new ThreadLocal<WeakReference<Borrower>>();
+        this.servantTryCount = new AtomicInteger(0);
+        this.servantState = new AtomicInteger(THREAD_WORKING);
+        this.idleScanState = new AtomicInteger(THREAD_WORKING);
+        this.idleScanThread = new FastObjectPool.IdleTimeoutScanThread(this);
+        this.monitorVo = this.createPoolMonitorVo(poolMode);
+        this.exitHook = new FastObjectPool.ObjectPoolHook(this);
+        Runtime.getRuntime().addShutdownHook(this.exitHook);
+        this.registerJmx();
 
-        this.setDaemon(true);
-        this.setName(poolName + "-workServant");
-        idleScanThread.setDaemon(true);
-        idleScanThread.setName(poolName + "-idleCheck");
-        this.setPriority(Thread.MIN_PRIORITY);
-        idleScanThread.setPriority(Thread.MIN_PRIORITY);
+        setDaemon(true);
+        setName(this.poolName + "-workServant");
+        this.idleScanThread.setDaemon(true);
+        this.idleScanThread.setName(this.poolName + "-idleCheck");
+        setPriority(Thread.MIN_PRIORITY);
+        this.idleScanThread.setPriority(Thread.MIN_PRIORITY);
 
-        this.start();
-        idleScanThread.start();
-        poolState = POOL_READY;
+        start();
+        this.idleScanThread.start();
+        this.poolState = POOL_READY;
 
-        Log.info("BeeOP({})has startup{mode:{},init size:{},max size:{},semaphore size:{},max wait:{}ms",
-                poolName,
+        FastObjectPool.Log.info("BeeOP({})has startup{mode:{},init size:{},max size:{},semaphore size:{},max wait:{}ms",
+                this.poolName,
                 poolMode,
-                pooledArray.length,
-                poolMaxSize,
-                semaphoreSize,
-                poolConfig.getMaxWait());
+                this.pooledArray.length,
+                this.poolMaxSize,
+                this.semaphoreSize,
+                this.poolConfig.getMaxWait());
     }
 
     /**
@@ -163,10 +163,10 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         try {
             int size = initSize > 0 ? initSize : 1;
             for (int i = 0; i < size; i++)
-                createPooledEntry(OBJECT_IDLE);
+                this.createPooledEntry(OBJECT_IDLE);
         } catch (Throwable e) {
-            for (PooledObject pooledEntry : pooledArray)
-                removePooledEntry(pooledEntry, DESC_RM_INIT);
+            for (PooledObject pooledEntry : this.pooledArray)
+                this.removePooledEntry(pooledEntry, DESC_RM_INIT);
             if (initSize > 0)
                 throw e instanceof ObjectException ? (ObjectException) e : new ObjectException(e);
         }
@@ -174,25 +174,25 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //Method-1.3:create one pooled object
     private PooledObject createPooledEntry(int state) throws ObjectException {
-        synchronized (synLock) {
-            int l = pooledArray.length;
-            if (l < poolMaxSize) {
-                if (printRuntimeLog)
-                    Log.info("BeeOP({}))begin to create a new pooled object,state:{}", poolName, state);
+        synchronized (this.synLock) {
+            int l = this.pooledArray.length;
+            if (l < this.poolMaxSize) {
+                if (this.printRuntimeLog)
+                    FastObjectPool.Log.info("BeeOP({}))begin to create a new pooled object,state:{}", this.poolName, state);
 
                 Object rawObj = null;
                 try {
-                    rawObj = objectFactory.create();
-                    PooledObject p = templatePooledObject.setDefaultAndCopy(rawObj, state);
-                    if (printRuntimeLog)
-                        Log.info("BeeOP({}))has created a new pooled object:{},state:{}", poolName, p, state);
+                    rawObj = this.objectFactory.create();
+                    PooledObject p = this.templatePooledObject.setDefaultAndCopy(rawObj, state);
+                    if (this.printRuntimeLog)
+                        FastObjectPool.Log.info("BeeOP({}))has created a new pooled object:{},state:{}", this.poolName, p, state);
                     PooledObject[] arrayNew = new PooledObject[l + 1];
-                    System.arraycopy(pooledArray, 0, arrayNew, 0, l);
+                    System.arraycopy(this.pooledArray, 0, arrayNew, 0, l);
                     arrayNew[l] = p;// tail
-                    pooledArray = arrayNew;
+                    this.pooledArray = arrayNew;
                     return p;
                 } catch (Throwable e) {
-                    if (rawObj != null) objectFactory.destroy(rawObj);
+                    if (rawObj != null) this.objectFactory.destroy(rawObj);
                     throw e instanceof ObjectException ? (ObjectException) e : new ObjectException(e);
                 }
             } else {
@@ -208,19 +208,19 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //Method-1.4: remove one pooled object
     private void removePooledEntry(PooledObject p, String removeType) {
-        if (printRuntimeLog)
-            Log.info("BeeOP({}))begin to remove pooled object:{},reason:{}", poolName, p, removeType);
+        if (this.printRuntimeLog)
+            FastObjectPool.Log.info("BeeOP({}))begin to remove pooled object:{},reason:{}", this.poolName, p, removeType);
         p.onBeforeRemove();
-        synchronized (synLock) {
-            for (int l = pooledArray.length, i = l - 1; i >= 0; i--) {
-                if (pooledArray[i] == p) {
+        synchronized (this.synLock) {
+            for (int l = this.pooledArray.length, i = l - 1; i >= 0; i--) {
+                if (this.pooledArray[i] == p) {
                     PooledObject[] arrayNew = new PooledObject[l - 1];
-                    System.arraycopy(pooledArray, 0, arrayNew, 0, i);
+                    System.arraycopy(this.pooledArray, 0, arrayNew, 0, i);
                     int m = l - i - 1;
-                    if (m > 0) System.arraycopy(pooledArray, i + 1, arrayNew, i, m);
-                    pooledArray = arrayNew;
-                    if (printRuntimeLog)
-                        Log.info("BeeOP({}))has removed pooled object:{},reason:{}", poolName, p, removeType);
+                    if (m > 0) System.arraycopy(this.pooledArray, i + 1, arrayNew, i, m);
+                    this.pooledArray = arrayNew;
+                    if (this.printRuntimeLog)
+                        FastObjectPool.Log.info("BeeOP({}))has removed pooled object:{},reason:{}", this.poolName, p, removeType);
                     break;
                 }
             }
@@ -235,66 +235,66 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
      * @throws Exception if pool is closed or waiting timeout,then throw exception
      */
     public BeeObjectHandle getObject() throws Exception {
-        if (poolState != POOL_READY) throw PoolCloseException;
+        if (this.poolState != POOL_READY) throw PoolCloseException;
 
         //0:try to get from threadLocal cache
-        WeakReference<Borrower> r = threadLocal.get();
+        WeakReference<Borrower> r = this.threadLocal.get();
         Borrower b = r != null ? r.get() : null;
         if (b != null) {
             PooledObject p = b.lastUsed;
-            if (p != null && p.state == OBJECT_IDLE && ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING)) {
-                if (testOnBorrow(p)) return createObjectHandle(p, b);
+            if (p != null && p.state == OBJECT_IDLE && FastObjectPool.ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING)) {
+                if (this.testOnBorrow(p)) return createObjectHandle(p, b);
                 b.lastUsed = null;
             }
         } else {
             b = new Borrower();
-            threadLocal.set(new WeakReference<Borrower>(b));
+            this.threadLocal.set(new WeakReference<Borrower>(b));
         }
 
         long deadline = System.nanoTime();
         try {
             //1:try to acquire a permit
-            if (!semaphore.tryAcquire(maxWaitNs, TimeUnit.NANOSECONDS))
+            if (!this.semaphore.tryAcquire(this.maxWaitNs, TimeUnit.NANOSECONDS))
                 throw RequestTimeoutException;
         } catch (InterruptedException e) {
             throw RequestInterruptException;
         }
         try {//semaphore acquired
             //2:try search one or create one
-            PooledObject p = searchOrCreate();
+            PooledObject p = this.searchOrCreate();
             if (p != null) return createObjectHandle(p, b);
 
             //3:try to get one transferred one
-            b.state = BOWER_NORMAL;
-            waitQueue.offer(b);
+            b.state = FastObjectPool.BOWER_NORMAL;
+            this.waitQueue.offer(b);
             boolean failed = false;
             Throwable cause = null;
-            deadline += maxWaitNs;
+            deadline += this.maxWaitNs;
             Thread thd = b.thread;
 
             do {
                 Object s = b.state;
                 if (s instanceof PooledObject) {
                     p = (PooledObject) s;
-                    if (transferPolicy.tryCatch(p) && testOnBorrow(p)) {
-                        waitQueue.remove(b);
+                    if (this.transferPolicy.tryCatch(p) && this.testOnBorrow(p)) {
+                        this.waitQueue.remove(b);
                         return createObjectHandle(p, b);
                     }
                 } else if (s instanceof Throwable) {
-                    waitQueue.remove(b);
+                    this.waitQueue.remove(b);
                     throw s instanceof ObjectException ? (ObjectException) s : new ObjectException((Throwable) s);
                 }
 
                 if (failed) {
-                    BorrowStUpd.compareAndSet(b, s, cause);
+                    FastObjectPool.BorrowStUpd.compareAndSet(b, s, cause);
                 } else if (s instanceof PooledObject) {
-                    b.state = BOWER_NORMAL;
-                    yield();
+                    b.state = FastObjectPool.BOWER_NORMAL;
+                    Thread.yield();
                 } else {//here:(state == BOWER_NORMAL)
                     long t = deadline - System.nanoTime();
                     if (t > 0L) {
-                        if (b.state == BOWER_NORMAL && BorrowStUpd.compareAndSet(b, BOWER_NORMAL, BOWER_WAITING)) {
-                            if (servantState.get() == THREAD_WAITING && servantTryCount.get() > 0 && servantState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
+                        if (b.state == FastObjectPool.BOWER_NORMAL && FastObjectPool.BorrowStUpd.compareAndSet(b, FastObjectPool.BOWER_NORMAL, FastObjectPool.BOWER_WAITING)) {
+                            if (this.servantState.get() == THREAD_WAITING && this.servantTryCount.get() > 0 && this.servantState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
                                 LockSupport.unpark(this);
 
                             LockSupport.parkNanos(t);//block exit:1:get transfer 2:interrupted 3:timeout 4:unpark before parkNanos
@@ -302,7 +302,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                                 failed = true;
                                 cause = RequestInterruptException;
                             }
-                            if (b.state == BOWER_WAITING && BorrowStUpd.compareAndSet(b, BOWER_WAITING, failed ? cause : BOWER_NORMAL) && !failed) {
+                            if (b.state == FastObjectPool.BOWER_WAITING && FastObjectPool.BorrowStUpd.compareAndSet(b, FastObjectPool.BOWER_WAITING, failed ? cause : FastObjectPool.BOWER_NORMAL) && !failed) {
                                 Thread.yield();
                             }
                         }
@@ -313,19 +313,19 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                 }//end (state == BOWER_NORMAL)
             } while (true);//while
         } finally {
-            semaphore.release();
+            this.semaphore.release();
         }
     }
 
     //Method-2.2: search one idle Object,if not found,then try to create one
     private PooledObject searchOrCreate() throws ObjectException {
-        PooledObject[] array = pooledArray;
+        PooledObject[] array = this.pooledArray;
         for (PooledObject p : array) {
-            if (p.state == OBJECT_IDLE && ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING) && testOnBorrow(p))
+            if (p.state == OBJECT_IDLE && FastObjectPool.ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING) && this.testOnBorrow(p))
                 return p;
         }
-        if (pooledArray.length < poolMaxSize)
-            return createPooledEntry(OBJECT_USING);
+        if (this.pooledArray.length < this.poolMaxSize)
+            return this.createPooledEntry(OBJECT_USING);
         return null;
     }
 
@@ -333,31 +333,31 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     private void tryWakeupServantThread() {
         int c;
         do {
-            c = servantTryCount.get();
-            if (c >= poolMaxSize) return;
-        } while (!servantTryCount.compareAndSet(c, c + 1));
-        if (!waitQueue.isEmpty() && servantState.get() == THREAD_WAITING && servantState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
+            c = this.servantTryCount.get();
+            if (c >= this.poolMaxSize) return;
+        } while (!this.servantTryCount.compareAndSet(c, c + 1));
+        if (!this.waitQueue.isEmpty() && this.servantState.get() == THREAD_WAITING && this.servantState.compareAndSet(THREAD_WAITING, THREAD_WORKING))
             LockSupport.unpark(this);
     }
 
     //Method-2.4: return object to pool after borrower end of use object
-    public void recycle(PooledObject p) {
-        Iterator<Borrower> iterator = this.waitQueue.iterator();
-        this.transferPolicy.beforeTransfer(p);
+    public final void recycle(PooledObject p) {
+        Iterator<Borrower> iterator = waitQueue.iterator();
+        transferPolicy.beforeTransfer(p);
         W:
         while (iterator.hasNext()) {
             Borrower b = iterator.next();
             Object state;
             do {
-                if (p.state != this.stateCodeOnRelease) return;
+                if (p.state != stateCodeOnRelease) return;
                 state = b.state;
                 if (!(state instanceof BorrowerState)) continue W;
-            } while (!BorrowStUpd.compareAndSet(b, state, p));
-            if (state == BOWER_WAITING) LockSupport.unpark(b.thread);
+            } while (!FastObjectPool.BorrowStUpd.compareAndSet(b, state, p));
+            if (state == FastObjectPool.BOWER_WAITING) LockSupport.unpark(b.thread);
             return;
         }
-        this.transferPolicy.onTransferFail(p);
-        this.tryWakeupServantThread();
+        transferPolicy.onTransferFail(p);
+        tryWakeupServantThread();
     }
 
 
@@ -368,7 +368,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
      * @param e: transfer Exception to waiter
      */
     private void transferException(Throwable e) {
-        Iterator<Borrower> iterator = this.waitQueue.iterator();
+        Iterator<Borrower> iterator = waitQueue.iterator();
         W:
         while (iterator.hasNext()) {
             Borrower b = iterator.next();
@@ -376,23 +376,23 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
             do {
                 state = b.state;
                 if (!(state instanceof BorrowerState)) continue W;
-            } while (!BorrowStUpd.compareAndSet(b, state, e));
-            if (state == BOWER_WAITING) LockSupport.unpark(b.thread);
+            } while (!FastObjectPool.BorrowStUpd.compareAndSet(b, state, e));
+            if (state == FastObjectPool.BOWER_WAITING) LockSupport.unpark(b.thread);
             return;
         }
     }
 
     //Method-2.6: remove object when exception occur in return
     public void abandonOnReturn(PooledObject p) {
-        removePooledEntry(p, DESC_RM_BAD);
-        tryWakeupServantThread();
+        this.removePooledEntry(p, DESC_RM_BAD);
+        this.tryWakeupServantThread();
     }
 
     //Method-2.7: check object alive state,if not alive then remove it from pool
     private boolean testOnBorrow(PooledObject p) {
-        if (System.currentTimeMillis() - p.lastAccessTime > validAssumeTime && !objectFactory.isValid(p, validTestTimeout)) {
-            removePooledEntry(p, DESC_RM_BAD);
-            tryWakeupServantThread();
+        if (System.currentTimeMillis() - p.lastAccessTime > this.validAssumeTime && !this.objectFactory.isValid(p, this.validTestTimeout)) {
+            this.removePooledEntry(p, DESC_RM_BAD);
+            this.tryWakeupServantThread();
             return false;
         } else {
             return true;
@@ -401,19 +401,19 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //Compete Pooled connection transfer
     //private static final class CompeteTransferPolicy implements ObjectTransferPolicy {
-    public int getStateCodeOnRelease() {
+    public final int getStateCodeOnRelease() {
         return OBJECT_IDLE;
     }
 
-    public void beforeTransfer(PooledObject p) {
+    public final void beforeTransfer(PooledObject p) {
         p.state = OBJECT_IDLE;
     }
 
-    public boolean tryCatch(PooledObject p) {
-        return p.state == OBJECT_IDLE && ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING);
+    public final boolean tryCatch(PooledObject p) {
+        return p.state == OBJECT_IDLE && FastObjectPool.ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING);
     }
 
-    public void onTransferFail(PooledObject p) {
+    public final void onTransferFail(PooledObject p) {
     }
 
     //***************************************************************************************************************//
@@ -421,37 +421,37 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     //***************************************************************************************************************//
     //Method-3.1: check whether exists borrows under semaphore
     private boolean existBorrower() {
-        return semaphoreSize > semaphore.availablePermits();
+        return this.semaphoreSize > this.semaphore.availablePermits();
     }
 
     //Method-3.2 shutdown two work threads in pool
     private void shutdownPoolThread() {
-        int curState = servantState.get();
-        servantState.set(THREAD_EXIT);
+        int curState = this.servantState.get();
+        this.servantState.set(THREAD_EXIT);
         if (curState == THREAD_WAITING) LockSupport.unpark(this);
 
-        curState = idleScanState.get();
-        idleScanState.set(THREAD_EXIT);
-        if (curState == THREAD_WAITING) LockSupport.unpark(idleScanThread);
+        curState = this.idleScanState.get();
+        this.idleScanState.set(THREAD_EXIT);
+        if (curState == THREAD_WAITING) LockSupport.unpark(this.idleScanThread);
     }
 
     //Method-3.3: pool servant thread run method
     public void run() {
-        while (poolState != POOL_CLOSED) {
-            while (servantState.get() == THREAD_WORKING && !waitQueue.isEmpty() && servantTryCount.get() > 0) {
+        while (this.poolState != POOL_CLOSED) {
+            while (this.servantState.get() == THREAD_WORKING && !this.waitQueue.isEmpty() && this.servantTryCount.get() > 0) {
                 try {
-                    servantTryCount.decrementAndGet();
-                    PooledObject p = searchOrCreate();
-                    if (p != null) recycle(p);
+                    this.servantTryCount.decrementAndGet();
+                    PooledObject p = this.searchOrCreate();
+                    if (p != null) this.recycle(p);
                 } catch (Throwable e) {
-                    transferException(e);
+                    this.transferException(e);
                 }
             }
 
-            if (servantState.get() == THREAD_EXIT)
+            if (this.servantState.get() == THREAD_EXIT)
                 break;
-            if (servantState.compareAndSet(THREAD_WORKING, THREAD_WAITING)) {
-                servantTryCount.set(0);
+            if (this.servantState.compareAndSet(THREAD_WORKING, THREAD_WAITING)) {
+                this.servantTryCount.set(0);
                 LockSupport.park();
             }
         }
@@ -462,35 +462,35 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
      * or dead objects,or long time not active objects in using state
      */
     private void closeIdleTimeoutPooledEntry() {
-        if (poolState == POOL_READY) {
-            PooledObject[] array = pooledArray;
+        if (this.poolState == POOL_READY) {
+            PooledObject[] array = this.pooledArray;
             for (PooledObject p : array) {
                 int state = p.state;
-                if (state == OBJECT_IDLE && !existBorrower()) {
-                    boolean isTimeoutInIdle = System.currentTimeMillis() - p.lastAccessTime - idleTimeoutMs >= 0L;
-                    if (isTimeoutInIdle && ObjStUpd.compareAndSet(p, state, OBJECT_CLOSED)) {//need close idle
-                        removePooledEntry(p, DESC_RM_IDLE);
-                        tryWakeupServantThread();
+                if (state == OBJECT_IDLE && !this.existBorrower()) {
+                    boolean isTimeoutInIdle = System.currentTimeMillis() - p.lastAccessTime - this.idleTimeoutMs >= 0L;
+                    if (isTimeoutInIdle && FastObjectPool.ObjStUpd.compareAndSet(p, state, OBJECT_CLOSED)) {//need close idle
+                        this.removePooledEntry(p, DESC_RM_IDLE);
+                        this.tryWakeupServantThread();
                     }
                 } else if (state == OBJECT_USING) {
-                    if (System.currentTimeMillis() - p.lastAccessTime - holdTimeoutMs >= 0L) {//hold timeout
+                    if (System.currentTimeMillis() - p.lastAccessTime - this.holdTimeoutMs >= 0L) {//hold timeout
                         BeeObjectHandle handleInUsing = p.handleInUsing;
                         if (handleInUsing != null) {
                             tryClosedProxyHandle(handleInUsing);
                         } else {
-                            removePooledEntry(p, DESC_RM_BAD);
-                            tryWakeupServantThread();
+                            this.removePooledEntry(p, DESC_RM_BAD);
+                            this.tryWakeupServantThread();
                         }
                     }
                 } else if (state == OBJECT_CLOSED) {
-                    removePooledEntry(p, DESC_RM_CLOSED);
-                    tryWakeupServantThread();
+                    this.removePooledEntry(p, DESC_RM_CLOSED);
+                    this.tryWakeupServantThread();
                 }
             }
 
-            ObjectPoolMonitorVo vo = this.getPoolMonitorVo();
-            if (printRuntimeLog)
-                Log.info("BeeOP({})idle:{},using:{},semaphore-waiting:{},transfer-waiting:{}", poolName, vo.getIdleSize(), vo.getUsingSize(), vo.getSemaphoreWaitingSize(), vo.getTransferWaitingSize());
+            ObjectPoolMonitorVo vo = getPoolMonitorVo();
+            if (this.printRuntimeLog)
+                FastObjectPool.Log.info("BeeOP({})idle:{},using:{},semaphore-waiting:{},transfer-waiting:{}", this.poolName, vo.getIdleSize(), vo.getUsingSize(), vo.getSemaphoreWaitingSize(), vo.getTransferWaitingSize());
         }
     }
 
@@ -499,70 +499,70 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     //***************************************************************************************************************//
     //Method-4.1: remove all connections from pool
     public void clear() {
-        clear(false);
+        this.clear(false);
     }
 
     //Method-4.2: remove all connections from pool
     public void clear(boolean force) {
-        if (PoolStateUpd.compareAndSet(this, POOL_READY, POOL_CLEARING)) {
-            Log.info("BeeOP({})begin to remove objects", poolName);
-            clear(force, DESC_RM_CLEAR);
-            poolState = POOL_READY;// restore state;
-            Log.info("BeeOP({})all objects were removed and restored to accept new requests", poolName);
+        if (FastObjectPool.PoolStateUpd.compareAndSet(this, POOL_READY, POOL_CLEARING)) {
+            FastObjectPool.Log.info("BeeOP({})begin to remove objects", this.poolName);
+            this.clear(force, DESC_RM_CLEAR);
+            this.poolState = POOL_READY;// restore state;
+            FastObjectPool.Log.info("BeeOP({})all objects were removed and restored to accept new requests", this.poolName);
         }
     }
 
     //Method-4.3: remove all connections from pool
     private void clear(boolean force, String source) {
-        semaphore.interruptWaitingThreads();
-        while (!waitQueue.isEmpty()) transferException(PoolCloseException);
+        this.semaphore.interruptWaitingThreads();
+        while (!this.waitQueue.isEmpty()) this.transferException(PoolCloseException);
 
-        while (pooledArray.length > 0) {
-            PooledObject[] array = pooledArray;
+        while (this.pooledArray.length > 0) {
+            PooledObject[] array = this.pooledArray;
             for (PooledObject p : array) {
-                if (ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_CLOSED)) {
-                    removePooledEntry(p, source);
+                if (FastObjectPool.ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_CLOSED)) {
+                    this.removePooledEntry(p, source);
                 } else if (p.state == OBJECT_CLOSED) {
-                    removePooledEntry(p, source);
+                    this.removePooledEntry(p, source);
                 } else if (p.state == OBJECT_USING) {
                     BeeObjectHandle handleInUsing = p.handleInUsing;
                     if (handleInUsing != null) {
-                        if (force || System.currentTimeMillis() - p.lastAccessTime - holdTimeoutMs >= 0L)
+                        if (force || System.currentTimeMillis() - p.lastAccessTime - this.holdTimeoutMs >= 0L)
                             tryClosedProxyHandle(handleInUsing);
                     } else {
-                        removePooledEntry(p, source);
+                        this.removePooledEntry(p, source);
                     }
                 }
             } // for
-            if (pooledArray.length > 0) LockSupport.parkNanos(delayTimeForNextClearNs);
+            if (this.pooledArray.length > 0) LockSupport.parkNanos(this.delayTimeForNextClearNs);
         } // while
     }
 
     //Method-4.4: closed check
     public boolean isClosed() {
-        return poolState == POOL_CLOSED;
+        return this.poolState == POOL_CLOSED;
     }
 
     // Method-4.5: close pool
     public void close() {
         do {
-            int poolStateCode = poolState;
-            if ((poolStateCode == POOL_NEW || poolStateCode == POOL_READY) && PoolStateUpd.compareAndSet(this, poolStateCode, POOL_CLOSED)) {
-                Log.info("BeeOP({})begin to shutdown", poolName);
-                clear(poolConfig.isForceCloseUsingOnClear(), DESC_RM_DESTROY);
-                unregisterJmx();
-                shutdownPoolThread();
+            int poolStateCode = this.poolState;
+            if ((poolStateCode == POOL_NEW || poolStateCode == POOL_READY) && FastObjectPool.PoolStateUpd.compareAndSet(this, poolStateCode, POOL_CLOSED)) {
+                FastObjectPool.Log.info("BeeOP({})begin to shutdown", this.poolName);
+                this.clear(this.poolConfig.isForceCloseUsingOnClear(), DESC_RM_DESTROY);
+                this.unregisterJmx();
+                this.shutdownPoolThread();
 
                 try {
-                    Runtime.getRuntime().removeShutdownHook(exitHook);
+                    Runtime.getRuntime().removeShutdownHook(this.exitHook);
                 } catch (Throwable e) {
                 }
-                Log.info("BeeOP({})has shutdown", poolName);
+                FastObjectPool.Log.info("BeeOP({})has shutdown", this.poolName);
                 break;
             } else if (poolStateCode == POOL_CLOSED) {
                 break;
             } else {
-                LockSupport.parkNanos(delayTimeForNextClearNs);// default wait 3 seconds
+                LockSupport.parkNanos(this.delayTimeForNextClearNs);// default wait 3 seconds
             }
         } while (true);
     }
@@ -572,18 +572,18 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     //***************************************************************************************************************//
     //Method-5.1: set pool info debug switch
     public void setPrintRuntimeLog(boolean indicator) {
-        this.printRuntimeLog = indicator;
+        printRuntimeLog = indicator;
     }
 
     //Method-5.2: size of all pooled object
     public int getTotalSize() {
-        return pooledArray.length;
+        return this.pooledArray.length;
     }
 
     //Method-5.3: size of idle pooled object
     public int getIdleSize() {
         int idleSize = 0;
-        PooledObject[] array = pooledArray;
+        PooledObject[] array = this.pooledArray;
         for (PooledObject p : array)
             if (p.state == OBJECT_IDLE) idleSize++;
         return idleSize;
@@ -591,24 +591,24 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //Method-5.4: size of using pooled connections
     public int getUsingSize() {
-        int active = pooledArray.length - getIdleSize();
+        int active = this.pooledArray.length - this.getIdleSize();
         return (active > 0) ? active : 0;
     }
 
     //Method-5.5: waiting size for semaphore
     public int getSemaphoreAcquiredSize() {
-        return poolConfig.getBorrowSemaphoreSize() - semaphore.availablePermits();
+        return this.poolConfig.getBorrowSemaphoreSize() - this.semaphore.availablePermits();
     }
 
     //Method-5.6: using size of semaphore permit
     public int getSemaphoreWaitingSize() {
-        return semaphore.getQueueLength();
+        return this.semaphore.getQueueLength();
     }
 
     //Method-5.7: waiting size in transfer queue
     public int getTransferWaitingSize() {
         int size = 0;
-        for (Borrower borrower : waitQueue) {
+        for (Borrower borrower : this.waitQueue) {
             if (borrower.state instanceof BorrowerState) size++;
         }
         return size;
@@ -616,10 +616,10 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //Method-5.8: register pool to jmx
     private void registerJmx() {
-        if (poolConfig.isEnableJmx()) {
+        if (this.poolConfig.isEnableJmx()) {
             MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
-            registerJmxBean(mBeanServer, String.format(" cn.beeop.pool.FastObjectPool:type=BeeOP(%s)", poolName), this);
-            registerJmxBean(mBeanServer, String.format("cn.beeop.BeeObjectSourceConfig:type=BeeOP(%s)-config", poolName), poolConfig);
+            this.registerJmxBean(mBeanServer, String.format(" cn.beeop.pool.FastObjectPool:type=BeeOP(%s)", this.poolName), this);
+            this.registerJmxBean(mBeanServer, String.format("cn.beeop.BeeObjectSourceConfig:type=BeeOP(%s)-config", this.poolName), this.poolConfig);
         }
     }
 
@@ -631,16 +631,16 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                 mBeanServer.registerMBean(bean, jmxRegName);
             }
         } catch (Exception e) {
-            Log.warn("BeeOP({})failed to register jmx-bean:{}", poolName, regName, e);
+            FastObjectPool.Log.warn("BeeOP({})failed to register jmx-bean:{}", this.poolName, regName, e);
         }
     }
 
     //Method-5.10: pool unregister from jmx
     private void unregisterJmx() {
-        if (poolConfig.isEnableJmx()) {
+        if (this.poolConfig.isEnableJmx()) {
             MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
-            unregisterJmxBean(mBeanServer, String.format(" cn.beeop.pool.FastObjectPool:type=BeeOP(%s)", poolName));
-            unregisterJmxBean(mBeanServer, String.format("cn.beeop.BeeObjectSourceConfig:type=BeeOP(%s)-config", poolName));
+            this.unregisterJmxBean(mBeanServer, String.format(" cn.beeop.pool.FastObjectPool:type=BeeOP(%s)", this.poolName));
+            this.unregisterJmxBean(mBeanServer, String.format("cn.beeop.BeeObjectSourceConfig:type=BeeOP(%s)-config", this.poolName));
         }
     }
 
@@ -652,7 +652,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                 mBeanServer.unregisterMBean(jmxRegName);
             }
         } catch (Exception e) {
-            Log.warn("BeeOP({})failed to unregister jmx-bean:{}", poolName, regName, e);
+            FastObjectPool.Log.warn("BeeOP({})failed to unregister jmx-bean:{}", this.poolName, regName, e);
         }
     }
 
@@ -662,22 +662,22 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         try {
             hostIP = InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
-            Log.info("BeeOP({})failed to resolve pool hose ip", poolName);
+            FastObjectPool.Log.info("BeeOP({})failed to resolve pool hose ip", this.poolName);
         }
         Thread currentThread = Thread.currentThread();
-        return new ObjectPoolMonitorVo(poolName, poolMode, poolMaxSize, hostIP, currentThread.getId(), currentThread.getName());
+        return new ObjectPoolMonitorVo(this.poolName, poolMode, this.poolMaxSize, hostIP, currentThread.getId(), currentThread.getName());
     }
 
     //Method-5.12: pool monitor vo
     public ObjectPoolMonitorVo getPoolMonitorVo() {
-        int totSize = getTotalSize();
-        int idleSize = getIdleSize();
-        monitorVo.setPoolState(poolState);
-        monitorVo.setIdleSize(idleSize);
-        monitorVo.setUsingSize(totSize - idleSize);
-        monitorVo.setSemaphoreWaitingSize(getSemaphoreWaitingSize());
-        monitorVo.setTransferWaitingSize(getTransferWaitingSize());
-        return monitorVo;
+        int totSize = this.getTotalSize();
+        int idleSize = this.getIdleSize();
+        this.monitorVo.setPoolState(this.poolState);
+        this.monitorVo.setIdleSize(idleSize);
+        this.monitorVo.setUsingSize(totSize - idleSize);
+        this.monitorVo.setSemaphoreWaitingSize(this.getSemaphoreWaitingSize());
+        this.monitorVo.setTransferWaitingSize(this.getTransferWaitingSize());
+        return this.monitorVo;
     }
 
     //***************************************************************************************************************//
@@ -686,18 +686,18 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //class-6.1:Compete Pooled connection transfer
     private static final class FairTransferPolicy implements ObjectTransferPolicy {
-        public int getStateCodeOnRelease() {
+        public final int getStateCodeOnRelease() {
             return OBJECT_USING;
         }
 
-        public void beforeTransfer(PooledObject p) {
+        public final void beforeTransfer(PooledObject p) {
         }
 
-        public boolean tryCatch(PooledObject p) {
+        public final boolean tryCatch(PooledObject p) {
             return p.state == OBJECT_USING;
         }
 
-        public void onTransferFail(PooledObject p) {
+        public final void onTransferFail(PooledObject p) {
             p.state = OBJECT_IDLE;
         }
     }
@@ -709,9 +709,9 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         }
 
         void interruptWaitingThreads() {
-            for (Thread thread : super.getQueuedThreads()) {
-                State state = thread.getState();
-                if (state == State.WAITING || state == State.TIMED_WAITING) {
+            for (Thread thread : getQueuedThreads()) {
+                Thread.State state = thread.getState();
+                if (state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING) {
                     thread.interrupt();
                 }
             }
@@ -725,15 +725,15 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
         IdleTimeoutScanThread(FastObjectPool pool) {
             this.pool = pool;
-            this.idleScanState = pool.idleScanState;
+            idleScanState = pool.idleScanState;
         }
 
         public void run() {
-            long checkTimeIntervalNanos = TimeUnit.MILLISECONDS.toNanos(pool.poolConfig.getTimerCheckInterval());
-            while (idleScanState.get() == THREAD_WORKING) {
+            long checkTimeIntervalNanos = TimeUnit.MILLISECONDS.toNanos(this.pool.poolConfig.getTimerCheckInterval());
+            while (this.idleScanState.get() == THREAD_WORKING) {
                 LockSupport.parkNanos(checkTimeIntervalNanos);
                 try {
-                    pool.closeIdleTimeoutPooledEntry();
+                    this.pool.closeIdleTimeoutPooledEntry();
                 } catch (Throwable e) {
                 }
             }
@@ -750,10 +750,10 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
         public void run() {
             try {
-                Log.info("BeeOP({})PoolHook Running", pool.poolName);
-                pool.close();
+                FastObjectPool.Log.info("BeeOP({})PoolHook Running", this.pool.poolName);
+                this.pool.close();
             } catch (Throwable e) {
-                Log.error("BeeOP({})Error at closing pool,cause:", pool.poolName, e);
+                FastObjectPool.Log.error("BeeOP({})Error at closing pool,cause:", this.pool.poolName, e);
             }
         }
     }

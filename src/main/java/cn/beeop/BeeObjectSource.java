@@ -6,11 +6,8 @@
  */
 package cn.beeop;
 
-import cn.beeop.pool.FastObjectPool;
 import cn.beeop.pool.ObjectPool;
 import cn.beeop.pool.ObjectPoolMonitorVo;
-import cn.beeop.pool.exception.PoolBaseException;
-import cn.beeop.pool.exception.PoolCreateFailedException;
 import cn.beeop.pool.exception.PoolNotCreateException;
 
 import static cn.beeop.pool.PoolStaticCenter.*;
@@ -35,39 +32,37 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     public BeeObjectSource() {
     }
 
-    public BeeObjectSource(BeeObjectSourceConfig config) throws Exception {
-        config.copyTo(this);
-        createPool(this);
+    public BeeObjectSource(BeeObjectSourceConfig config) {
+        try {
+            config.copyTo(this);
+            BeeObjectSource.createPool(this);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static ObjectPool createPool(BeeObjectSource os) throws Exception {
-        String poolImplementClassName = os.getPoolImplementClassName();
-        if (isBlank(poolImplementClassName)) poolImplementClassName = FastObjectPool.class.getName();
-        try {
-            Class<?> poolClass = Class.forName(poolImplementClassName, true, PoolClassLoader);
-            String errorMsg = checkClass(poolClass, ObjectPool.class, "pool");
-            if (!isBlank(errorMsg)) throw new BeeObjectSourceConfigException(errorMsg);
+        Class<?> poolClass = Class.forName(os.getPoolImplementClassName());
+        String errorMsg = checkClass(poolClass, ObjectPool.class, "pool");
+        if (!isBlank(errorMsg)) throw new BeeObjectSourceConfigException(errorMsg);
 
-            ObjectPool pool = (ObjectPool) poolClass.newInstance();
-            pool.init(os);
-            os.pool = pool;
-            os.ready = true;
-            return pool;
-        } catch (PoolBaseException e) {
-            throw e;
-        } catch (Throwable e) {
-            throw new PoolCreateFailedException("Failed to create object pool by class:" + poolImplementClassName, e);
-        }
+        ObjectPool pool = (ObjectPool) poolClass.newInstance();
+        pool.init(os);
+        os.pool = pool;
+        os.ready = true;
+        return pool;
     }
 
     //***************************************************************************************************************//
     //                                        2: object take methods(1)                                              //
     //***************************************************************************************************************//
-    public BeeObjectHandle getObject() throws Exception {
-        if (ready) return pool.getObject();
-        synchronized (synLock) {
-            if (pool != null) return pool.getObject();
-            return createPool(this).getObject();
+    public final BeeObjectHandle getObject() throws Exception {
+        if (this.ready) return this.pool.getObject();
+        synchronized (this.synLock) {
+            if (this.pool != null) return this.pool.getObject();
+            return BeeObjectSource.createPool(this).getObject();
         }
     }
 
@@ -75,22 +70,22 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     //                                          3: pool other methods(6)                                             //
     //***************************************************************************************************************//
     public void clear() throws Exception {
-        this.clear(false);
+        clear(false);
     }
 
     public void clear(boolean force) throws Exception {
-        if (pool == null) throw new PoolNotCreateException("Object pool not initialized");
-        pool.clear(force);
+        if (this.pool == null) throw new PoolNotCreateException("Object pool not initialized");
+        this.pool.clear(force);
     }
 
     public boolean isClosed() {
-        return pool == null || pool.isClosed();
+        return this.pool == null || this.pool.isClosed();
     }
 
     public void close() {
-        if (pool != null) {
+        if (this.pool != null) {
             try {
-                pool.close();
+                this.pool.close();
             } catch (Throwable e) {
                 CommonLog.error("Error at closing pool,cause:", e);
             }
@@ -98,11 +93,11 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     }
 
     public void setPrintRuntimeLog(boolean printRuntimeLog) {
-        if (pool != null) pool.setPrintRuntimeLog(printRuntimeLog);
+        if (this.pool != null) this.pool.setPrintRuntimeLog(printRuntimeLog);
     }
 
     public ObjectPoolMonitorVo getPoolMonitorVo() throws Exception {
-        if (pool == null) throw new PoolNotCreateException("Object pool not initialized");
-        return pool.getPoolMonitorVo();
+        if (this.pool == null) throw new PoolNotCreateException("Object pool not initialized");
+        return this.pool.getPoolMonitorVo();
     }
 }

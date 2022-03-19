@@ -6,7 +6,7 @@
  */
 package cn.beeop;
 
-import cn.beeop.pool.PoolStaticCenter;
+import cn.beeop.pool.FastObjectPool;
 import cn.beeop.pool.SimpleObjectFactory;
 
 import java.io.File;
@@ -30,15 +30,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * @version 1.0
  */
 public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
-    //empty class array
-    private static final Class[] EMPTY_CLASSES = new Class[0];
-    //empty class name array
-    private static final String[] EMPTY_CLASS_NAMES = new String[0];
-    //The number of CPUs
-    private static final int NCPUS = Runtime.getRuntime().availableProcessors();
     //poolName index
     private static final AtomicInteger PoolNameIndex = new AtomicInteger(1);
-
 
     //exclude method names on raw object,which can't be called by user,for example;close,destroy,terminate
     private final Set<String> excludeMethodNames = new HashSet<String>(3);
@@ -53,7 +46,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //max reachable size of object instance in pool
     private int maxActive = Math.min(Math.max(10, NCPUS), 50);
     //max permit size of pool semaphore
-    private int borrowSemaphoreSize = Math.min(maxActive / 2, NCPUS);
+    private int borrowSemaphoreSize = Math.min(this.maxActive / 2, NCPUS);
     //milliseconds:max wait time to get one object from pool<code>ObjectPool.getObject()</code>
     private long maxWait = SECONDS.toMillis(8);
     //milliseconds:max idle time of objects in pool,when reach,then close them and remove from pool
@@ -70,14 +63,14 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     private boolean forceCloseUsingOnClear;
     //milliseconds:delay time for next loop to clear,when<code>forceCloseUsingOnClear</code> is false and exists using object instance
     private long delayTimeForNextClear = 3000L;
-    //pool implementation class name
-    private String poolImplementClassName;
+
     //indicator,whether register pool to jmx
     private boolean enableJmx;
     //indicator,whether print pool config info
     private boolean printConfigInfo;
     //indicator,whether print pool runtime info
     private boolean printRuntimeLog;
+
     //object class
     private Class objectClass;
     //object class name
@@ -92,32 +85,34 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     private String objectFactoryClassName;
     //object factory
     private RawObjectFactory objectFactory;
+    //pool implementation class name
+    private String poolImplementClassName = FastObjectPool.class.getName();
 
     //***************************************************************************************************************//
     //                                     1: constructors(4)                                                        //
     //***************************************************************************************************************//
     public BeeObjectSourceConfig() {
-        excludeMethodNames.add("close");
-        excludeMethodNames.add("destroy");
-        excludeMethodNames.add("terminate");
+        this.excludeMethodNames.add("close");
+        this.excludeMethodNames.add("destroy");
+        this.excludeMethodNames.add("terminate");
     }
 
     //read configuration from properties file
     public BeeObjectSourceConfig(File propertiesFile) {
         this();
-        this.loadFromPropertiesFile(propertiesFile);
+        loadFromPropertiesFile(propertiesFile);
     }
 
     //read configuration from properties file
     public BeeObjectSourceConfig(String propertiesFileName) {
         this();
-        this.loadFromPropertiesFile(propertiesFileName);
+        loadFromPropertiesFile(propertiesFileName);
     }
 
     //read configuration from properties
     public BeeObjectSourceConfig(Properties configProperties) {
         this();
-        this.loadFromProperties(configProperties);
+        loadFromProperties(configProperties);
     }
 
     //***************************************************************************************************************//
@@ -126,7 +121,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //check object factory class
     private static void checkObjectFactoryClass(Class factoryClass) {
         if (factoryClass != null) {
-            String errorMsg = PoolStaticCenter.checkClass(factoryClass, RawObjectFactory.class, "object factory");
+            String errorMsg = checkClass(factoryClass, RawObjectFactory.class, "object factory");
             if (!isBlank(errorMsg)) throw new BeeObjectSourceConfigException(errorMsg);
         }
     }
@@ -134,7 +129,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //check object class
     private static Constructor checkObjectClass(Class objectClass) {
         if (objectClass != null) {
-            String errorMsg = PoolStaticCenter.checkClass(objectClass, (Class[]) null, "object");
+            String errorMsg = checkClass(objectClass, (Class[]) null, "object");
             if (!isBlank(errorMsg)) throw new BeeObjectSourceConfigException(errorMsg);
             try {
                 return objectClass.getConstructor(EMPTY_CLASSES);
@@ -162,7 +157,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //                                     3:configuration about pool inner control(33)                              //
     //***************************************************************************************************************//
     public String getPoolName() {
-        return poolName;
+        return this.poolName;
     }
 
     public void setPoolName(String poolName) {
@@ -170,7 +165,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public boolean isFairMode() {
-        return fairMode;
+        return this.fairMode;
     }
 
     public void setFairMode(boolean fairMode) {
@@ -178,7 +173,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public int getInitialSize() {
-        return initialSize;
+        return this.initialSize;
     }
 
     public void setInitialSize(int initialSize) {
@@ -186,18 +181,18 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public int getMaxActive() {
-        return maxActive;
+        return this.maxActive;
     }
 
     public void setMaxActive(int maxActive) {
         if (maxActive > 0) {
             this.maxActive = maxActive;
-            this.borrowSemaphoreSize = (maxActive > 1) ? Math.min(maxActive / 2, NCPUS) : 1;
+            borrowSemaphoreSize = (maxActive > 1) ? Math.min(maxActive / 2, NCPUS) : 1;
         }
     }
 
     public int getBorrowSemaphoreSize() {
-        return borrowSemaphoreSize;
+        return this.borrowSemaphoreSize;
     }
 
     public void setBorrowSemaphoreSize(int borrowSemaphoreSize) {
@@ -205,7 +200,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public long getMaxWait() {
-        return maxWait;
+        return this.maxWait;
     }
 
     public void setMaxWait(long maxWait) {
@@ -213,7 +208,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public long getIdleTimeout() {
-        return idleTimeout;
+        return this.idleTimeout;
     }
 
     public void setIdleTimeout(long idleTimeout) {
@@ -221,7 +216,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public long getHoldTimeout() {
-        return holdTimeout;
+        return this.holdTimeout;
     }
 
     public void setHoldTimeout(long holdTimeout) {
@@ -229,7 +224,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public int getValidTestTimeout() {
-        return validTestTimeout;
+        return this.validTestTimeout;
     }
 
     public void setValidTestTimeout(int validTestTimeout) {
@@ -237,7 +232,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public long getValidAssumeTime() {
-        return validAssumeTime;
+        return this.validAssumeTime;
     }
 
     public void setValidAssumeTime(long validAssumeTime) {
@@ -245,7 +240,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public long getTimerCheckInterval() {
-        return timerCheckInterval;
+        return this.timerCheckInterval;
     }
 
     public void setTimerCheckInterval(long timerCheckInterval) {
@@ -253,7 +248,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public boolean isForceCloseUsingOnClear() {
-        return forceCloseUsingOnClear;
+        return this.forceCloseUsingOnClear;
     }
 
     public void setForceCloseUsingOnClear(boolean forceCloseUsingOnClear) {
@@ -261,7 +256,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public long getDelayTimeForNextClear() {
-        return delayTimeForNextClear;
+        return this.delayTimeForNextClear;
     }
 
     public void setDelayTimeForNextClear(long delayTimeForNextClear) {
@@ -269,15 +264,15 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public String getPoolImplementClassName() {
-        return poolImplementClassName;
+        return this.poolImplementClassName;
     }
 
     public void setPoolImplementClassName(String poolImplementClassName) {
-        this.poolImplementClassName = trimString(poolImplementClassName);
+        if (!isBlank(poolImplementClassName)) this.poolImplementClassName = trimString(poolImplementClassName);
     }
 
     public boolean isEnableJmx() {
-        return enableJmx;
+        return this.enableJmx;
     }
 
     public void setEnableJmx(boolean enableJmx) {
@@ -289,7 +284,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public boolean isPrintRuntimeLog() {
-        return printRuntimeLog;
+        return this.printRuntimeLog;
     }
 
     public void setPrintRuntimeLog(boolean printRuntimeLog) {
@@ -301,7 +296,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //                                     4: configuration about object creation(19)                                //
     //***************************************************************************************************************//
     public Class getObjectClass() {
-        return objectClass;
+        return this.objectClass;
     }
 
     public void setObjectClass(Class objectClass) {
@@ -309,7 +304,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public String getObjectClassName() {
-        return objectClassName;
+        return this.objectClassName;
     }
 
     public void setObjectClassName(String objectClassName) {
@@ -317,41 +312,41 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public Class[] getObjectInterfaces() {
-        if (objectInterfaces == null) return EMPTY_CLASSES;
+        if (this.objectInterfaces == null) return EMPTY_CLASSES;
 
-        Class[] tempInterfaces = new Class[objectInterfaces.length];
-        System.arraycopy(objectInterfaces, 0, tempInterfaces, 0, objectInterfaces.length);
+        Class[] tempInterfaces = new Class[this.objectInterfaces.length];
+        System.arraycopy(this.objectInterfaces, 0, tempInterfaces, 0, this.objectInterfaces.length);
         return tempInterfaces;
     }
 
     public void setObjectInterfaces(Class[] interfaces) {
         if (interfaces == null || interfaces.length == 0) {
-            this.objectInterfaces = null;
+            objectInterfaces = null;
         } else {
-            this.objectInterfaces = new Class[interfaces.length];
-            System.arraycopy(interfaces, 0, objectInterfaces, 0, interfaces.length);
+            objectInterfaces = new Class[interfaces.length];
+            System.arraycopy(interfaces, 0, this.objectInterfaces, 0, interfaces.length);
         }
     }
 
     public String[] getObjectInterfaceNames() {
-        if (objectInterfaceNames == null) return EMPTY_CLASS_NAMES;
+        if (this.objectInterfaceNames == null) return EMPTY_CLASS_NAMES;
 
-        String[] tempInterfaceNames = new String[objectInterfaceNames.length];
-        System.arraycopy(objectInterfaceNames, 0, tempInterfaceNames, 0, objectInterfaceNames.length);
+        String[] tempInterfaceNames = new String[this.objectInterfaceNames.length];
+        System.arraycopy(this.objectInterfaceNames, 0, tempInterfaceNames, 0, this.objectInterfaceNames.length);
         return tempInterfaceNames;
     }
 
     public void setObjectInterfaceNames(String[] interfaceNames) {
         if (interfaceNames == null || interfaceNames.length == 0) {
-            this.objectInterfaceNames = null;
+            objectInterfaceNames = null;
         } else {
-            this.objectInterfaceNames = new String[interfaceNames.length];
-            System.arraycopy(interfaceNames, 0, objectInterfaceNames, 0, interfaceNames.length);
+            objectInterfaceNames = new String[interfaceNames.length];
+            System.arraycopy(interfaceNames, 0, this.objectInterfaceNames, 0, interfaceNames.length);
         }
     }
 
     public Class getObjectFactoryClass() {
-        return objectFactoryClass;
+        return this.objectFactoryClass;
     }
 
     public void setObjectFactoryClass(Class objectFactoryClass) {
@@ -359,7 +354,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public String getObjectFactoryClassName() {
-        return objectFactoryClassName;
+        return this.objectFactoryClassName;
     }
 
     public void setObjectFactoryClassName(String objectFactoryClassName) {
@@ -367,27 +362,27 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public RawObjectFactory getObjectFactory() {
-        return objectFactory;
+        return this.objectFactory;
     }
 
     public void addExcludeMethodName(String methodName) {
-        if (!isBlank(methodName)) excludeMethodNames.add(methodName);
+        if (!isBlank(methodName)) this.excludeMethodNames.add(methodName);
     }
 
     public void removeExcludeMethodName(String methodName) {
-        if (!isBlank(methodName)) excludeMethodNames.remove(methodName);
+        if (!isBlank(methodName)) this.excludeMethodNames.remove(methodName);
     }
 
     public Set<String> getExcludeMethodNames() {
-        return new HashSet<String>(excludeMethodNames);
+        return new HashSet<String>(this.excludeMethodNames);
     }
 
     public void removeFactoryProperty(String key) {
-        if (!isBlank(key)) factoryProperties.remove(key);
+        if (!isBlank(key)) this.factoryProperties.remove(key);
     }
 
     public void addFactoryProperty(String key, Object value) {
-        if (!isBlank(key) && value != null) factoryProperties.put(key, value);
+        if (!isBlank(key) && value != null) this.factoryProperties.put(key, value);
     }
 
     public void addFactoryProperty(String propertyText) {
@@ -396,11 +391,11 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             for (String attribute : attributeArray) {
                 String[] pair = attribute.split("=");
                 if (pair.length == 2) {
-                    factoryProperties.put(pair[0].trim(), pair[1].trim());
+                    this.factoryProperties.put(pair[0].trim(), pair[1].trim());
                 } else {
                     pair = attribute.split(":");
                     if (pair.length == 2) {
-                        factoryProperties.put(pair[0].trim(), pair[1].trim());
+                        this.factoryProperties.put(pair[0].trim(), pair[1].trim());
                     }
                 }
             }
@@ -412,7 +407,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //***************************************************************************************************************//
     public void loadFromPropertiesFile(String filename) {
         if (isBlank(filename)) throw new IllegalArgumentException("Properties file can't be null");
-        loadFromPropertiesFile(new File(filename));
+        this.loadFromPropertiesFile(new File(filename));
     }
 
     public void loadFromPropertiesFile(File file) {
@@ -427,7 +422,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             stream = Files.newInputStream(Paths.get(file.toURI()));
             Properties configProperties = new Properties();
             configProperties.load(stream);
-            loadFromProperties(configProperties);
+            this.loadFromProperties(configProperties);
         } catch (BeeObjectSourceConfigException e) {
             throw e;
         } catch (Throwable e) {
@@ -454,7 +449,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         setPropertiesValue(this, setValueMap);
 
         //3:try to find 'factoryProperties' config value
-        addFactoryProperty(getPropertyValue(configProperties, "factoryProperties"));
+        this.addFactoryProperty(getPropertyValue(configProperties, "factoryProperties"));
         String factoryPropertiesCount = getPropertyValue(configProperties, "factoryProperties.count");
         if (!isBlank(factoryPropertiesCount)) {
             int count = 0;
@@ -463,7 +458,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             } catch (Throwable e) {
             }
             for (int i = 1; i <= count; i++)
-                addFactoryProperty(getPropertyValue(configProperties, "factoryProperties." + i));
+                this.addFactoryProperty(getPropertyValue(configProperties, "factoryProperties." + i));
         }
 
         //4:try to find 'excludeMethodNames' config value
@@ -473,7 +468,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             for (String excludeMethodName : excludeMethodNameArray) {
                 if (!isBlank(excludeMethodName)) {
                     excludeMethodName = excludeMethodName.trim();
-                    this.addExcludeMethodName(excludeMethodName);
+                    addExcludeMethodName(excludeMethodName);
 
                     CommonLog.debug("add excludeMethodName:{}", excludeMethodName);
                 }
@@ -483,7 +478,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         //5:try to find 'objectInterfaceNames' config value
         String objectInterfaceNames = getPropertyValue(configProperties, "objectInterfaceNames");
         if (!isBlank(objectInterfaceNames))
-            this.setObjectInterfaceNames(objectInterfaceNames.split(","));
+            setObjectInterfaceNames(objectInterfaceNames.split(","));
 
         //6:try to find 'objectInterfaces' config value
         String objectInterfaceNames2 = getPropertyValue(configProperties, "objectInterfaces");
@@ -497,7 +492,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
                     throw new BeeObjectSourceConfigException("Class not found:" + objectInterfaceNameArray[i]);
                 }
             }
-            this.setObjectInterfaces(objectInterfaces);
+            setObjectInterfaces(objectInterfaces);
         }
     }
 
@@ -506,29 +501,29 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //***************************************************************************************************************//
     //check pool configuration
     public BeeObjectSourceConfig check() throws BeeObjectSourceConfigException {
-        if (this.maxActive <= 0)
+        if (maxActive <= 0)
             throw new BeeObjectSourceConfigException("maxActive must be greater than zero");
-        if (this.initialSize < 0)
+        if (initialSize < 0)
             throw new BeeObjectSourceConfigException("initialSize must be greater than zero");
-        if (this.initialSize > maxActive)
+        if (initialSize > this.maxActive)
             throw new BeeObjectSourceConfigException("initialSize must not be greater than 'maxActive'");
-        if (this.borrowSemaphoreSize <= 0)
+        if (borrowSemaphoreSize <= 0)
             throw new BeeObjectSourceConfigException("borrowSemaphoreSize must be greater than zero");
-        if (this.idleTimeout <= 0)
+        if (idleTimeout <= 0)
             throw new BeeObjectSourceConfigException("idleTimeout must be greater than zero");
-        if (this.holdTimeout <= 0)
+        if (holdTimeout <= 0)
             throw new BeeObjectSourceConfigException("holdTimeout must be greater than zero");
-        if (this.maxWait <= 0)
+        if (maxWait <= 0)
             throw new BeeObjectSourceConfigException("maxWait must be greater than zero");
 
         //1:try to create object factory
-        RawObjectFactory objectFactory = tryCreateObjectFactory();
+        RawObjectFactory objectFactory = this.tryCreateObjectFactory();
         //2:load object implemented interfaces,if config
-        Class[] objectInterfaces = loadObjectInterfaces();
-        if (isBlank(this.poolName)) this.poolName = "FastPool-" + PoolNameIndex.getAndIncrement();
+        Class[] objectInterfaces = this.loadObjectInterfaces();
+        if (isBlank(poolName)) poolName = "FastPool-" + BeeObjectSourceConfig.PoolNameIndex.getAndIncrement();
 
         BeeObjectSourceConfig configCopy = new BeeObjectSourceConfig();
-        this.copyTo(configCopy);
+        copyTo(configCopy);
         configCopy.objectFactory = objectFactory;
         configCopy.setObjectInterfaces(objectInterfaces);
         return configCopy;
@@ -550,7 +545,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
                 Object fieldValue = field.get(this);
                 fieldName = field.getName();
 
-                if (printConfigInfo) CommonLog.info("{}.{}={}", poolName, fieldName, fieldValue);
+                if (this.printConfigInfo) CommonLog.info("{}.{}={}", this.poolName, fieldName, fieldValue);
                 field.set(config, fieldValue);
             }
         } catch (Throwable e) {
@@ -559,65 +554,67 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
         //2:copy 'excludeMethodNames'
         int index = 0;
-        for (String methodName : excludeMethodNames) {
+        for (String methodName : this.excludeMethodNames) {
             config.addExcludeMethodName(methodName);
-            if (printConfigInfo) CommonLog.info("{}.excludeMethodNames[{}]={}", poolName, index++, methodName);
+            if (this.printConfigInfo)
+                CommonLog.info("{}.excludeMethodNames[{}]={}", this.poolName, index++, methodName);
         }
 
         //3:copy 'objectInterfaces'
-        Class[] interfaces = (objectInterfaces == null) ? null : new Class[objectInterfaces.length];
+        Class[] interfaces = (this.objectInterfaces == null) ? null : new Class[this.objectInterfaces.length];
         if (interfaces != null) {
-            System.arraycopy(objectInterfaces, 0, interfaces, 0, interfaces.length);
+            System.arraycopy(this.objectInterfaces, 0, interfaces, 0, interfaces.length);
             for (int i = 0, l = interfaces.length; i < l; i++)
-                if (printConfigInfo) CommonLog.info("{}.objectInterfaces[{}]={}", poolName, i, interfaces[i]);
+                if (this.printConfigInfo) CommonLog.info("{}.objectInterfaces[{}]={}", this.poolName, i, interfaces[i]);
         }
         config.setObjectInterfaces(interfaces);
 
         //4:copy 'objectInterfaceNames'
-        String[] interfaceNames = (objectInterfaceNames == null) ? null : new String[objectInterfaceNames.length];
+        String[] interfaceNames = (this.objectInterfaceNames == null) ? null : new String[this.objectInterfaceNames.length];
         if (interfaceNames != null) {
-            System.arraycopy(objectInterfaceNames, 0, interfaceNames, 0, interfaceNames.length);
-            for (int i = 0, l = objectInterfaceNames.length; i < l; i++)
-                if (printConfigInfo)
-                    CommonLog.info("{}.objectInterfaceNames[{}]={}", poolName, i, objectInterfaceNames[i]);
+            System.arraycopy(this.objectInterfaceNames, 0, interfaceNames, 0, interfaceNames.length);
+            for (int i = 0, l = this.objectInterfaceNames.length; i < l; i++)
+                if (this.printConfigInfo)
+                    CommonLog.info("{}.objectInterfaceNames[{}]={}", this.poolName, i, this.objectInterfaceNames[i]);
         }
         config.setObjectInterfaceNames(interfaceNames);
     }
 
     private Class[] loadObjectInterfaces() throws BeeObjectSourceConfigException {
         Class[] objectInterfaces = this.objectInterfaces;
-        if (objectInterfaces == null && objectInterfaceNames != null && objectInterfaceNames.length > 0) {
-            objectInterfaces = new Class[objectInterfaceNames.length];
-            for (int i = 0; i < objectInterfaceNames.length; i++) {
+        if (objectInterfaces == null && this.objectInterfaceNames != null && this.objectInterfaceNames.length > 0) {
+            objectInterfaces = new Class[this.objectInterfaceNames.length];
+            for (int i = 0; i < this.objectInterfaceNames.length; i++) {
                 try {
-                    if (isBlank(objectInterfaceNames[i]))
+                    if (isBlank(this.objectInterfaceNames[i]))
                         throw new BeeObjectSourceConfigException("objectInterfaceNames[" + i + "]is empty or null");
-                    objectInterfaces[i] = Class.forName(objectInterfaceNames[i]);
+                    objectInterfaces[i] = Class.forName(this.objectInterfaceNames[i]);
                 } catch (ClassNotFoundException e) {
-                    throw new BeeObjectSourceConfigException("Not found object interface:" + objectInterfaceNames[i]);
+                    throw new BeeObjectSourceConfigException("Not found object interface:" + this.objectInterfaceNames[i]);
                 }
             }
         }
 
-        if (objectInterfaces != null && objectInterfaces.length > 0) checkObjectInterfaces(objectInterfaces);
+        if (objectInterfaces != null && objectInterfaces.length > 0)
+            BeeObjectSourceConfig.checkObjectInterfaces(objectInterfaces);
         return objectInterfaces;
     }
 
     private RawObjectFactory tryCreateObjectFactory() throws BeeObjectSourceConfigException {
         //1: try to create factory from factory class/className
         Class objectFactoryClass = this.objectFactoryClass;
-        if (objectFactoryClass == null && !isBlank(objectFactoryClassName)) {
+        if (objectFactoryClass == null && !isBlank(this.objectFactoryClassName)) {
             try {
-                objectFactoryClass = Class.forName(objectFactoryClassName);
+                objectFactoryClass = Class.forName(this.objectFactoryClassName);
             } catch (ClassNotFoundException e) {
-                throw new BeeObjectSourceConfigException("Not found object factory class:" + objectFactoryClassName);
+                throw new BeeObjectSourceConfigException("Not found object factory class:" + this.objectFactoryClassName);
             }
         }
         if (objectFactoryClass != null) {
             try {
-                checkObjectFactoryClass(objectFactoryClass);//check factory class
-                RawObjectFactory factory = (RawObjectFactory) objectFactoryClass.getConstructor().newInstance();
-                setPropertiesValue(factory, factoryProperties);
+                BeeObjectSourceConfig.checkObjectFactoryClass(objectFactoryClass);//check factory class
+                RawObjectFactory factory = (RawObjectFactory) objectFactoryClass.getConstructor(EMPTY_CLASSES).newInstance();
+                setPropertiesValue(factory, this.factoryProperties);
                 return factory;
             } catch (Throwable e) {
                 throw new BeeObjectSourceConfigException("Failed to create object factory by class:" + objectFactoryClass.getName(), e);
@@ -626,15 +623,15 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
         //2: try to create simple factory from object class/class name
         Class objectClass = this.objectClass;
-        if (objectClass == null && !isBlank(objectClassName)) {
+        if (objectClass == null && !isBlank(this.objectClassName)) {
             try {
-                objectClass = Class.forName(objectClassName);
+                objectClass = Class.forName(this.objectClassName);
             } catch (ClassNotFoundException e) {
-                throw new BeeObjectSourceConfigException("Not found object class:" + objectClassName);
+                throw new BeeObjectSourceConfigException("Not found object class:" + this.objectClassName);
             }
         }
         if (objectClass != null) {
-            return new SimpleObjectFactory(checkObjectClass(objectClass));
+            return new SimpleObjectFactory(BeeObjectSourceConfig.checkObjectClass(objectClass));
         } else {
             throw new BeeObjectSourceConfigException("Must set value to one of ['objectFactoryClassName','objectClassName']");
         }
