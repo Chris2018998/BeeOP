@@ -17,7 +17,7 @@ Java7或更高
 <dependency>
    <groupId>com.github.chris2018998</groupId>
    <artifactId>beeop</artifactId>
-   <version>1.2.2</version>
+   <version>1.2.3</version>
 </dependency>
 ```
 
