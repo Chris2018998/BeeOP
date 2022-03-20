@@ -11,7 +11,6 @@ import cn.beeop.pool.exception.ObjectException;
 
 import static cn.beeop.pool.PoolStaticCenter.*;
 
-
 /**
  * object Handle implement
  *

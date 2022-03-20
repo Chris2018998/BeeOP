@@ -6,7 +6,6 @@
  */
 package cn.beeop.pool;
 
-
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.RawObjectFactory;
