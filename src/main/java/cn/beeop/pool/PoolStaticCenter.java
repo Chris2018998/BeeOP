@@ -129,18 +129,18 @@ public class PoolStaticCenter {
      * @param propertyName config item name
      * @return configuration item value
      */
-    public static String getPropertyValue(Properties properties, String propertyName) {
+    public static String getPropertyValue(Properties properties, final String propertyName) {
         String value = readPropertyValue(properties, propertyName);
         if (value != null) return value;
 
-        propertyName = propertyName.substring(0, 1).toLowerCase(Locale.US) + propertyName.substring(1);
-        value = readPropertyValue(properties, propertyName);
+        String newPropertyName = propertyName.substring(0, 1).toLowerCase(Locale.US) + propertyName.substring(1);
+        value = readPropertyValue(properties, newPropertyName);
         if (value != null) return value;
 
-        value = readPropertyValue(properties, propertyNameToFieldId(propertyName, Separator_MiddleLine));
+        value = readPropertyValue(properties, propertyNameToFieldId(newPropertyName, Separator_MiddleLine));
         if (value != null) return value;
 
-        return readPropertyValue(properties, propertyNameToFieldId(propertyName, Separator_UnderLine));
+        return readPropertyValue(properties, propertyNameToFieldId(newPropertyName, Separator_UnderLine));
     }
 
     /**
