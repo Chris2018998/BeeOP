@@ -30,10 +30,12 @@ public final class SimpleObjectFactory implements RawObjectFactory {
 
     //set default values
     public void setDefault(Object obj) {
+        //do nothing
     }
 
     //set default values
     public void reset(Object obj) {
+        //do nothing
     }
 
     //test object
@@ -43,5 +45,6 @@ public final class SimpleObjectFactory implements RawObjectFactory {
 
     //destroy  object
     public void destroy(Object obj) {
+        //do nothing
     }
 }
