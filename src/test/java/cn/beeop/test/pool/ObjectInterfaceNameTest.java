@@ -12,7 +12,7 @@ import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
 import cn.beeop.test.object.Book;
-import cn.beeop.test.object.JavaBookFactory;
+import cn.beeop.test.object.JavaBook;
 
 /**
  * ObjectFactory subclass
@@ -24,7 +24,7 @@ public class ObjectInterfaceNameTest extends TestCase {
 
     public void setUp() throws Throwable {
         BeeObjectSourceConfig config = new BeeObjectSourceConfig();
-        config.setObjectFactoryClassName(JavaBookFactory.class.getName());
+        config.setObjectClass(JavaBook.class);
         config.setObjectInterfaceNames(new String[]{Book.class.getName()});
         obs = new BeeObjectSource(config);
     }
@@ -39,7 +39,6 @@ public class ObjectInterfaceNameTest extends TestCase {
             handle = obs.getObject();
             if (handle == null)
                 TestUtil.assertError("Failed to get object");
-
             Book book = (Book) handle.getReflectProxy();
             book.getName();
         } finally {

@@ -10,7 +10,7 @@ package cn.beeop.test.object;
  * @author Chris.Liao
  * @version 1.0
  */
-public class JavaBook {
+public class JavaBook implements Book {
     private final String name;
     private final long number;
 

@@ -21,13 +21,9 @@ public class TestUtil {
         throw new AssertionError(String.format(message, String.valueOf(expect), String.valueOf(current)));
     }
 
-    public static Object getFieldValue(Object ob, String fieldName) {
-        try {
-            Field field = ob.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            return field.get(ob);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    public static Object getFieldValue(Object ob, String fieldName) throws Exception {
+        Field field = ob.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(ob);
     }
 }
