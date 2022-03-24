@@ -516,11 +516,11 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         if (maxWait <= 0)
             throw new BeeObjectSourceConfigException("maxWait must be greater than zero");
 
-        //1:try to create object factory
-        RawObjectFactory objectFactory = this.tryCreateObjectFactory();
-        //2:load object implemented interfaces,if config
+        //1:load object implemented interfaces,if config
         Class[] objectInterfaces = this.loadObjectInterfaces();
-        if (isBlank(poolName)) poolName = "FastPool-" + BeeObjectSourceConfig.PoolNameIndex.getAndIncrement();
+        //2:try to create object factory
+        RawObjectFactory objectFactory = this.tryCreateObjectFactory(objectInterfaces);
+        if (isBlank(poolName)) poolName = "FastPool-" + PoolNameIndex.getAndIncrement();
 
         BeeObjectSourceConfig configCopy = new BeeObjectSourceConfig();
         copyTo(configCopy);
@@ -596,11 +596,11 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         }
 
         if (objectInterfaces != null && objectInterfaces.length > 0)
-            BeeObjectSourceConfig.checkObjectInterfaces(objectInterfaces);
+            checkObjectInterfaces(objectInterfaces);
         return objectInterfaces;
     }
 
-    private RawObjectFactory tryCreateObjectFactory() throws BeeObjectSourceConfigException {
+    private RawObjectFactory tryCreateObjectFactory( Class[] objectInterfaces) throws BeeObjectSourceConfigException {
         //1: try to create factory from factory class/className
         Class objectFactoryClass = this.objectFactoryClass;
         if (objectFactoryClass == null && !isBlank(this.objectFactoryClassName)) {
@@ -612,7 +612,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         }
         if (objectFactoryClass != null) {
             try {
-                BeeObjectSourceConfig.checkObjectFactoryClass(objectFactoryClass);//check factory class
+                checkObjectFactoryClass(objectFactoryClass);//check factory class
                 RawObjectFactory factory = (RawObjectFactory) objectFactoryClass.getConstructor(EMPTY_CLASSES).newInstance();
                 setPropertiesValue(factory, this.factoryProperties);
                 return factory;
@@ -631,6 +631,12 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             }
         }
         if (objectClass != null) {
+            if (objectInterfaces != null) {
+                for (Class interfaceClass : objectInterfaces) {
+                    String errorMsg = checkClass(objectClass, interfaceClass, "object class interface");
+                    if (!isBlank(errorMsg)) throw new BeeObjectSourceConfigException(errorMsg);
+                }
+            }
             return new SimpleObjectFactory(BeeObjectSourceConfig.checkObjectClass(objectClass));
         } else {
             throw new BeeObjectSourceConfigException("Must set value to one of ['objectFactoryClassName','objectClassName']");

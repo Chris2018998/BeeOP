@@ -47,11 +47,14 @@ public final class ObjectHandle implements BeeObjectHandle {
         this.p.recycleSelf();
     }
 
-    public synchronized Object getReflectProxy() throws Exception {
+    public Object getReflectProxy() throws Exception {
         if (this.isClosed) throw ObjectClosedException;
-        if (!this.reflectProxyCreated) {
-            this.reflectProxy = this.p.createReflectProxy(this);
-            this.reflectProxyCreated = true;
+        if (this.reflectProxyCreated) return this.reflectProxy;
+        synchronized (this) {
+            if (reflectProxy == null) {
+                this.reflectProxy = this.p.createReflectProxy(this);
+                this.reflectProxyCreated = true;
+            }
         }
         return this.reflectProxy;
     }
