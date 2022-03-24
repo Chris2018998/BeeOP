@@ -28,7 +28,7 @@ public class ConfigCheckCopyTest extends TestCase {
         config.setObjectClassName(JavaBook.class.getName());
         BeeObjectSourceConfig config2 = config.check();
 
-        if (config2 == config) throw new Exception("Configuration check copy failed");
+        if (config2 == config) throw new BeeObjectSourceConfigException("Configuration check copy failed");
 
         List<String> excludeNames = new LinkedList<String>();
         excludeNames.add("objectFactory");
@@ -42,7 +42,7 @@ public class ConfigCheckCopyTest extends TestCase {
             if (!excludeNames.contains(field.getName())) {
                 field.setAccessible(true);
                 if (!Objects.deepEquals(field.get(config), field.get(config2))) {
-                    throw new BeeObjectSourceConfigException("Failed to copy field[" + field.getName() + "],value is not equals");
+                    throw new BeeObjectSourceConfigException("Failed to copy field[" + field.getName() + "],value is not equalsString");
                 }
             }
         }
@@ -51,9 +51,9 @@ public class ConfigCheckCopyTest extends TestCase {
         Set<String> excludeMethodNames1 = (Set<String>) TestUtil.getFieldValue(config, "excludeMethodNames");
         Set<String> excludeMethodNames2 = (Set<String>) TestUtil.getFieldValue(config2, "excludeMethodNames");
         if (!Objects.deepEquals(excludeMethodNames1, excludeMethodNames2))
-            throw new Exception("Configuration 'excludeMethodNames' check copy failed");
+            throw new BeeObjectSourceConfigException("Configuration 'excludeMethodNames' check copy failed");
         if (!Objects.deepEquals(config.getObjectInterfaceNames(), config2.getObjectInterfaceNames()))
-            throw new Exception("Configuration 'objectInterfaceNames' check copy failed");
+            throw new BeeObjectSourceConfigException("Configuration 'objectInterfaceNames' check copy failed");
     }
 
     private void testContainerField(BeeObjectSourceConfig config, BeeObjectSourceConfig config2, String propertyName) throws Exception {

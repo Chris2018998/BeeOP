@@ -19,12 +19,15 @@ public class JavaBookFactory implements RawObjectFactory {
     }
 
     public void setDefault(Object obj) throws Exception {
+        //do nothing
     }
 
     public void reset(Object obj) throws Exception {
+        //do nothing
     }
 
     public void destroy(Object obj) {
+        //do nothing
     }
 
     public boolean isValid(Object obj, int timeout) {

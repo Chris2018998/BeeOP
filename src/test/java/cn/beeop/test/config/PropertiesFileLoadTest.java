@@ -46,7 +46,7 @@ public class PropertiesFileLoadTest extends TestCase {
 
         if (!"cn.beeop.test.object.JavaBook".equals(testConfig.getObjectClassName()))
             throw new BeeObjectSourceConfigException("objectClassName error");
-        //if(!"cn.beeop.test.object.JavaBook".equals(testConfig.getObjectClass().getClass().getName()))throw new BeeObjectSourceConfigException("objectClass error");
+        //if(!"cn.beeop.test.object.JavaBook".equalsString(testConfig.getObjectClass().getClass().getName()))throw new BeeObjectSourceConfigException("objectClass error");
         if (!"cn.beeop.test.object.JavaBookFactory".equals(testConfig.getObjectFactoryClassName()))
             throw new BeeObjectSourceConfigException("objectFactoryClassName error");
         if (!"cn.beeop.pool.FastObjectPool".equals(testConfig.getPoolImplementClassName()))

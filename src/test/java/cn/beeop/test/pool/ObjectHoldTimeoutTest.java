@@ -9,7 +9,6 @@ package cn.beeop.test.pool;
 import cn.beeop.BeeObjectHandle;
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.pool.FastObjectPool;
 import cn.beeop.pool.ObjectPoolMonitorVo;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
@@ -42,7 +41,7 @@ public class ObjectHoldTimeoutTest extends TestCase {
     public void test() throws Exception {
         BeeObjectHandle handle = null;
         try {
-            FastObjectPool pool = (FastObjectPool) TestUtil.getFieldValue(obs, "pool");
+            //FastObjectPool pool = (FastObjectPool) TestUtil.getFieldValue(obs, "pool");
 
             handle = obs.getObject();
             ObjectPoolMonitorVo monitorVo = obs.getPoolMonitorVo();
@@ -56,7 +55,7 @@ public class ObjectHoldTimeoutTest extends TestCase {
                 TestUtil.assertError("Using connections not as expected 0 after hold timeout");
 
             try {
-                Object v = handle.call("toString", new Class[0], new Object[0]);
+                handle.call("toString", new Class[0], new Object[0]);
                 System.out.println("handle isClosed:" + handle.isClosed());
 
                 TestUtil.assertError("must throw closed exception");

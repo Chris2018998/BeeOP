@@ -41,6 +41,7 @@ public class ObjectInterfaceNameTest extends TestCase {
                 TestUtil.assertError("Failed to get object");
 
             Book book = (Book) handle.getReflectProxy();
+            book.getName();
         } finally {
             if (handle != null)
                 handle.close();
