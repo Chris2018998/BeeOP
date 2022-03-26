@@ -8,7 +8,6 @@ package cn.beeop.test.pool;
 
 import cn.beeop.BeeObjectSource;
 import cn.beeop.BeeObjectSourceConfig;
-import cn.beeop.pool.FastObjectPool;
 import cn.beeop.pool.ObjectPoolMonitorVo;
 import cn.beeop.test.TestCase;
 import cn.beeop.test.TestUtil;
@@ -41,7 +40,7 @@ public class ObjectIdleTimeoutTest extends TestCase {
     }
 
     public void test() throws Exception {
-        FastObjectPool pool = (FastObjectPool) TestUtil.getFieldValue(obs, "pool");
+//        FastObjectPool pool = (FastObjectPool) TestUtil.getFieldValue(obs, "pool");
 //        CountDownLatch poolThreadLatch = (CountDownLatch) TestUtil.getFieldValue(pool, "poolThreadLatch");
 //        if (poolThreadLatch.getCount() > 0) poolThreadLatch.await();
 
