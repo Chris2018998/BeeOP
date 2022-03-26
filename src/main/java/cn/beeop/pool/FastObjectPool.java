@@ -556,6 +556,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                 try {
                     Runtime.getRuntime().removeShutdownHook(this.exitHook);
                 } catch (Throwable e) {
+                    //do nothing
                 }
                 Log.info("BeeOP({})has shutdown", this.poolName);
                 break;
@@ -735,6 +736,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                 try {
                     this.pool.closeIdleTimeoutPooledEntry();
                 } catch (Throwable e) {
+                    //do nothing
                 }
             }
         }

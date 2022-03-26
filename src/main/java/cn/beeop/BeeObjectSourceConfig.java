@@ -116,45 +116,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     //***************************************************************************************************************//
-    //                                     2: static check methods(3)                                                //
-    //***************************************************************************************************************//
-    //check object factory class
-    private static void checkObjectFactoryClass(Class factoryClass) {
-        if (factoryClass != null) {
-            String errorMsg = checkClass(factoryClass, RawObjectFactory.class, "object factory");
-            if (!isBlank(errorMsg)) throw new BeeObjectSourceConfigException(errorMsg);
-        }
-    }
-
-    //check object class
-    private static Constructor checkObjectClass(Class objectClass) {
-        if (objectClass != null) {
-            String errorMsg = checkClass(objectClass, (Class[]) null, "object");
-            if (!isBlank(errorMsg)) throw new BeeObjectSourceConfigException(errorMsg);
-            try {
-                return objectClass.getConstructor(EMPTY_CLASSES);
-            } catch (Exception e) {
-                throw new BeeObjectSourceConfigException("Error object class[" + objectClass.getName() + "],which must provide a constructor without parameter");
-            }
-        } else {
-            throw new BeeObjectSourceConfigException("Error object class can't be null");
-        }
-    }
-
-    //check object interface
-    private static void checkObjectInterfaces(Class[] interfaces) {
-        if (interfaces != null) {
-            for (int i = 0, l = interfaces.length; i < l; i++) {
-                if (interfaces[i] == null)
-                    throw new BeeObjectSourceConfigException("interfaces array[" + i + "]is null");
-                if (!interfaces[i].isInterface())
-                    throw new BeeObjectSourceConfigException("interfaces array[" + i + "]is not valid interface");
-            }
-        }
-    }
-
-    //***************************************************************************************************************//
-    //                                     3:configuration about pool inner control(33)                              //
+    //                                     2:configuration about pool inner control(33)                              //
     //***************************************************************************************************************//
     public String getPoolName() {
         return this.poolName;
@@ -293,7 +255,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
 
     //***************************************************************************************************************//
-    //                                     4: configuration about object creation(19)                                //
+    //                                     3: configuration about object creation(19)                                //
     //***************************************************************************************************************//
     public Class getObjectClass() {
         return this.objectClass;
@@ -403,7 +365,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     //***************************************************************************************************************//
-    //                                     5: configuration load from properties load (3)                            //
+    //                                     4: configuration load from properties load (3)                            //
     //***************************************************************************************************************//
     public void loadFromPropertiesFile(String filename) {
         if (isBlank(filename)) throw new IllegalArgumentException("Properties file can't be null");
@@ -431,6 +393,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             if (stream != null) try {
                 stream.close();
             } catch (Throwable e) {
+                //do nothing
             }
         }
     }
@@ -456,6 +419,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
             try {
                 count = Integer.parseInt(factoryPropertiesCount.trim());
             } catch (Throwable e) {
+                //do nothing
             }
             for (int i = 1; i <= count; i++)
                 this.addFactoryProperty(getPropertyValue(configProperties, "factoryProperties." + i));
@@ -497,7 +461,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     //***************************************************************************************************************//
-    //                                     6: configuration check and object factory create methods(4)               //
+    //                                     5: configuration check and object factory create methods(4)               //
     //***************************************************************************************************************//
     //check pool configuration
     public BeeObjectSourceConfig check() throws BeeObjectSourceConfigException {
@@ -522,6 +486,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         RawObjectFactory objectFactory = this.tryCreateObjectFactory(objectInterfaces);
         if (isBlank(poolName)) poolName = "FastPool-" + PoolNameIndex.getAndIncrement();
 
+        //3:create config object
         BeeObjectSourceConfig configCopy = new BeeObjectSourceConfig();
         copyTo(configCopy);
         configCopy.objectFactory = objectFactory;
@@ -582,7 +547,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
     private Class[] loadObjectInterfaces() throws BeeObjectSourceConfigException {
         Class[] objectInterfaces = this.objectInterfaces;
-        if (objectInterfaces == null && this.objectInterfaceNames != null && this.objectInterfaceNames.length > 0) {
+        if (objectInterfaces == null && this.objectInterfaceNames != null) {
             objectInterfaces = new Class[this.objectInterfaceNames.length];
             for (int i = 0; i < this.objectInterfaceNames.length; i++) {
                 try {
@@ -590,17 +555,23 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
                         throw new BeeObjectSourceConfigException("objectInterfaceNames[" + i + "]is empty or null");
                     objectInterfaces[i] = Class.forName(this.objectInterfaceNames[i]);
                 } catch (ClassNotFoundException e) {
-                    throw new BeeObjectSourceConfigException("Not found object interface:" + this.objectInterfaceNames[i]);
+                    throw new BeeObjectSourceConfigException("Not found interface:" + this.objectInterfaceNames[i]);
                 }
             }
         }
 
-        if (objectInterfaces != null && objectInterfaces.length > 0)
-            checkObjectInterfaces(objectInterfaces);
+        if (objectInterfaces != null) {
+            for (int i = 0, l = objectInterfaces.length; i < l; i++) {
+                if (objectInterfaces[i] == null)
+                    throw new BeeObjectSourceConfigException("interfaces array[" + i + "]is null");
+                if (!objectInterfaces[i].isInterface())
+                    throw new BeeObjectSourceConfigException("interfaces array[" + i + "]is not valid interface");
+            }
+        }
         return objectInterfaces;
     }
 
-    private RawObjectFactory tryCreateObjectFactory( Class[] objectInterfaces) throws BeeObjectSourceConfigException {
+    private RawObjectFactory tryCreateObjectFactory(Class[] objectInterfaces) throws BeeObjectSourceConfigException {
         //1: try to create factory from factory class/className
         Class objectFactoryClass = this.objectFactoryClass;
         if (objectFactoryClass == null && !isBlank(this.objectFactoryClassName)) {
@@ -612,8 +583,8 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         }
         if (objectFactoryClass != null) {
             try {
-                checkObjectFactoryClass(objectFactoryClass);//check factory class
-                RawObjectFactory factory = (RawObjectFactory) objectFactoryClass.getConstructor(EMPTY_CLASSES).newInstance();
+                Constructor constructor = getClassConstructor(objectFactoryClass, RawObjectFactory.class, "object factory");
+                RawObjectFactory factory = (RawObjectFactory) constructor.newInstance();
                 setPropertiesValue(factory, this.factoryProperties);
                 return factory;
             } catch (Throwable e) {
@@ -630,14 +601,9 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
                 throw new BeeObjectSourceConfigException("Not found object class:" + this.objectClassName);
             }
         }
+
         if (objectClass != null) {
-            if (objectInterfaces != null) {
-                for (Class interfaceClass : objectInterfaces) {
-                    String errorMsg = checkClass(objectClass, interfaceClass, "object class interface");
-                    if (!isBlank(errorMsg)) throw new BeeObjectSourceConfigException(errorMsg);
-                }
-            }
-            return new SimpleObjectFactory(BeeObjectSourceConfig.checkObjectClass(objectClass));
+            return new SimpleObjectFactory(getClassConstructor(objectClass, objectInterfaces, "object class"));
         } else {
             throw new BeeObjectSourceConfigException("Must set value to one of ['objectFactoryClassName','objectClassName']");
         }
