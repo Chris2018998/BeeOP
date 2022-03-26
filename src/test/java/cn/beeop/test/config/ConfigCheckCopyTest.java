@@ -55,9 +55,4 @@ public class ConfigCheckCopyTest extends TestCase {
         if (!Objects.deepEquals(config.getObjectInterfaceNames(), config2.getObjectInterfaceNames()))
             throw new BeeObjectSourceConfigException("Configuration 'objectInterfaceNames' check copy failed");
     }
-
-    private void testContainerField(BeeObjectSourceConfig config, BeeObjectSourceConfig config2, String propertyName) throws Exception {
-        Field field = BeeObjectSourceConfig.class.getDeclaredField(propertyName);
-        field.setAccessible(true);
-    }
 }
