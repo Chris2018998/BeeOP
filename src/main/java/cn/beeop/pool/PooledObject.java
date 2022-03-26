@@ -97,14 +97,14 @@ final class PooledObject implements Cloneable {
         }
     }
 
-    void recycleSelf() throws ObjectException {
+    void recycleSelf() throws Exception {
         try {
             this.handleInUsing = null;
             this.factory.reset(this.raw);
             this.pool.recycle(this);
         } catch (Throwable e) {
             this.pool.abandonOnReturn(this);
-            throw e instanceof ObjectException ? (ObjectException) e : new ObjectException(e);
+            throw e instanceof Exception ? (Exception) e : new ObjectException(e);
         }
     }
 

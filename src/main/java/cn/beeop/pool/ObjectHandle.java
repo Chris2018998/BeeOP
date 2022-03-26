@@ -7,7 +7,6 @@
 package cn.beeop.pool;
 
 import cn.beeop.BeeObjectHandle;
-import cn.beeop.pool.exception.ObjectException;
 
 import static cn.beeop.pool.PoolStaticCenter.*;
 
@@ -39,7 +38,7 @@ public final class ObjectHandle implements BeeObjectHandle {
         return this.isClosed;
     }
 
-    public final void close() throws ObjectException {
+    public final void close() throws Exception {
         synchronized (this) {//safe close
             if (this.isClosed) return;
             this.isClosed = true;
