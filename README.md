@@ -8,7 +8,7 @@
 
 ## :coffee: Introduction 
 
-BeeOP is a small JAVA object pool
+BeeOP: a small JAVA object pool
 
 ## :arrow_down: Download 
 Java7 or higher
