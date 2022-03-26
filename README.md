@@ -33,7 +33,6 @@ Test log file：[https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/Object
 
 Test source：[https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/BeeOP_Test.rar](https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/BeeOP_Test.rar)
 
-
 ## Example
 
 ```java
@@ -122,7 +121,6 @@ public class JavaBookFactory implements RawObjectFactory {
 
 9：Jmx support
 
- 
 ## configuration
 
 |     Field name         |       Description                               |   Remark                                                    |
@@ -131,11 +129,12 @@ public class JavaBookFactory implements RawObjectFactory {
 |fairMode               |boolean indicator for borrow fair mode           |true:fair mode,false:comepete mode;default is false         |
 |initialSize            |pooled object creation size when pool initialized|default is 0                                                |
 |maxActive              |max size for pooled object instances in pool     |default is 10                                               | 
-|borrowSemaphoreSize    |borrow concurrent thread size                    |default val=min(maxActive/2,cpu size)                       |                       
-|maxWait                |max wait time to borrow one object instance      |time unit is ms,default is 8000 ms                          |                       
+|borrowSemaphoreSize    |borrow concurrent thread size                    |default val=min(maxActive/2,cpu size)                       |                     
+|maxWait                |max wait time to borrow one object instance      |time unit is ms,default is 8000 ms                          |                     
 |idleTimeout            |max idle time of object instance in pool         |time unit is ms,default is 18000 ms                         |  
 |holdTimeout            |max inactive time hold by borrower               |time unit is ms,default is 300000 ms                        |  
-|forceCloseUsingOnClear |object close indicator when pool closing or reseting|true:close;false:wait object return, default is false    |            |delayTimeForNextClear   |park time to clear when checked object is in using state|effected  when forceCloseObject==true               |                              |idleCheckTimeInterval   |scan thread time interval to check idle object |time unit is ms,default is 300000 ms                         |
+|forceCloseUsingOnClear |object close indicator when pool closing or reseting|true:close;false:wait object return, default is false    |          
+|delayTimeForNextClear   |park time to clear when checked object is in using state|effected  when forceCloseObject==true               |                     
+|idleCheckTimeInterval   |scan thread time interval to check idle object |time unit is ms,default is 300000 ms                         |
 |objectFactoryClassName  |object factory class name                      |default is null                                              |
 |enableJmx               |JMX boolean indicator for pool                 |default is false                                             |
-
