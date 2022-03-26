@@ -40,7 +40,7 @@ public class ObjectInterfaceNameTest extends TestCase {
             if (handle == null)
                 TestUtil.assertError("Failed to get object");
             Book book = (Book) handle.getReflectProxy();
-            book.getName();
+            System.out.println("Book name:" + book.getName());
         } finally {
             if (handle != null)
                 handle.close();
