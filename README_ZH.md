@@ -7,10 +7,12 @@
  <a><img src="https://maven-badges.herokuapp.com/maven-central/com.github.chris2018998/beeop/badge.svg"></a>
 </p> 
 
-### :coffee: 简介 
+## :coffee: 简介 
+
 小蜜蜂对象池：一款轻量级Java对象池 
 
-### :arrow_down: 下载 
+## :arrow_down: 下载 
+
 Java7或更高
 ```xml
 <dependency>
@@ -20,7 +22,7 @@ Java7或更高
 </dependency>
 ```
 
-### 性能测试
+## 性能测试
 100万次借用/归还(1000线程 x1000次),获取时间分布,平均时间
 |  对象池名    | commons-pool2-2.9.0 | BeeOP0.3_Fair      | BeeOP0.3_Compete  |
 | ----------- |----------------     | -------------------| -------------      |  
@@ -32,8 +34,7 @@ Java7或更高
 
 源码位置：[https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/BeeOP_Test.rar](https://github.com/Chris2018998/BeeOP/blob/main/doc/temp/BeeOP_Test.rar)
 
-
-### 范例
+## 范例
 ```java
 public interface Book {
     public String getName();
@@ -99,7 +100,8 @@ public class JavaBookFactory implements RawObjectFactory {
  }
 ```
 
-### 功能支持
+## 功能支持
+
 1：对象借用超时
 
 2：对象借用支持公平与竞争模式
@@ -118,8 +120,9 @@ public class JavaBookFactory implements RawObjectFactory {
 
 9：支持JMX
 
----
-### 配置项说明
+
+## 配置项说明
+
 |             配置项      |   描述                          |   备注                                                      |
 | ---------------------  | ----------------------------    | -----------------------------------------------------------|
 | poolName	             |池名                              |如果未赋值则会自动产生一个                                      |
@@ -135,4 +138,3 @@ public class JavaBookFactory implements RawObjectFactory {
 | idleCheckTimeInterval  |对象闲置扫描线程间隔时间(毫秒)       |默认5分钟                                                   |
 | objectFactoryClassName |自定义的对象工厂类名                |默认为空                                                    |
 | enableJmx              |JMX监控支持开关                    |默认false                                                  |
-
