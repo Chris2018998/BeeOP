@@ -10,8 +10,6 @@ import cn.beeop.pool.ObjectPool;
 import cn.beeop.pool.ObjectPoolMonitorVo;
 import cn.beeop.pool.exception.PoolNotCreateException;
 
-import java.lang.reflect.Constructor;
-
 import static cn.beeop.pool.PoolStaticCenter.CommonLog;
 import static cn.beeop.pool.PoolStaticCenter.getClassConstructor;
 
@@ -48,8 +46,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
 
     private static ObjectPool createPool(BeeObjectSource os) throws Exception {
         Class<?> poolClass = Class.forName(os.getPoolImplementClassName());
-        Constructor constructor = getClassConstructor(poolClass, ObjectPool.class, "pool");
-        ObjectPool pool = (ObjectPool) constructor.newInstance();
+        ObjectPool pool = (ObjectPool) getClassConstructor(poolClass, ObjectPool.class, "pool").newInstance();
         pool.init(os);
         os.pool = pool;
         os.ready = true;
