@@ -120,7 +120,6 @@ public class JavaBookFactory implements RawObjectFactory {
 
 9：支持JMX
 
-
 ## 配置项说明
 
 |             配置项      |   描述                          |   备注                                                      |
