@@ -9,7 +9,7 @@
 
 ## :coffee: 简介 
 
-小蜜蜂对象池：一款小型Java对象池组件 
+BeeOP：一款小型Java对象池组件 
 
 ## :arrow_down: 下载 
 
