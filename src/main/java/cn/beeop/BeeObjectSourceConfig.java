@@ -222,7 +222,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public void setDelayTimeForNextClear(long delayTimeForNextClear) {
-        if (delayTimeForNextClear > 0) this.delayTimeForNextClear = delayTimeForNextClear;
+        if (delayTimeForNextClear >= 0) this.delayTimeForNextClear = delayTimeForNextClear;
     }
 
     public String getPoolImplementClassName() {
