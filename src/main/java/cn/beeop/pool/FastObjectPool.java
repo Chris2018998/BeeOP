@@ -659,14 +659,19 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //Method-5.12 create monitor vo
     private ObjectPoolMonitorVo createPoolMonitorVo(String poolMode) {
-        String hostIP = null;
-        try {
-            hostIP = InetAddress.getLocalHost().getHostAddress();
-        } catch (UnknownHostException e) {
-            Log.info("BeeOP({})failed to resolve pool hose ip", this.poolName);
-        }
+        ObjectPoolMonitorVo monitorVo = new ObjectPoolMonitorVo();
+        monitorVo.setPoolName(poolName);
+        monitorVo.setPoolMode(poolMode);
+        monitorVo.setPoolMaxSize(poolMaxSize);
         Thread currentThread = Thread.currentThread();
-        return new ObjectPoolMonitorVo(this.poolName, poolMode, this.poolMaxSize, hostIP, currentThread.getId(), currentThread.getName());
+        monitorVo.setThreadId(currentThread.getId());
+        monitorVo.setThreadName(currentThread.getName());
+        try {
+            monitorVo.setHostIP(InetAddress.getLocalHost().getHostAddress());
+        } catch (UnknownHostException e) {
+            Log.info("BeeCP({})failed to resolve pool hose ip", this.poolName);
+        }
+        return monitorVo;
     }
 
     //Method-5.12: pool monitor vo
