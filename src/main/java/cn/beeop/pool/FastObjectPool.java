@@ -520,11 +520,11 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         while (this.pooledArray.length > 0) {
             PooledObject[] array = this.pooledArray;
             for (PooledObject p : array) {
-                if (ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_CLOSED)) {
-                    this.removePooledEntry(p, source);
-                } else if (p.state == OBJECT_CLOSED) {
-                    this.removePooledEntry(p, source);
-                } else if (p.state == OBJECT_USING) {
+                final int state = p.state;
+                if (state == OBJECT_IDLE) {
+                    if (ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_CLOSED))
+                        this.removePooledEntry(p, source);
+                } else if (state == OBJECT_USING) {
                     BeeObjectHandle handleInUsing = p.handleInUsing;
                     if (handleInUsing != null) {
                         if (force || System.currentTimeMillis() - p.lastAccessTime - this.holdTimeoutMs >= 0L) {
@@ -535,6 +535,8 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                     } else {
                         this.removePooledEntry(p, source);
                     }
+                } else if (state == OBJECT_CLOSED) {
+                    this.removePooledEntry(p, source);
                 }
             } // for
             if (this.pooledArray.length > 0) LockSupport.parkNanos(this.delayTimeForNextClearNs);
