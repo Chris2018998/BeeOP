@@ -488,9 +488,10 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                 }
             }
 
-            ObjectPoolMonitorVo vo = getPoolMonitorVo();
-            if (this.printRuntimeLog)
+            if (this.printRuntimeLog) {
+                ObjectPoolMonitorVo vo = getPoolMonitorVo();
                 Log.info("BeeOP({})idle:{},using:{},semaphore-waiting:{},transfer-waiting:{}", this.poolName, vo.getIdleSize(), vo.getUsingSize(), vo.getSemaphoreWaitingSize(), vo.getTransferWaitingSize());
+            }
         }
     }
 
@@ -541,6 +542,11 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
             } // for
             if (this.pooledArray.length > 0) LockSupport.parkNanos(this.delayTimeForNextClearNs);
         } // while
+
+        if (this.printRuntimeLog) {
+            ObjectPoolMonitorVo vo = getPoolMonitorVo();
+            Log.info("BeeOP({})idle:{},using:{},semaphore-waiting:{},transfer-waiting:{}", this.poolName, vo.getIdleSize(), vo.getUsingSize(), vo.getSemaphoreWaitingSize(), vo.getTransferWaitingSize());
+        }
     }
 
     //Method-4.4: closed check
