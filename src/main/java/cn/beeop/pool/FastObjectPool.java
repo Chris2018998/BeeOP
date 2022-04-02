@@ -679,7 +679,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         Thread currentThread = Thread.currentThread();
         monitorVo.setThreadId(currentThread.getId());
         monitorVo.setThreadName(currentThread.getName());
-        monitorUUID = UUID.randomUUID().toString();
+        monitorUUID = "BeeOP_" + UUID.randomUUID().toString();
         monitorVo.setUUID(monitorUUID);
         try {
             monitorVo.setHostIP(InetAddress.getLocalHost().getHostAddress());
