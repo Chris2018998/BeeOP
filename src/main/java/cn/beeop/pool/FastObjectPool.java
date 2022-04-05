@@ -23,7 +23,6 @@ import java.lang.ref.WeakReference;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Iterator;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -77,7 +76,6 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     private ObjectPoolMonitorVo monitorVo;
     private ObjectPoolHook exitHook;
     private boolean printRuntimeLog;
-    private String monitorUUID;
 
     //***************************************************************************************************************//
     //                1: Pool initialize and Pooled object create/remove methods(4)                                  //                                                                                  //
@@ -679,8 +677,6 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         Thread currentThread = Thread.currentThread();
         monitorVo.setThreadId(currentThread.getId());
         monitorVo.setThreadName(currentThread.getName());
-        monitorUUID = "BeeOP_" + UUID.randomUUID().toString();
-        monitorVo.setUUID(monitorUUID);
         try {
             monitorVo.setHostIP(InetAddress.getLocalHost().getHostAddress());
         } catch (UnknownHostException e) {
@@ -693,7 +689,6 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     public ObjectPoolMonitorVo getPoolMonitorVo() {
         int totSize = this.getTotalSize();
         int idleSize = this.getIdleSize();
-        this.monitorVo.setUUID(monitorUUID);
         this.monitorVo.setPoolState(poolState);
         this.monitorVo.setIdleSize(idleSize);
         this.monitorVo.setUsingSize(totSize - idleSize);
