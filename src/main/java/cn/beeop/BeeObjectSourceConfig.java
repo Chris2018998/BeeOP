@@ -464,7 +464,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     //                                     5: configuration check and object factory create methods(4)               //
     //***************************************************************************************************************//
     //check pool configuration
-    public BeeObjectSourceConfig check() throws BeeObjectSourceConfigException {
+    public BeeObjectSourceConfig check() {
         if (maxActive <= 0)
             throw new BeeObjectSourceConfigException("maxActive must be greater than zero");
         if (initialSize < 0)
@@ -571,7 +571,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         return objectInterfaces;
     }
 
-    private RawObjectFactory tryCreateObjectFactory(Class[] objectInterfaces) throws BeeObjectSourceConfigException {
+    private RawObjectFactory tryCreateObjectFactory(Class[] objectInterfaces) {
         //1: try to create factory from factory class/className
         Class objectFactoryClass = this.objectFactoryClass;
         if (objectFactoryClass == null && !isBlank(this.objectFactoryClassName)) {

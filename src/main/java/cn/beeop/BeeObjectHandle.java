@@ -15,24 +15,24 @@ package cn.beeop;
 public interface BeeObjectHandle {
 
     /**
-     * return raw object to pool and remark proxy object as closed
+     * return raw object to pool and remark statement object as closed
      *
      * @throws Exception if access error occurs
      */
     void close() throws Exception;
 
     /**
-     * query proxy is whether closed
+     * query statement is whether closed
      *
-     * @return proxy state
+     * @return statement state
      * @throws Exception if access error occurs
      */
     boolean isClosed() throws Exception;
 
     /*
-     *  return object reflection proxy to user,if 'objectInterfaces' not config,then return null
+     *  return object reflection statement to user,if 'objectInterfaces' not config,then return null
      *
-     * @return proxy instance
+     * @return statement instance
      * @throws Exception if access error occurs
      */
     Object getReflectProxy() throws Exception;
