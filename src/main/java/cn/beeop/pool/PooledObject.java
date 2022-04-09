@@ -104,11 +104,10 @@ final class PooledObject implements Cloneable {
             this.pool.recycle(this);
         } catch (Throwable e) {
             this.pool.abandonOnReturn(this);
-            throw e instanceof Exception ? (Exception) e : new ObjectException(e);
+            throw e;
         }
     }
-
-
+    
     //***************************************************************************************************************//
     //                                  3: reflect methods(2)                                                        //                                                                                  //
     //***************************************************************************************************************//
