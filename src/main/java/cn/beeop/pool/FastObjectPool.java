@@ -132,7 +132,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         this.servantState = new AtomicInteger(THREAD_WORKING);
         this.idleScanState = new AtomicInteger(THREAD_WORKING);
         this.idleScanThread = new IdleTimeoutScanThread(this);
-        this.monitorVo = this.createPoolMonitorVo(poolMode);
+        this.monitorVo = this.createPoolMonitorVo();
         this.exitHook = new ObjectPoolHook(this);
         Runtime.getRuntime().addShutdownHook(this.exitHook);
         this.registerJmx();
@@ -170,8 +170,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         } catch (Throwable e) {
             for (PooledObject pooledEntry : this.pooledArray)
                 this.removePooledEntry(pooledEntry, DESC_RM_INIT);
-            if (initSize > 0)
-                throw e instanceof ObjectException ? (ObjectException) e : new ObjectException(e);
+            if (initSize > 0) throw e;
         }
     }
 
@@ -672,7 +671,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     }
 
     //Method-5.12 create monitor vo
-    private ObjectPoolMonitorVo createPoolMonitorVo(String poolMode) {
+    private ObjectPoolMonitorVo createPoolMonitorVo() {
         Thread currentThread = Thread.currentThread();
         this.poolThreadId = currentThread.getId();
         this.poolThreadName = currentThread.getName();
