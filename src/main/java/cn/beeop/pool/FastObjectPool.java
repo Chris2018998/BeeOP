@@ -49,6 +49,10 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     private final Object synLock = new Object();
 
     private String poolName;
+    private String poolMode;
+    private String poolHostIP;
+    private long poolThreadId;
+    private String poolThreadName;
     private int poolMaxSize;
     private volatile int poolState;
     private int semaphoreSize;
@@ -103,7 +107,6 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                 this.poolConfig.getExcludeMethodNames());
         this.createInitObjects(this.poolConfig.getInitialSize());
 
-        String poolMode;
         if (this.poolConfig.isFairMode()) {
             poolMode = "fair";
             this.transferPolicy = new FairTransferPolicy();
@@ -670,30 +673,34 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //Method-5.12 create monitor vo
     private ObjectPoolMonitorVo createPoolMonitorVo(String poolMode) {
-        ObjectPoolMonitorVo monitorVo = new ObjectPoolMonitorVo();
-        monitorVo.setPoolName(poolName);
-        monitorVo.setPoolMode(poolMode);
-        monitorVo.setPoolMaxSize(poolMaxSize);
         Thread currentThread = Thread.currentThread();
-        monitorVo.setThreadId(currentThread.getId());
-        monitorVo.setThreadName(currentThread.getName());
+        this.poolThreadId = currentThread.getId();
+        this.poolThreadName = currentThread.getName();
+
         try {
-            monitorVo.setHostIP(InetAddress.getLocalHost().getHostAddress());
+            this.poolHostIP = (InetAddress.getLocalHost().getHostAddress());
         } catch (UnknownHostException e) {
-            Log.info("BeeCP({})failed to resolve pool hose ip", this.poolName);
+            Log.info("BeeOP({})failed to resolve pool hose ip", this.poolName);
         }
-        return monitorVo;
+        return new ObjectPoolMonitorVo();
     }
 
     //Method-5.12: pool monitor vo
     public ObjectPoolMonitorVo getPoolMonitorVo() {
+        monitorVo.setPoolName(poolName);
+        monitorVo.setPoolMode(poolMode);
+        monitorVo.setPoolMaxSize(poolMaxSize);
+        monitorVo.setThreadId(poolThreadId);
+        monitorVo.setThreadName(poolThreadName);
+        monitorVo.setHostIP(poolHostIP);
+
         int totSize = this.getTotalSize();
         int idleSize = this.getIdleSize();
-        this.monitorVo.setPoolState(poolState);
-        this.monitorVo.setIdleSize(idleSize);
-        this.monitorVo.setUsingSize(totSize - idleSize);
-        this.monitorVo.setSemaphoreWaitingSize(this.getSemaphoreWaitingSize());
-        this.monitorVo.setTransferWaitingSize(this.getTransferWaitingSize());
+        monitorVo.setPoolState(poolState);
+        monitorVo.setIdleSize(idleSize);
+        monitorVo.setUsingSize(totSize - idleSize);
+        monitorVo.setSemaphoreWaitingSize(this.getSemaphoreWaitingSize());
+        monitorVo.setTransferWaitingSize(this.getTransferWaitingSize());
         return this.monitorVo;
     }
 
