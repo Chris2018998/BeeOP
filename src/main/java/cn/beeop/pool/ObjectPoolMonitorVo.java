@@ -15,7 +15,7 @@ package cn.beeop.pool;
 
 public class ObjectPoolMonitorVo {
     private String osId;
-    private String osUUId;
+    private String osUUID;
     private String hostIP;
     private long threadId;
     private String threadName;
@@ -37,13 +37,9 @@ public class ObjectPoolMonitorVo {
         this.osId = osId;
     }
 
-    public String getOsUUId() {
-        return osUUId;
-    }
+    public String getOsUUID() { return osUUID; }
 
-    void setOsUUId(String osUUId) {
-        this.osUUId = osUUId;
-    }
+     void setOsUUID(String osUUID) { this.osUUID = osUUID; }
 
     public String getHostIP() {
         return hostIP;
