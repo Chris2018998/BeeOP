@@ -416,6 +416,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     }
 
     public final void onTransferFail(PooledObject p) {
+        //do nothing
     }
 
     //***************************************************************************************************************//
@@ -714,6 +715,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         }
 
         public final void beforeTransfer(PooledObject p) {
+            //do nothing
         }
 
         public final boolean tryCatch(PooledObject p) {

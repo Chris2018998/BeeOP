@@ -37,9 +37,13 @@ public class ObjectPoolMonitorVo {
         this.osId = osId;
     }
 
-    public String getOsUUID() { return osUUID; }
+    public String getOsUUID() {
+        return osUUID;
+    }
 
-     void setOsUUID(String osUUID) { this.osUUID = osUUID; }
+    void setOsUUID(String osUUID) {
+        this.osUUID = osUUID;
+    }
 
     public String getHostIP() {
         return hostIP;
