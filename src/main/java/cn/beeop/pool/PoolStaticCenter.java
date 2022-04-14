@@ -28,11 +28,11 @@ import java.util.*;
  * @version 1.0
  */
 public class PoolStaticCenter {
-    public static final Class[] EMPTY_CLASSES = new Class[0];
-    public static final Object[] EMPTY_PARAMETERS = new Class[0];
-    public static final String[] EMPTY_CLASS_NAMES = new String[0];
     public static final int NCPUS = Runtime.getRuntime().availableProcessors();
     public static final Logger CommonLog = LoggerFactory.getLogger(PoolStaticCenter.class);
+    public static final Class[] EMPTY_CLASSES = new Class[0];
+    public static final String[] EMPTY_CLASS_NAMES = new String[0];
+    private static final Object[] EMPTY_PARAMETERS = new Object[0];
 
     //pool object state
     static final int OBJECT_IDLE = 0;
