@@ -11,7 +11,7 @@ import cn.beeop.pool.ObjectPoolMonitorVo;
 import cn.beeop.pool.exception.PoolNotCreateException;
 
 import static cn.beeop.pool.PoolStaticCenter.CommonLog;
-import static cn.beeop.pool.PoolStaticCenter.getClassConstructor;
+import static cn.beeop.pool.PoolStaticCenter.createClassInstance;
 
 /**
  * Bee Object object source
@@ -46,7 +46,8 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
 
     private static ObjectPool createPool(BeeObjectSource os) throws Exception {
         Class<?> poolClass = Class.forName(os.getPoolImplementClassName());
-        ObjectPool pool = (ObjectPool) getClassConstructor(poolClass, ObjectPool.class, "pool").newInstance();
+        ObjectPool pool = (ObjectPool) createClassInstance(poolClass, ObjectPool.class, "pool");
+
         pool.init(os);
         os.pool = pool;
         os.ready = true;

@@ -11,7 +11,6 @@ import cn.beeop.pool.SimpleObjectFactory;
 
 import java.io.File;
 import java.io.InputStream;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
@@ -583,8 +582,7 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         }
         if (objectFactoryClass != null) {
             try {
-                Constructor constructor = getClassConstructor(objectFactoryClass, RawObjectFactory.class, "object factory");
-                RawObjectFactory factory = (RawObjectFactory) constructor.newInstance();
+                RawObjectFactory factory = (RawObjectFactory) createClassInstance(objectFactoryClass, RawObjectFactory.class, "object factory");
                 setPropertiesValue(factory, this.factoryProperties);
                 return factory;
             } catch (Throwable e) {
@@ -603,7 +601,11 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
         }
 
         if (objectClass != null) {
-            return new SimpleObjectFactory(getClassConstructor(objectClass, objectInterfaces, "object class"));
+            try {
+                return new SimpleObjectFactory(getConstructor(objectClass, objectInterfaces, "object class"));
+            } catch (Exception e) {
+                throw new BeeObjectSourceConfigException("Not found a valid constructor without parameters in class:" + objectClass.getName());
+            }
         } else {
             throw new BeeObjectSourceConfigException("Must set value to one of ['objectFactoryClassName','objectClassName']");
         }

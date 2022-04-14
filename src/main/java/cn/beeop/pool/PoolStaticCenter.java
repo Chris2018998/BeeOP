@@ -29,6 +29,7 @@ import java.util.*;
  */
 public class PoolStaticCenter {
     public static final Class[] EMPTY_CLASSES = new Class[0];
+    public static final Object[] EMPTY_PARAMETERS = new Class[0];
     public static final String[] EMPTY_CLASS_NAMES = new String[0];
     public static final int NCPUS = Runtime.getRuntime().availableProcessors();
     public static final Logger CommonLog = LoggerFactory.getLogger(PoolStaticCenter.class);
@@ -291,12 +292,17 @@ public class PoolStaticCenter {
     //                               5:class check(3)                                                           //
     //***************************************************************************************************************//
     //check subclass,if failed,then return error message;
-    public static Constructor getClassConstructor(Class objectClass, Class parentClass, String objectClassType) {
-        return getClassConstructor(objectClass, parentClass != null ? new Class[]{parentClass} : null, objectClassType);
+    public static Object createClassInstance(Class objectClass, Class parentClass, String objectClassType) throws Exception {
+        return createClassInstance(objectClass, parentClass != null ? new Class[]{parentClass} : null, objectClassType);
     }
 
     //check subclass,if failed,then return error message;
-    public static Constructor getClassConstructor(Class objectClass, Class[] parentClasses, String objectClassType) {
+    public static Object createClassInstance(Class objectClass, Class[] parentClasses, String objectClassType) throws Exception {
+        return getConstructor(objectClass, parentClasses, objectClassType).newInstance(EMPTY_PARAMETERS);
+    }
+
+    //check subclass,if failed,then return error message;
+    public static Constructor getConstructor(Class objectClass, Class[] parentClasses, String objectClassType) throws Exception {
         //1:check class abstract modifier
         if (Modifier.isAbstract(objectClass.getModifiers()))
             throw new BeeObjectSourceConfigException("Error " + objectClassType + " class[" + objectClass.getName() + "],which can't be an abstract class");
@@ -315,12 +321,9 @@ public class PoolStaticCenter {
             if (!isSubClass)
                 throw new BeeObjectSourceConfigException("Error " + objectClassType + " class[" + objectClass.getName() + "],which must extend from one of class[" + getClassName(parentClasses) + "]");
         }
+
         //4:check class constructor
-        try {
-            return objectClass.getConstructor(EMPTY_CLASSES);
-        } catch (NoSuchMethodException e) {
-            throw new BeeObjectSourceConfigException("Error " + objectClassType + " class[" + objectClass.getName() + "],which must provide a constructor without parameter");
-        }
+        return objectClass.getConstructor(EMPTY_CLASSES);
     }
 
     private static String getClassName(Class[] classes) {
