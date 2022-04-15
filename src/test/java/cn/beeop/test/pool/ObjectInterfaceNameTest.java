@@ -39,7 +39,7 @@ public class ObjectInterfaceNameTest extends TestCase {
             handle = obs.getObject();
             if (handle == null)
                 TestUtil.assertError("Failed to get object");
-            Book book = (Book) handle.getReflectProxy();
+            Book book = (Book) handle.getObjectProxy();
             System.out.println("Book name:" + book.getName());
         } finally {
             if (handle != null)

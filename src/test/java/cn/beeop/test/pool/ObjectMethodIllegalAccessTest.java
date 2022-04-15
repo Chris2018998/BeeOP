@@ -58,7 +58,7 @@ public class ObjectMethodIllegalAccessTest extends TestCase {
 
     public void test2(BeeObjectHandle handle) throws Exception {
         try {
-            Book book = (Book) handle.getReflectProxy();
+            Book book = (Book) handle.getObjectProxy();
             System.out.println(book.getName());
             TestUtil.assertError("Proxy method illegal access test fail");
         } catch (UndeclaredThrowableException e) {

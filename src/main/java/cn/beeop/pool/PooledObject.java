@@ -7,9 +7,7 @@
 package cn.beeop.pool;
 
 import cn.beeop.RawObjectFactory;
-import cn.beeop.pool.exception.ObjectException;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
@@ -26,7 +24,7 @@ import static java.lang.System.currentTimeMillis;
  * @version 1.0
  */
 final class PooledObject implements Cloneable {
-    private static final ConcurrentHashMap<Object, Method> ObjectMethodMap = new ConcurrentHashMap<Object, Method>(16);
+    private static final ConcurrentHashMap<Object, Method> MethodMap = new ConcurrentHashMap<Object, Method>(16);
     private final ObjectPool pool;
     private final RawObjectFactory factory;
     private final Class[] objectInterfaces;
@@ -121,29 +119,18 @@ final class PooledObject implements Cloneable {
     Object call(String name, Class[] types, Object[] params) throws Exception {
         if (this.excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
 
-        Object key = new PooledObject.MethodCacheKey(name, types);
-        Method method = PooledObject.ObjectMethodMap.get(key);
-        try {
-            if (method == null) {
-                method = this.rawClass.getMethod(name, types);
-                Method mapMethod = PooledObject.ObjectMethodMap.putIfAbsent(key, method);
-                if (mapMethod != null) method = mapMethod;
-            }
+        Object key = new MethodCacheKey(name, types);
+        Method method = MethodMap.get(key);
 
-            Object v = method.invoke(this.raw, params);
-            this.updateAccessTime();
-            return v;
-        } catch (NoSuchMethodException e) {
-            throw new ObjectException(e);
-        } catch (IllegalAccessException e) {
-            throw new ObjectException(e);
-        } catch (InvocationTargetException e) {
-            if (e.getCause() != null) {
-                throw new ObjectException(e.getCause());
-            } else {
-                throw new ObjectException(e);
-            }
+        if (method == null) {
+            method = this.rawClass.getMethod(name, types);
+            Method mapMethod = MethodMap.put(key, method);
+            if (mapMethod != null) method = mapMethod;
         }
+
+        Object v = method.invoke(this.raw, params);
+        this.updateAccessTime();
+        return v;
     }
 
     //***************************************************************************************************************//
@@ -167,7 +154,7 @@ final class PooledObject implements Cloneable {
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || this.getClass() != o.getClass()) return false;
-            PooledObject.MethodCacheKey that = (PooledObject.MethodCacheKey) o;
+            MethodCacheKey that = (MethodCacheKey) o;
             return this.name.equals(that.name) &&
                     Arrays.equals(this.types, that.types);
         }

@@ -21,7 +21,7 @@ import static cn.beeop.pool.PoolStaticCenter.ObjectMethodForbiddenException;
  * @author Chris.Liao
  * @version 1.0
  */
-public final class ObjectReflectHandler implements InvocationHandler {
+final class ObjectReflectHandler implements InvocationHandler {
     private final Object raw;
     private final PooledObject p;
     private final BeeObjectHandle owner;//owner

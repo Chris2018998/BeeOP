@@ -19,8 +19,8 @@ import static cn.beeop.pool.PoolStaticCenter.*;
 public final class ObjectHandle implements BeeObjectHandle {
     private final PooledObject p;
     private boolean isClosed;
-    private Object reflectProxy;
-    private boolean reflectProxyCreated;
+    private Object objectProxy;
+    private boolean proxyCreated;
 
     ObjectHandle(PooledObject p) {
         this.p = p;
@@ -46,16 +46,16 @@ public final class ObjectHandle implements BeeObjectHandle {
         this.p.recycleSelf();
     }
 
-    public Object getReflectProxy() throws Exception {
+    public Object getObjectProxy() throws Exception {
         if (this.isClosed) throw ObjectClosedException;
-        if (this.reflectProxyCreated) return this.reflectProxy;
+        if (this.proxyCreated) return this.objectProxy;
         synchronized (this) {
-            if (reflectProxy == null) {
-                this.reflectProxy = this.p.createReflectProxy(this);
-                this.reflectProxyCreated = true;
+            if (objectProxy == null) {
+                this.objectProxy = this.p.createReflectProxy(this);
+                this.proxyCreated = true;
             }
         }
-        return this.reflectProxy;
+        return this.objectProxy;
     }
 
     //***************************************************************************************************************//

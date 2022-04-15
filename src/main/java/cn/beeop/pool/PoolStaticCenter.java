@@ -32,8 +32,6 @@ public class PoolStaticCenter {
     public static final Logger CommonLog = LoggerFactory.getLogger(PoolStaticCenter.class);
     public static final Class[] EMPTY_CLASSES = new Class[0];
     public static final String[] EMPTY_CLASS_NAMES = new String[0];
-    private static final Object[] EMPTY_PARAMETERS = new Object[0];
-
     //pool object state
     static final int OBJECT_IDLE = 0;
     static final int OBJECT_USING = 1;
@@ -54,13 +52,13 @@ public class PoolStaticCenter {
     static final String DESC_RM_CLOSED = "closed";
     static final String DESC_RM_CLEAR = "clear";
     static final String DESC_RM_DESTROY = "destroy";
-
     static final Exception RequestTimeoutException = new ObjectException("Request timeout");
     static final Exception RequestInterruptException = new ObjectException("Request interrupted");
     static final Exception PoolCloseException = new PoolClosedException("Pool has shut down or in clearing");
     static final Exception ObjectClosedException = new ObjectException("No operations allowed after object handle closed");
     static final Exception ObjectMethodForbiddenException = new ObjectException("Method illegal access");
     static final ClassLoader PoolClassLoader = FastObjectPool.class.getClassLoader();
+    private static final Object[] EMPTY_PARAMETERS = new Object[0];
     private static final String Separator_MiddleLine = "-";
     private static final String Separator_UnderLine = "_";
 
