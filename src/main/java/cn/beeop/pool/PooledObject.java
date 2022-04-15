@@ -9,7 +9,6 @@ package cn.beeop.pool;
 import cn.beeop.RawObjectFactory;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,9 +26,7 @@ final class PooledObject implements Cloneable {
     private static final ConcurrentHashMap<Object, Method> MethodMap = new ConcurrentHashMap<Object, Method>(16);
     private final ObjectPool pool;
     private final RawObjectFactory factory;
-    private final Class[] objectInterfaces;
     private final Set<String> excludeMethodNames;
-    private final boolean supportReflectProxy;
 
     Object raw;
     volatile int state;
@@ -40,26 +37,10 @@ final class PooledObject implements Cloneable {
     //***************************************************************************************************************//
     //                                  1: Pooled entry create/clone methods(2)                                      //                                                                                  //
     //***************************************************************************************************************//
-    PooledObject(ObjectPool pool, RawObjectFactory factory, Class[] objectInterfaces, Set<String> excludeMethodNames) {
+    PooledObject(ObjectPool pool, RawObjectFactory factory, Set<String> excludeMethodNames) {
         this.pool = pool;
         this.factory = factory;
-        this.objectInterfaces = objectInterfaces;
         this.excludeMethodNames = excludeMethodNames;
-
-        if (objectInterfaces == null || objectInterfaces.length == 0) {
-            this.supportReflectProxy = false;
-        } else {
-            Throwable cause = null;
-            try {
-                Proxy.newProxyInstance(
-                        PoolClassLoader,
-                        objectInterfaces,
-                        new ObjectReflectHandler(this, null, excludeMethodNames));
-            } catch (Throwable e) {
-                cause = e;
-            }
-            this.supportReflectProxy = cause == null;
-        }
     }
 
     PooledObject setDefaultAndCopy(Object raw, int state) throws Exception {
@@ -74,7 +55,7 @@ final class PooledObject implements Cloneable {
     }
 
     //***************************************************************************************************************//
-    //                                  2: Pooled entry business methods(4)                                          //                                                                                  //
+    //                               2: Pooled entry business methods(4)                                             //                                                                                  //
     //***************************************************************************************************************//
     public String toString() {
         return this.raw.toString();
@@ -109,13 +90,6 @@ final class PooledObject implements Cloneable {
     //***************************************************************************************************************//
     //                                  3: reflect methods(2)                                                        //                                                                                  //
     //***************************************************************************************************************//
-    Object createReflectProxy(ObjectHandle handle) {
-        return this.supportReflectProxy ? Proxy.newProxyInstance(
-                PoolClassLoader,
-                this.objectInterfaces,
-                new ObjectReflectHandler(this, handle, this.excludeMethodNames)) : null;
-    }
-
     Object call(String name, Class[] types, Object[] params) throws Exception {
         if (this.excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
 

@@ -20,7 +20,6 @@ public final class ObjectHandle implements BeeObjectHandle {
     private final PooledObject p;
     private boolean isClosed;
     private Object objectProxy;
-    private boolean proxyCreated;
 
     ObjectHandle(PooledObject p) {
         this.p = p;
@@ -46,16 +45,13 @@ public final class ObjectHandle implements BeeObjectHandle {
         this.p.recycleSelf();
     }
 
-    public Object getObjectProxy() throws Exception {
+    public final Object getObjectProxy() throws Exception {
         if (this.isClosed) throw ObjectClosedException;
-        if (this.proxyCreated) return this.objectProxy;
-        synchronized (this) {
-            if (objectProxy == null) {
-                this.objectProxy = this.p.createReflectProxy(this);
-                this.proxyCreated = true;
-            }
-        }
         return this.objectProxy;
+    }
+
+    void setObjectProxy(Object objectProxy) {
+        this.objectProxy = objectProxy;
     }
 
     //***************************************************************************************************************//

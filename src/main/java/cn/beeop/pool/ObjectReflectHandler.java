@@ -21,26 +21,31 @@ import static cn.beeop.pool.PoolStaticCenter.ObjectMethodForbiddenException;
  * @author Chris.Liao
  * @version 1.0
  */
-final class ObjectReflectHandler implements InvocationHandler {
-    private final Object raw;
-    private final PooledObject p;
-    private final BeeObjectHandle owner;//owner
+final class ObjectReflectHandler implements InvocationHandler, Cloneable {
     private final Set<String> excludeMethodNames;
+    private Object raw;
+    private PooledObject p;
+    private BeeObjectHandle owner;
 
-    ObjectReflectHandler(PooledObject p, BeeObjectHandle handle, Set<String> excludeMethodNames) {
-        this.p = p;
-        raw = p.raw;
-        owner = handle;
+    ObjectReflectHandler(Set<String> excludeMethodNames) {
         this.excludeMethodNames = excludeMethodNames;
+    }
+
+    final ObjectReflectHandler copy(PooledObject p, BeeObjectHandle handle) throws Exception {
+        ObjectReflectHandler handler = (ObjectReflectHandler) super.clone();
+        handler.p = p;
+        handler.raw = p.raw;
+        handler.owner = handle;
+        return handler;
     }
 
     //reflect method
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        if (this.owner.isClosed()) throw ObjectClosedException;
-        if (this.excludeMethodNames.contains(method.getName())) throw ObjectMethodForbiddenException;
+        if (owner.isClosed()) throw ObjectClosedException;
+        if (excludeMethodNames.contains(method.getName())) throw ObjectMethodForbiddenException;
 
         Object v = method.invoke(this.raw, args);
-        this.p.updateAccessTime();
+        p.updateAccessTime();
         return v;
     }
 }
