@@ -29,7 +29,6 @@ final class PooledObject implements Cloneable {
     private final RawObjectFactory factory;
     private final Class[] objectInterfaces;
     private final Set<String> excludeMethodNames;
-    private final boolean supportObjectProxy;
 
     Object raw;
     volatile int state;
@@ -45,7 +44,6 @@ final class PooledObject implements Cloneable {
         this.factory = factory;
         this.objectInterfaces = objectInterfaces;
         this.excludeMethodNames = excludeMethodNames;
-        this.supportObjectProxy = objectInterfaces != null && objectInterfaces.length > 0;
     }
 
     PooledObject setDefaultAndCopy(Object raw, int state) throws Exception {
@@ -58,7 +56,6 @@ final class PooledObject implements Cloneable {
         p.lastAccessTime = currentTimeMillis();//first time
         return p;
     }
-
 
     //***************************************************************************************************************//
     //                               2: Pooled entry business methods(4)                                             //                                                                                  //
@@ -97,25 +94,24 @@ final class PooledObject implements Cloneable {
     //                                  3: reflect methods(2)                                                        //                                                                                  //
     //***************************************************************************************************************//
     final Object createObjectProxy(ObjectHandle handle) {
-        return supportObjectProxy ? Proxy.newProxyInstance(
+        return Proxy.newProxyInstance(
                 PoolClassLoader,
                 objectInterfaces,
-                new ObjectReflectHandler(this, handle, this.excludeMethodNames)) : null;
+                new ObjectReflectHandler(this, handle, excludeMethodNames));
     }
 
     final Object call(String name, Class[] types, Object[] params) throws Exception {
-        if (this.excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
+        if (excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
 
         Object key = new MethodCacheKey(name, types);
         Method method = MethodMap.get(key);
 
         if (method == null) {
-            method = this.rawClass.getMethod(name, types);
-            Method mapMethod = MethodMap.put(key, method);
-            if (mapMethod != null) method = mapMethod;
+            method = rawClass.getMethod(name, types);
+            MethodMap.put(key, method);
         }
 
-        Object v = method.invoke(this.raw, params);
+        Object v = method.invoke(raw, params);
         this.updateAccessTime();
         return v;
     }

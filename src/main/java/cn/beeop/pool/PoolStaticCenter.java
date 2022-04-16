@@ -65,12 +65,6 @@ public class PoolStaticCenter {
     //***************************************************************************************************************//
     //                               1: Handle create/close methods(2)                                                  //
     //***************************************************************************************************************//
-    // Method-2.8:create object handle
-    static BeeObjectHandle createObjectHandle(PooledObject p, Borrower b) {
-        b.lastUsed = p;
-        return new ObjectHandle(p);
-    }
-
     static void tryClosedProxyHandle(BeeObjectHandle handle) {
         try {
             handle.close();

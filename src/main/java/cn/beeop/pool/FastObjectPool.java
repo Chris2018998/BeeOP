@@ -67,6 +67,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     private long delayTimeForNextClearNs;//nanoseconds
     private PooledObject templatePooledObject;
     private ObjectTransferPolicy transferPolicy;
+    private ObjectHandleFactory handleFactory;
     private RawObjectFactory objectFactory;
     private volatile PooledObject[] pooledArray;
 
@@ -101,9 +102,14 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         this.poolMaxSize = this.poolConfig.getMaxActive();
         this.objectFactory = this.poolConfig.getObjectFactory();
         this.pooledArray = new PooledObject[0];
-        this.templatePooledObject = new PooledObject(this,
-                objectFactory, poolConfig.getObjectInterfaces(), poolConfig.getExcludeMethodNames());
+
+        Class[] objectInterfaces = poolConfig.getObjectInterfaces();
+        this.templatePooledObject = new PooledObject(this, objectFactory, objectInterfaces, poolConfig.getExcludeMethodNames());
         this.createInitObjects(this.poolConfig.getInitialSize());
+        if (objectInterfaces != null && objectInterfaces.length > 0)
+            handleFactory = new ObjectHandleWithProxyFactory();
+        else
+            handleFactory = new ObjectHandleFactory();
 
         if (this.poolConfig.isFairMode()) {
             poolMode = "fair";
@@ -242,7 +248,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         if (b != null) {
             PooledObject p = b.lastUsed;
             if (p != null && p.state == OBJECT_IDLE && ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING)) {
-                if (this.testOnBorrow(p)) return createObjectHandle(p, b);
+                if (this.testOnBorrow(p)) return handleFactory.createHandle(p, b);
                 b.lastUsed = null;
             }
         } else {
@@ -261,7 +267,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         try {//semaphore acquired
             //2:try search one or create one
             PooledObject p = this.searchOrCreate();
-            if (p != null) return createObjectHandle(p, b);
+            if (p != null) return handleFactory.createHandle(p, b);
 
             //3:try to get one transferred one
             b.state = BOWER_NORMAL;
@@ -277,7 +283,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                     p = (PooledObject) s;
                     if (this.transferPolicy.tryCatch(p) && this.testOnBorrow(p)) {
                         this.waitQueue.remove(b);
-                        return createObjectHandle(p, b);
+                        return handleFactory.createHandle(p, b);
                     }
                 } else if (s instanceof Throwable) {
                     this.waitQueue.remove(b);
