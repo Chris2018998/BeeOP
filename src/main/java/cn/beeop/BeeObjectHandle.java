@@ -13,6 +13,7 @@ package cn.beeop;
  * @version 1.0
  */
 public interface BeeObjectHandle {
+
     void close() throws Exception;
 
     boolean isClosed() throws Exception;

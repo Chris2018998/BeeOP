@@ -30,13 +30,15 @@ public class ObjectHandleWithProxy extends ObjectHandle {
         if (proxyCreated) return objectProxy;
 
         synchronized (this) {
-            try {
-                objectProxy = Proxy.newProxyInstance(
-                        PoolClassLoader,
-                        p.objectInterfaces,
-                        new ObjectReflectHandler(p, this));
-            } finally {
-                proxyCreated = true;
+            if (!proxyCreated) {
+                try {
+                    objectProxy = Proxy.newProxyInstance(
+                            PoolClassLoader,
+                            p.objectInterfaces,
+                            new ObjectReflectHandler(p, this));
+                } finally {
+                    proxyCreated = true;
+                }
             }
         }
         return objectProxy;

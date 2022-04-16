@@ -769,8 +769,24 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         }
     }
 
-    //class-6.4:JVM exit hook
-    private class ObjectPoolHook extends Thread {
+    //class-6.4: handle factory
+    private static class ObjectHandleFactory {
+        BeeObjectHandle createHandle(PooledObject p, Borrower b) {
+            b.lastUsed = p;
+            return new ObjectHandle(p);
+        }
+    }
+
+    //class-6.5: supported proxy handle factory
+    private static class ObjectHandleWithProxyFactory extends ObjectHandleFactory {
+        BeeObjectHandle createHandle(PooledObject p, Borrower b) {
+            b.lastUsed = p;
+            return new ObjectHandleWithProxy(p);
+        }
+    }
+
+    //class-6.6:JVM exit hook
+    private static class ObjectPoolHook extends Thread {
         private final FastObjectPool pool;
 
         ObjectPoolHook(FastObjectPool pool) {

@@ -58,9 +58,9 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     //                                        2: object take methods(1)                                              //
     //***************************************************************************************************************//
     public final BeeObjectHandle getObject() throws Exception {
-        if (this.ready) return this.pool.getObject();
-        synchronized (this.synLock) {
-            if (this.pool != null) return this.pool.getObject();
+        if (ready) return pool.getObject();
+        synchronized (synLock) {
+            if (pool != null) return pool.getObject();
             return createPool(this).getObject();
         }
     }
@@ -73,18 +73,18 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     }
 
     public void clear(boolean force) throws Exception {
-        if (this.pool == null) throw new PoolNotCreateException("Object pool not initialized");
-        this.pool.clear(force);
+        if (pool == null) throw new PoolNotCreateException("Object pool not initialized");
+        pool.clear(force);
     }
 
     public boolean isClosed() {
-        return this.pool == null || this.pool.isClosed();
+        return pool == null || pool.isClosed();
     }
 
     public void close() {
-        if (this.pool != null) {
+        if (pool != null) {
             try {
-                this.pool.close();
+                pool.close();
             } catch (Throwable e) {
                 CommonLog.error("Error at closing pool,cause:", e);
             }
@@ -92,11 +92,11 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     }
 
     public void setPrintRuntimeLog(boolean printRuntimeLog) {
-        if (this.pool != null) this.pool.setPrintRuntimeLog(printRuntimeLog);
+        if (pool != null) pool.setPrintRuntimeLog(printRuntimeLog);
     }
 
     public ObjectPoolMonitorVo getPoolMonitorVo() throws Exception {
-        if (this.pool == null) throw new PoolNotCreateException("Object pool not initialized");
-        return this.pool.getPoolMonitorVo();
+        if (pool == null) throw new PoolNotCreateException("Object pool not initialized");
+        return pool.getPoolMonitorVo();
     }
 }

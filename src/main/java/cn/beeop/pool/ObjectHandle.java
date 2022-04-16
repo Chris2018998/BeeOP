@@ -22,7 +22,7 @@ import static cn.beeop.pool.PoolStaticCenter.*;
  * @version 1.0
  */
 public class ObjectHandle implements BeeObjectHandle {
-    private static final ConcurrentHashMap<Object, Method> MethodMap = new ConcurrentHashMap<Object, Method>(16);
+    private static final ConcurrentHashMap<MethodCacheKey, Method> MethodMap = new ConcurrentHashMap<MethodCacheKey, Method>(16);
     protected final PooledObject p;
     private final Object raw;
     private final Set<String> excludeMethodNames;
@@ -69,7 +69,7 @@ public class ObjectHandle implements BeeObjectHandle {
         if (isClosed) throw ObjectClosedException;
         if (excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
 
-        Object key = new MethodCacheKey(name, types);
+        MethodCacheKey key = new MethodCacheKey(name, types);
         Method method = MethodMap.get(key);
 
         if (method == null) {
