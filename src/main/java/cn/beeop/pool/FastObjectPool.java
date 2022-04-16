@@ -20,7 +20,6 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Proxy;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Iterator;
@@ -66,10 +65,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     private long validAssumeTime;//milliseconds
     private int validTestTimeout;//seconds
     private long delayTimeForNextClearNs;//nanoseconds
-    private Class[] objectInterfaces;
-    private boolean supportObjectProxy;
     private PooledObject templatePooledObject;
-    private ObjectReflectHandler templateReflectHandler;
     private ObjectTransferPolicy transferPolicy;
     private RawObjectFactory objectFactory;
     private volatile PooledObject[] pooledArray;
@@ -105,10 +101,10 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         this.poolMaxSize = this.poolConfig.getMaxActive();
         this.objectFactory = this.poolConfig.getObjectFactory();
         this.pooledArray = new PooledObject[0];
-        this.templatePooledObject = new PooledObject(this, objectFactory, poolConfig.getExcludeMethodNames());
+        this.templatePooledObject = new PooledObject(this,
+                objectFactory, poolConfig.getObjectInterfaces(), poolConfig.getExcludeMethodNames());
         this.createInitObjects(this.poolConfig.getInitialSize());
-        this.objectInterfaces = poolConfig.getObjectInterfaces();
-        this.templateReflectHandler = createObjectReflectHandler();
+
         if (this.poolConfig.isFairMode()) {
             poolMode = "fair";
             this.transferPolicy = new FairTransferPolicy();
@@ -157,21 +153,6 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                 this.poolMaxSize,
                 this.semaphoreSize,
                 this.poolConfig.getMaxWait());
-    }
-
-    //Method-1.2: create template ObjectReflectHandler
-    private ObjectReflectHandler createObjectReflectHandler() {
-        ObjectReflectHandler reflectHandler = null;
-        if (objectInterfaces != null && objectInterfaces.length > 0) {
-            reflectHandler = new ObjectReflectHandler(poolConfig.getExcludeMethodNames());
-            try {
-                Proxy.newProxyInstance(PoolClassLoader, objectInterfaces, reflectHandler);
-                supportObjectProxy = true;
-            } catch (Throwable e) {
-                reflectHandler = null;
-            }
-        }
-        return reflectHandler;
     }
 
     /**
@@ -416,25 +397,6 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
             return true;
         }
     }
-
-    // Method-2.8:create object handle
-    private BeeObjectHandle createObjectHandle(PooledObject p, Borrower b) {
-        b.lastUsed = p;
-        ObjectHandle handle = new ObjectHandle(p);
-        if (this.supportObjectProxy) {
-            try {
-                handle.setObjectProxy(
-                        Proxy.newProxyInstance(
-                                PoolClassLoader,
-                                objectInterfaces,
-                                templateReflectHandler.copy(p, handle)));
-            } catch (Throwable e) {
-                //do nothing
-            }
-        }
-        return handle;
-    }
-
 
     //Compete Pooled connection transfer
     //private static final class CompeteTransferPolicy implements ObjectTransferPolicy {

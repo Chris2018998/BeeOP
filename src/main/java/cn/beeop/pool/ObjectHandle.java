@@ -19,6 +19,7 @@ import static cn.beeop.pool.PoolStaticCenter.*;
 public final class ObjectHandle implements BeeObjectHandle {
     private final PooledObject p;
     private boolean isClosed;
+    private boolean proxyCreated;
     private Object objectProxy;
 
     ObjectHandle(PooledObject p) {
@@ -30,28 +31,33 @@ public final class ObjectHandle implements BeeObjectHandle {
     //                                  1: override methods(4)                                                       //                                                                                  //
     //***************************************************************************************************************//
     public String toString() {
-        return this.p.toString();
+        return p.toString();
     }
 
     public boolean isClosed() {
-        return this.isClosed;
+        return isClosed;
     }
 
     public final void close() throws Exception {
         synchronized (this) {//safe close
-            if (this.isClosed) return;
-            this.isClosed = true;
+            if (isClosed) return;
+            isClosed = true;
         }
-        this.p.recycleSelf();
+        p.recycleSelf();
     }
 
     public final Object getObjectProxy() throws Exception {
-        if (this.isClosed) throw ObjectClosedException;
-        return this.objectProxy;
-    }
+        if (isClosed) throw ObjectClosedException;
+        if (proxyCreated) return objectProxy;
 
-    void setObjectProxy(Object objectProxy) {
-        this.objectProxy = objectProxy;
+        synchronized (this) {
+            try {
+                objectProxy = p.createObjectProxy(this);
+            } finally {
+                proxyCreated = true;
+            }
+        }
+        return objectProxy;
     }
 
     //***************************************************************************************************************//
@@ -62,7 +68,7 @@ public final class ObjectHandle implements BeeObjectHandle {
     }
 
     public Object call(String name, Class[] types, Object[] params) throws Exception {
-        if (this.isClosed) throw ObjectClosedException;
-        return this.p.call(name, types, params);
+        if (isClosed) throw ObjectClosedException;
+        return p.call(name, types, params);
     }
 }

@@ -9,6 +9,7 @@ package cn.beeop.pool;
 import cn.beeop.RawObjectFactory;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +27,9 @@ final class PooledObject implements Cloneable {
     private static final ConcurrentHashMap<Object, Method> MethodMap = new ConcurrentHashMap<Object, Method>(16);
     private final ObjectPool pool;
     private final RawObjectFactory factory;
+    private final Class[] objectInterfaces;
     private final Set<String> excludeMethodNames;
+    private final boolean supportObjectProxy;
 
     Object raw;
     volatile int state;
@@ -37,10 +40,12 @@ final class PooledObject implements Cloneable {
     //***************************************************************************************************************//
     //                                  1: Pooled entry create/clone methods(2)                                      //                                                                                  //
     //***************************************************************************************************************//
-    PooledObject(ObjectPool pool, RawObjectFactory factory, Set<String> excludeMethodNames) {
+    PooledObject(ObjectPool pool, RawObjectFactory factory, Class[] objectInterfaces, Set<String> excludeMethodNames) {
         this.pool = pool;
         this.factory = factory;
+        this.objectInterfaces = objectInterfaces;
         this.excludeMethodNames = excludeMethodNames;
+        this.supportObjectProxy = objectInterfaces != null && objectInterfaces.length > 0;
     }
 
     PooledObject setDefaultAndCopy(Object raw, int state) throws Exception {
@@ -53,6 +58,7 @@ final class PooledObject implements Cloneable {
         p.lastAccessTime = currentTimeMillis();//first time
         return p;
     }
+
 
     //***************************************************************************************************************//
     //                               2: Pooled entry business methods(4)                                             //                                                                                  //
@@ -90,7 +96,14 @@ final class PooledObject implements Cloneable {
     //***************************************************************************************************************//
     //                                  3: reflect methods(2)                                                        //                                                                                  //
     //***************************************************************************************************************//
-    Object call(String name, Class[] types, Object[] params) throws Exception {
+    final Object createObjectProxy(ObjectHandle handle) {
+        return supportObjectProxy ? Proxy.newProxyInstance(
+                PoolClassLoader,
+                objectInterfaces,
+                new ObjectReflectHandler(this, handle, this.excludeMethodNames)) : null;
+    }
+
+    final Object call(String name, Class[] types, Object[] params) throws Exception {
         if (this.excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
 
         Object key = new MethodCacheKey(name, types);
