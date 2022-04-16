@@ -36,7 +36,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     public BeeObjectSource(BeeObjectSourceConfig config) {
         try {
             config.copyTo(this);
-            BeeObjectSource.createPool(this);
+            createPool(this);
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
@@ -61,7 +61,7 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
         if (this.ready) return this.pool.getObject();
         synchronized (this.synLock) {
             if (this.pool != null) return this.pool.getObject();
-            return BeeObjectSource.createPool(this).getObject();
+            return createPool(this).getObject();
         }
     }
 

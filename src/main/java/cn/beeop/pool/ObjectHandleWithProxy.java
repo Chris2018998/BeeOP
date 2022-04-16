@@ -6,7 +6,10 @@
  */
 package cn.beeop.pool;
 
+import java.lang.reflect.Proxy;
+
 import static cn.beeop.pool.PoolStaticCenter.ObjectClosedException;
+import static cn.beeop.pool.PoolStaticCenter.PoolClassLoader;
 
 /**
  * object Handle support proxy
@@ -28,7 +31,10 @@ public class ObjectHandleWithProxy extends ObjectHandle {
 
         synchronized (this) {
             try {
-                objectProxy = p.createObjectProxy(this);
+                objectProxy = Proxy.newProxyInstance(
+                        PoolClassLoader,
+                        p.objectInterfaces,
+                        new ObjectReflectHandler(p, this));
             } finally {
                 proxyCreated = true;
             }

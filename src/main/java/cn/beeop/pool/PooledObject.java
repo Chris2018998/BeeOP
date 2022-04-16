@@ -8,13 +8,10 @@ package cn.beeop.pool;
 
 import cn.beeop.RawObjectFactory;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.Arrays;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
-import static cn.beeop.pool.PoolStaticCenter.*;
+import static cn.beeop.pool.PoolStaticCenter.CommonLog;
+import static cn.beeop.pool.PoolStaticCenter.OBJECT_CLOSED;
 import static java.lang.System.currentTimeMillis;
 
 /**
@@ -24,17 +21,16 @@ import static java.lang.System.currentTimeMillis;
  * @version 1.0
  */
 final class PooledObject implements Cloneable {
-    private static final ConcurrentHashMap<Object, Method> MethodMap = new ConcurrentHashMap<Object, Method>(16);
+    final Class[] objectInterfaces;
+    final Set<String> excludeMethodNames;
     private final ObjectPool pool;
     private final RawObjectFactory factory;
-    private final Class[] objectInterfaces;
-    private final Set<String> excludeMethodNames;
 
     Object raw;
+    Class rawClass;
     volatile int state;
     ObjectHandle handleInUsing;
     volatile long lastAccessTime;
-    private Class rawClass;
 
     //***************************************************************************************************************//
     //                                  1: Pooled entry create/clone methods(2)                                      //                                                                                  //
@@ -87,59 +83,6 @@ final class PooledObject implements Cloneable {
         } catch (Throwable e) {
             this.pool.abandonOnReturn(this);
             throw e;
-        }
-    }
-
-    //***************************************************************************************************************//
-    //                                  3: reflect methods(2)                                                        //                                                                                  //
-    //***************************************************************************************************************//
-    final Object createObjectProxy(ObjectHandle handle) {
-        return Proxy.newProxyInstance(
-                PoolClassLoader,
-                objectInterfaces,
-                new ObjectReflectHandler(this, handle, excludeMethodNames));
-    }
-
-    final Object call(String name, Class[] types, Object[] params) throws Exception {
-        if (excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
-
-        Object key = new MethodCacheKey(name, types);
-        Method method = MethodMap.get(key);
-
-        if (method == null) {
-            method = rawClass.getMethod(name, types);
-            MethodMap.put(key, method);
-        }
-
-        Object v = method.invoke(raw, params);
-        this.updateAccessTime();
-        return v;
-    }
-
-    //***************************************************************************************************************//
-    //                                  4: inner class(1)                                                            //                                                                                  //
-    //***************************************************************************************************************//
-    private static final class MethodCacheKey {
-        private final String name;
-        private final Class[] types;
-
-        MethodCacheKey(String name, Class[] types) {
-            this.name = name;
-            this.types = types;
-        }
-
-        public int hashCode() {
-            int result = this.name.hashCode();
-            result = 31 * result + Arrays.hashCode(this.types);
-            return result;
-        }
-
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || this.getClass() != o.getClass()) return false;
-            MethodCacheKey that = (MethodCacheKey) o;
-            return this.name.equals(that.name) &&
-                    Arrays.equals(this.types, that.types);
         }
     }
 }

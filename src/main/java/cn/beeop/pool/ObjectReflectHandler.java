@@ -27,11 +27,11 @@ public final class ObjectReflectHandler implements InvocationHandler {
     private final BeeObjectHandle handle;
     private final Set<String> excludeMethodNames;
 
-    ObjectReflectHandler(PooledObject p, ObjectHandle handle, Set<String> excludeMethodNames) {
+    ObjectReflectHandler(PooledObject p, ObjectHandle handle) {
         this.p = p;
         this.raw = p.raw;
         this.handle = handle;
-        this.excludeMethodNames = excludeMethodNames;
+        this.excludeMethodNames = p.excludeMethodNames;
     }
 
     //reflect method
@@ -39,7 +39,7 @@ public final class ObjectReflectHandler implements InvocationHandler {
         if (handle.isClosed()) throw ObjectClosedException;
         if (excludeMethodNames.contains(method.getName())) throw ObjectMethodForbiddenException;
 
-        Object v = method.invoke(this.raw, args);
+        Object v = method.invoke(raw, args);
         p.updateAccessTime();
         return v;
     }
