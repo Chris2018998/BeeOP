@@ -63,9 +63,9 @@ public class PoolStaticCenter {
     private static final String Separator_UnderLine = "_";
 
     //***************************************************************************************************************//
-    //                               1: Handle create/close methods(2)                                                  //
+    //                               1: Handle close methods(1)                                                  //
     //***************************************************************************************************************//
-    static void tryClosedProxyHandle(BeeObjectHandle handle) {
+    static void tryCloseObjectHandle(BeeObjectHandle handle) {
         try {
             handle.close();
         } catch (Throwable e) {
@@ -80,10 +80,6 @@ public class PoolStaticCenter {
         return value == null ? null : value.trim();
     }
 
-    public static boolean equalsString(String a, String b) {
-        return a == null ? b == null : a.equals(b);
-    }
-
     public static boolean isBlank(String str) {
         if (str == null) return true;
         for (int i = 0, l = str.length(); i < l; ++i) {
@@ -94,26 +90,8 @@ public class PoolStaticCenter {
     }
 
     //***************************************************************************************************************//
-    //                               3: configuration read methods(5)                                                //
+    //                               3: configuration read methods(2)                                                //
     //***************************************************************************************************************//
-
-    /**
-     * find-out all set methods and put to map with method names,for example:
-     * method:setMaxActive, map.put('MaxActive',method)
-     *
-     * @param beanClass set methods owner
-     * @return methods map
-     */
-    public static Map<String, Method> getClassSetMethodMap(Class beanClass) {
-        Method[] methods = beanClass.getMethods();
-        HashMap<String, Method> methodMap = new LinkedHashMap<String, Method>(methods.length);
-        for (Method method : methods) {
-            String methodName = method.getName();
-            if (method.getParameterTypes().length == 1 && methodName.startsWith("set") && methodName.length() > 3)
-                methodMap.put(methodName.substring(3), method);
-        }
-        return methodMap;
-    }
 
     /**
      * get config item value by property name,which support three format:
@@ -139,43 +117,6 @@ public class PoolStaticCenter {
         return readPropertyValue(properties, propertyNameToFieldId(newPropertyName, Separator_UnderLine));
     }
 
-    /**
-     * get config item value by property name,which support three format:
-     * 1:hump,example:maxActive
-     * 2:middle line,example: max-active
-     * 3:middle line,example: max_active
-     *
-     * @param valueMap     configuration list
-     * @param propertyName config item name
-     * @return configuration item value
-     */
-    public static Object getFieldValue(Map<String, Object> valueMap, final String propertyName) {
-        Object value = valueMap.get(propertyName);
-        if (value != null) return value;
-
-        String newPropertyName = propertyName.substring(0, 1).toLowerCase(Locale.US) + propertyName.substring(1);
-        value = valueMap.get(newPropertyName);
-        if (value != null) return value;
-
-        value = valueMap.get(propertyNameToFieldId(newPropertyName, Separator_MiddleLine));
-        if (value != null) return value;
-
-        return valueMap.get(propertyNameToFieldId(newPropertyName, Separator_UnderLine));
-    }
-
-    private static String propertyNameToFieldId(String property, String separator) {
-        char[] chars = property.toCharArray();
-        StringBuilder sb = new StringBuilder(chars.length);
-        for (char c : chars) {
-            if (Character.isUpperCase(c)) {
-                sb.append(separator).append(Character.toLowerCase(c));
-            } else {
-                sb.append(c);
-            }
-        }
-        return sb.toString();
-    }
-
     private static String readPropertyValue(Properties configProperties, String propertyName) {
         String value = configProperties.getProperty(propertyName, null);
         if (value != null) {
@@ -194,7 +135,7 @@ public class PoolStaticCenter {
         setPropertiesValue(bean, getClassSetMethodMap(bean.getClass()), valueMap);
     }
 
-    public static void setPropertiesValue(Object bean, Map<String, Method> setMethodMap, Map<String, Object> valueMap) throws BeeObjectSourceConfigException {
+    private static void setPropertiesValue(Object bean, Map<String, Method> setMethodMap, Map<String, Object> valueMap) throws BeeObjectSourceConfigException {
         if (bean == null) throw new BeeObjectSourceConfigException("Bean can't be null");
         if (setMethodMap == null || setMethodMap.isEmpty() || valueMap == null || valueMap.isEmpty()) return;
         for (Map.Entry<String, Method> entry : setMethodMap.entrySet()) {
@@ -228,6 +169,55 @@ public class PoolStaticCenter {
             }
         }
     }
+
+    private static Map<String, Method> getClassSetMethodMap(Class beanClass) {
+        Method[] methods = beanClass.getMethods();
+        HashMap<String, Method> methodMap = new LinkedHashMap<String, Method>(methods.length);
+        for (Method method : methods) {
+            String methodName = method.getName();
+            if (method.getParameterTypes().length == 1 && methodName.startsWith("set") && methodName.length() > 3)
+                methodMap.put(methodName.substring(3), method);
+        }
+        return methodMap;
+    }
+
+    /**
+     * get config item value by property name,which support three format:
+     * 1:hump,example:maxActive
+     * 2:middle line,example: max-active
+     * 3:middle line,example: max_active
+     *
+     * @param valueMap     configuration list
+     * @param propertyName config item name
+     * @return configuration item value
+     */
+    private static Object getFieldValue(Map<String, Object> valueMap, final String propertyName) {
+        Object value = valueMap.get(propertyName);
+        if (value != null) return value;
+
+        String newPropertyName = propertyName.substring(0, 1).toLowerCase(Locale.US) + propertyName.substring(1);
+        value = valueMap.get(newPropertyName);
+        if (value != null) return value;
+
+        value = valueMap.get(propertyNameToFieldId(newPropertyName, Separator_MiddleLine));
+        if (value != null) return value;
+
+        return valueMap.get(propertyNameToFieldId(newPropertyName, Separator_UnderLine));
+    }
+
+    private static String propertyNameToFieldId(String property, String separator) {
+        char[] chars = property.toCharArray();
+        StringBuilder sb = new StringBuilder(chars.length);
+        for (char c : chars) {
+            if (Character.isUpperCase(c)) {
+                sb.append(separator).append(Character.toLowerCase(c));
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
 
     private static Object convert(String propName, Object setValue, Class type) {
         if (type.isInstance(setValue)) {
@@ -282,7 +272,7 @@ public class PoolStaticCenter {
     }
 
     //***************************************************************************************************************//
-    //                               5:class check(3)                                                           //
+    //                               5:class instance create(4)                                                      //
     //***************************************************************************************************************//
     //check subclass,if failed,then return error message;
     public static Object createClassInstance(Class objectClass, Class parentClass, String objectClassType) throws Exception {

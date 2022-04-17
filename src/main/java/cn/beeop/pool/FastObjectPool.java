@@ -482,7 +482,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                     if (System.currentTimeMillis() - p.lastAccessTime - this.holdTimeoutMs >= 0L) {//hold timeout
                         BeeObjectHandle handleInUsing = p.handleInUsing;
                         if (handleInUsing != null) {
-                            tryClosedProxyHandle(handleInUsing);
+                            tryCloseObjectHandle(handleInUsing);
                         } else {
                             this.removePooledEntry(p, DESC_RM_BAD);
                             this.tryWakeupServantThread();
@@ -535,7 +535,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                     BeeObjectHandle handleInUsing = p.handleInUsing;
                     if (handleInUsing != null) {
                         if (force || System.currentTimeMillis() - p.lastAccessTime - this.holdTimeoutMs >= 0L) {
-                            tryClosedProxyHandle(handleInUsing);
+                            tryCloseObjectHandle(handleInUsing);
                             if (ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_CLOSED))
                                 this.removePooledEntry(p, source);
                         }
