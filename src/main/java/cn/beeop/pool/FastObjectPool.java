@@ -11,8 +11,8 @@ import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.RawObjectFactory;
 import cn.beeop.pool.atomic.AtomicIntegerFieldUpdaterImpl;
 import cn.beeop.pool.atomic.AtomicReferenceFieldUpdaterImpl;
-import cn.beeop.pool.exception.ObjectException;
 import cn.beeop.pool.exception.PoolCreateFailedException;
+import cn.beeop.pool.exception.PoolInternalException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +92,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
      * @param config data source configuration
      * @throws Exception check configuration fail or to create initiated object
      */
-    public synchronized void init(BeeObjectSourceConfig config) throws Exception {
+    public void init(BeeObjectSourceConfig config) throws Exception {
         if (config == null) throw new PoolCreateFailedException("Configuration can't be null");
         if (this.poolState != POOL_NEW) throw new PoolCreateFailedException("Pool has initialized");
 
@@ -179,7 +179,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     }
 
     //Method-1.4:create one pooled object
-    private PooledObject createPooledEntry(int state) throws ObjectException {
+    private PooledObject createPooledEntry(int state) throws Exception {
         synchronized (this.synLock) {
             int l = this.pooledArray.length;
             if (l < this.poolMaxSize) {
@@ -199,7 +199,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                     return p;
                 } catch (Throwable e) {
                     if (rawObj != null) this.objectFactory.destroy(rawObj);
-                    throw e instanceof ObjectException ? (ObjectException) e : new ObjectException(e);
+                    throw e instanceof Exception ? (Exception) e : new PoolInternalException(e);
                 }
             } else {
                 return null;
@@ -287,7 +287,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                     }
                 } else if (s instanceof Throwable) {
                     this.waitQueue.remove(b);
-                    throw s instanceof ObjectException ? (ObjectException) s : new ObjectException((Throwable) s);
+                    throw s instanceof Exception ? (Exception) s : new PoolInternalException((Throwable) s);
                 }
 
                 if (failed) {
@@ -323,7 +323,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     }
 
     //Method-2.2: search one idle Object,if not found,then try to create one
-    private PooledObject searchOrCreate() throws ObjectException {
+    private PooledObject searchOrCreate() throws Exception {
         PooledObject[] array = this.pooledArray;
         for (PooledObject p : array) {
             if (p.state == OBJECT_IDLE && ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING) && this.testOnBorrow(p))
