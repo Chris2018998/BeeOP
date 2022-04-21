@@ -15,10 +15,5 @@ package cn.beeop.pool;
 interface ObjectTransferPolicy {
     int getStateCodeOnRelease();
 
-    void beforeTransfer(PooledObject p);
-
     boolean tryCatch(PooledObject p);
-
-    void onTransferFail(PooledObject p);
-
 }

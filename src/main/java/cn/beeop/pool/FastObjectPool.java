@@ -55,6 +55,9 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     private String poolThreadName;
     private int poolMaxSize;
     private volatile int poolState;
+    private boolean isFairMode;
+    private boolean isCompeteMode;
+
     private int semaphoreSize;
     private PoolSemaphore semaphore;
     private long maxWaitNs;//nanoseconds
@@ -113,9 +116,11 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
         if (this.poolConfig.isFairMode()) {
             poolMode = "fair";
+            isFairMode = true;
             this.transferPolicy = new FairTransferPolicy();
         } else {
             poolMode = "compete";
+            isCompeteMode = true;
             this.transferPolicy = this;
         }
         this.stateCodeOnRelease = this.transferPolicy.getStateCodeOnRelease();
@@ -129,7 +134,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         this.printRuntimeLog = this.poolConfig.isPrintRuntimeLog();
 
         this.semaphoreSize = this.poolConfig.getBorrowSemaphoreSize();
-        this.semaphore = new PoolSemaphore(this.semaphoreSize, this.poolConfig.isFairMode());
+        this.semaphore = new PoolSemaphore(this.semaphoreSize, isFairMode);
         this.waitQueue = new ConcurrentLinkedQueue<Borrower>();
         this.threadLocal = new ThreadLocal<WeakReference<Borrower>>();
         this.servantTryCount = new AtomicInteger(0);
@@ -307,9 +312,9 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                                 failed = true;
                                 cause = RequestInterruptException;
                             }
-                            if (b.state == BOWER_WAITING && BorrowStUpd.compareAndSet(b, BOWER_WAITING, failed ? cause : BOWER_NORMAL) && !failed) {
+                            if (b.state == BOWER_WAITING && BorrowStUpd.compareAndSet(b, BOWER_WAITING, failed ? cause : BOWER_NORMAL) && !failed)
                                 Thread.yield();
-                            }
+
                         }
                     } else {//timeout
                         failed = true;
@@ -347,8 +352,8 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //Method-2.4: return object to pool after borrower end of use object
     public final void recycle(PooledObject p) {
+        if (isCompeteMode) p.state = OBJECT_IDLE;
         Iterator<Borrower> iterator = waitQueue.iterator();
-        transferPolicy.beforeTransfer(p);
         W:
         while (iterator.hasNext()) {
             Borrower b = iterator.next();
@@ -361,7 +366,8 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
             if (state == BOWER_WAITING) LockSupport.unpark(b.thread);
             return;
         }
-        transferPolicy.onTransferFail(p);
+
+        if (isFairMode) p.state = OBJECT_IDLE;
         tryWakeupServantThread();
     }
 
@@ -410,16 +416,8 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         return OBJECT_IDLE;
     }
 
-    public final void beforeTransfer(PooledObject p) {
-        p.state = OBJECT_IDLE;
-    }
-
     public final boolean tryCatch(PooledObject p) {
         return p.state == OBJECT_IDLE && ObjStUpd.compareAndSet(p, OBJECT_IDLE, OBJECT_USING);
-    }
-
-    public final void onTransferFail(PooledObject p) {
-        //do nothing
     }
 
     //***************************************************************************************************************//
@@ -717,16 +715,8 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
             return OBJECT_USING;
         }
 
-        public final void beforeTransfer(PooledObject p) {
-            //do nothing
-        }
-
         public final boolean tryCatch(PooledObject p) {
             return p.state == OBJECT_USING;
-        }
-
-        public final void onTransferFail(PooledObject p) {
-            p.state = OBJECT_IDLE;
         }
     }
 
