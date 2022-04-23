@@ -441,23 +441,24 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
 
     //Method-3.3: pool servant thread run method
     public void run() {
-        while (this.poolState != POOL_CLOSED) {
-            while (this.servantState.get() == THREAD_WORKING && !this.waitQueue.isEmpty() && this.servantTryCount.get() > 0) {
+        while (poolState != POOL_CLOSED) {
+            while (servantState.get() == THREAD_WORKING) {
+                int c = servantTryCount.get();
+                if (c <= 0 || (waitQueue.isEmpty() && servantTryCount.compareAndSet(c, 0))) break;
+                servantTryCount.decrementAndGet();
+
                 try {
-                    this.servantTryCount.decrementAndGet();
-                    PooledObject p = this.searchOrCreate();
-                    if (p != null) this.recycle(p);
+                    PooledObject p =searchOrCreate();
+                    if (p != null) recycle(p);
                 } catch (Throwable e) {
                     this.transferException(e);
                 }
             }
 
-            if (this.servantState.get() == THREAD_EXIT)
+            if (servantState.get() == THREAD_EXIT)
                 break;
-            if (this.servantState.compareAndSet(THREAD_WORKING, THREAD_WAITING)) {
-                this.servantTryCount.set(0);
+            if (servantTryCount.get() == 0 && servantState.compareAndSet(THREAD_WORKING, THREAD_WAITING))
                 LockSupport.park();
-            }
         }
     }
 
