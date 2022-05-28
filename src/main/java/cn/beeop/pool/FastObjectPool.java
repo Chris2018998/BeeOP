@@ -11,6 +11,8 @@ import cn.beeop.BeeObjectSourceConfig;
 import cn.beeop.RawObjectFactory;
 import cn.beeop.pool.atomic.AtomicIntegerFieldUpdaterImpl;
 import cn.beeop.pool.atomic.AtomicReferenceFieldUpdaterImpl;
+import cn.beeop.pool.exception.ObjectException;
+import cn.beeop.pool.exception.PoolClosedException;
 import cn.beeop.pool.exception.PoolCreateFailedException;
 import cn.beeop.pool.exception.PoolInternalException;
 import org.slf4j.Logger;
@@ -245,7 +247,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
      * @throws Exception if pool is closed or waiting timeout,then throw exception
      */
     public BeeObjectHandle getObject() throws Exception {
-        if (this.poolState != POOL_READY) throw PoolCloseException;
+        if (this.poolState != POOL_READY) throw new PoolClosedException("Pool has shut down or in clearing");
 
         //0:try to get from threadLocal cache
         WeakReference<Borrower> r = this.threadLocal.get();
@@ -265,9 +267,9 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         try {
             //1:try to acquire a permit
             if (!this.semaphore.tryAcquire(this.maxWaitNs, TimeUnit.NANOSECONDS))
-                throw RequestTimeoutException;
+                throw new ObjectException("Get object timeout");
         } catch (InterruptedException e) {
-            throw RequestInterruptException;
+            throw new ObjectException("Interrupted during getting object");
         }
         try {//semaphore acquired
             //2:try search one or create one
@@ -310,7 +312,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                             LockSupport.parkNanos(t);//block exit:1:get transfer 2:interrupted 3:timeout 4:unpark before parkNanos
                             if (thd.isInterrupted()) {
                                 failed = true;
-                                cause = RequestInterruptException;
+                                cause = new ObjectException("Interrupted during getting object");
                             }
                             if (b.state == BOWER_WAITING && BorrowStUpd.compareAndSet(b, BOWER_WAITING, failed ? cause : BOWER_NORMAL) && !failed)
                                 Thread.yield();
@@ -318,7 +320,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                         }
                     } else {//timeout
                         failed = true;
-                        cause = RequestTimeoutException;
+                        cause = new ObjectException("Get object timeout");
                     }
                 }//end (state == BOWER_NORMAL)
             } while (true);//while
@@ -448,7 +450,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                 servantTryCount.decrementAndGet();
 
                 try {
-                    PooledObject p =searchOrCreate();
+                    PooledObject p = searchOrCreate();
                     if (p != null) recycle(p);
                 } catch (Throwable e) {
                     this.transferException(e);
@@ -521,7 +523,8 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     //Method-4.3: remove all connections from pool
     private void clear(boolean force, String source) {
         this.semaphore.interruptWaitingThreads();
-        while (!this.waitQueue.isEmpty()) this.transferException(PoolCloseException);
+        PoolClosedException poolCloseException = new PoolClosedException("Pool has shut down or in clearing");
+        while (!this.waitQueue.isEmpty()) this.transferException(poolCloseException);
 
         while (this.pooledArray.length > 0) {
             PooledObject[] array = this.pooledArray;

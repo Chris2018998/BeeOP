@@ -6,9 +6,10 @@
  */
 package cn.beeop.pool;
 
+import cn.beeop.pool.exception.ObjectException;
+
 import java.lang.reflect.Proxy;
 
-import static cn.beeop.pool.PoolStaticCenter.ObjectClosedException;
 import static cn.beeop.pool.PoolStaticCenter.PoolClassLoader;
 
 /**
@@ -26,7 +27,7 @@ public class ObjectHandleWithProxy extends ObjectHandle {
     }
 
     public Object getObjectProxy() throws Exception {
-        if (isClosed) throw ObjectClosedException;
+        if (isClosed) throw new ObjectException("No operations allowed after object handle closed");
         if (proxyCreated) return objectProxy;
 
         synchronized (this) {

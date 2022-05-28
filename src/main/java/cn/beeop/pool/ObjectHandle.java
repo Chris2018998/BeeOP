@@ -7,13 +7,15 @@
 package cn.beeop.pool;
 
 import cn.beeop.BeeObjectHandle;
+import cn.beeop.pool.exception.ObjectException;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static cn.beeop.pool.PoolStaticCenter.*;
+import static cn.beeop.pool.PoolStaticCenter.EMPTY_CLASSES;
+import static cn.beeop.pool.PoolStaticCenter.EMPTY_CLASS_NAMES;
 
 /**
  * object Handle implement
@@ -66,8 +68,8 @@ public class ObjectHandle implements BeeObjectHandle {
     }
 
     public Object call(String name, Class[] types, Object[] params) throws Exception {
-        if (isClosed) throw ObjectClosedException;
-        if (excludeMethodNames.contains(name)) throw ObjectMethodForbiddenException;
+        if (isClosed) throw new ObjectException("No operations allowed after object handle closed");
+        if (excludeMethodNames.contains(name)) throw new ObjectException("Method illegal access");
 
         MethodCacheKey key = new MethodCacheKey(name, types);
         Method method = MethodMap.get(key);

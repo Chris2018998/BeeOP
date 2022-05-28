@@ -7,13 +7,12 @@
 package cn.beeop.pool;
 
 import cn.beeop.BeeObjectHandle;
+import cn.beeop.pool.exception.ObjectException;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.Set;
 
-import static cn.beeop.pool.PoolStaticCenter.ObjectClosedException;
-import static cn.beeop.pool.PoolStaticCenter.ObjectMethodForbiddenException;
 
 /**
  * Proxy reflect handler
@@ -36,8 +35,8 @@ public final class ObjectReflectHandler implements InvocationHandler {
 
     //reflect method
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        if (handle.isClosed()) throw ObjectClosedException;
-        if (excludeMethodNames.contains(method.getName())) throw ObjectMethodForbiddenException;
+        if (handle.isClosed()) throw new ObjectException("No operations allowed after object handle closed");
+        if (excludeMethodNames.contains(method.getName())) throw new ObjectException("Method illegal access");
 
         Object v = method.invoke(raw, args);
         p.updateAccessTime();
