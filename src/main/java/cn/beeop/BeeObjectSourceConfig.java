@@ -413,15 +413,15 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
 
         //3:try to find 'factoryProperties' config value
         this.addFactoryProperty(getPropertyValue(configProperties, "factoryProperties"));
-        String factoryPropertiesCount = getPropertyValue(configProperties, "factoryProperties.count");
-        if (!isBlank(factoryPropertiesCount)) {
-            int count = 0;
+        String factoryPropertiesSize = getPropertyValue(configProperties, "factoryProperties.size");
+        if (!isBlank(factoryPropertiesSize)) {
+            int size = 0;
             try {
-                count = Integer.parseInt(factoryPropertiesCount.trim());
+                size = Integer.parseInt(factoryPropertiesSize.trim());
             } catch (Throwable e) {
                 //do nothing
             }
-            for (int i = 1; i <= count; i++)
+            for (int i = 1; i <= size; i++)
                 this.addFactoryProperty(getPropertyValue(configProperties, "factoryProperties." + i));
         }
 
