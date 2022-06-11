@@ -6,7 +6,7 @@
     <artifactId>beeop</artifactId>
     <version>1.2.8</version>
     <name>beeop</name>
-    <url>https://gitee.com/Chris2018998/BeeOP</url>
+    <url>https://github.com/Chris2018998/BeeOP https://gitee.com/Chris2018998/BeeOP</url>
     <description>Java Object Pool Implementation</description>
 
     <properties>
