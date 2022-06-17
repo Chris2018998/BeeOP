@@ -274,36 +274,26 @@ public class BeeObjectSourceConfig implements BeeObjectSourceConfigJmxBean {
     }
 
     public Class[] getObjectInterfaces() {
-        if (this.objectInterfaces == null) return EMPTY_CLASSES;
-
-        Class[] tempInterfaces = new Class[this.objectInterfaces.length];
-        System.arraycopy(this.objectInterfaces, 0, tempInterfaces, 0, this.objectInterfaces.length);
-        return tempInterfaces;
+        return (this.objectInterfaces == null)?  EMPTY_CLASSES:objectInterfaces.clone();
     }
 
     public void setObjectInterfaces(Class[] interfaces) {
         if (interfaces == null || interfaces.length == 0) {
-            objectInterfaces = null;
+            this.objectInterfaces = null;
         } else {
-            objectInterfaces = new Class[interfaces.length];
-            System.arraycopy(interfaces, 0, this.objectInterfaces, 0, interfaces.length);
+            this.objectInterfaces = interfaces.clone();
         }
     }
 
     public String[] getObjectInterfaceNames() {
-        if (this.objectInterfaceNames == null) return EMPTY_CLASS_NAMES;
-
-        String[] tempInterfaceNames = new String[this.objectInterfaceNames.length];
-        System.arraycopy(this.objectInterfaceNames, 0, tempInterfaceNames, 0, this.objectInterfaceNames.length);
-        return tempInterfaceNames;
+        return this.objectInterfaceNames == null?EMPTY_CLASS_NAMES:objectInterfaceNames.clone();
     }
 
     public void setObjectInterfaceNames(String[] interfaceNames) {
         if (interfaceNames == null || interfaceNames.length == 0) {
             objectInterfaceNames = null;
         } else {
-            objectInterfaceNames = new String[interfaceNames.length];
-            System.arraycopy(interfaceNames, 0, this.objectInterfaceNames, 0, interfaceNames.length);
+            objectInterfaceNames = interfaceNames.clone();
         }
     }
 
