@@ -152,8 +152,8 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         setName(this.poolName + "-workServant");
         this.idleScanThread.setDaemon(true);
         this.idleScanThread.setName(this.poolName + "-idleCheck");
-        setPriority(Thread.MIN_PRIORITY);
-        this.idleScanThread.setPriority(Thread.MIN_PRIORITY);
+        setPriority(4);
+        this.idleScanThread.setPriority(4);
 
         start();
         this.idleScanThread.start();
