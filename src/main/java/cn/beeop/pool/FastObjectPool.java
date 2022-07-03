@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.LockSupport;
+
 import static cn.beeop.pool.PoolStaticCenter.*;
 
 /**
@@ -309,14 +310,12 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                                 LockSupport.unpark(this);
 
                             LockSupport.parkNanos(t);//block exit:1:get transfer 2:timeout 3:interrupted
-                            if (b.state == BOWER_WAITING) {//timeout or interrupted
-                                if (thd.isInterrupted()) {
-                                    failed = true;
-                                    cause = new ObjectException("Interrupted during getting object");
-                                    BorrowStUpd.compareAndSet(b, BOWER_WAITING, cause);
-                                } else if (BorrowStUpd.compareAndSet(b, BOWER_WAITING, BOWER_NORMAL)) {//timeout,give it one chance again
-                                    Thread.yield();
-                                }
+                            if (thd.isInterrupted()) {
+                                failed = true;
+                                cause = new ObjectException("Interrupted during getting object");
+                                BorrowStUpd.compareAndSet(b, BOWER_WAITING, cause);
+                            } else if (b.state == BOWER_WAITING && BorrowStUpd.compareAndSet(b, BOWER_WAITING, BOWER_NORMAL)) {//timeout,give it one chance again
+                                Thread.yield();
                             }
                         }
                     } else {//timeout
