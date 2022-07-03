@@ -10,6 +10,9 @@ import cn.beeop.pool.ObjectPool;
 import cn.beeop.pool.ObjectPoolMonitorVo;
 import cn.beeop.pool.exception.PoolNotCreateException;
 
+import java.sql.SQLException;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import static cn.beeop.pool.PoolStaticCenter.CommonLog;
 import static cn.beeop.pool.PoolStaticCenter.createClassInstance;
 
@@ -23,9 +26,12 @@ import static cn.beeop.pool.PoolStaticCenter.createClassInstance;
  * @version 1.0
  */
 public class BeeObjectSource extends BeeObjectSourceConfig {
-    private final Object synLock = new Object();
-    private volatile boolean ready;
     private ObjectPool pool;
+    private boolean ready;
+    private Exception failedCause;
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock.ReadLock readLock = lock.readLock();
+    private final ReentrantReadWriteLock.WriteLock writeLock = lock.writeLock();
 
     //***************************************************************************************************************//
     //                                             1:constructors(2)                                                 //
@@ -59,10 +65,28 @@ public class BeeObjectSource extends BeeObjectSourceConfig {
     //***************************************************************************************************************//
     public final BeeObjectHandle getObject() throws Exception {
         if (ready) return pool.getObject();
-        synchronized (synLock) {
-            if (pool != null) return pool.getObject();
-            return createPool(this).getObject();
+
+        if (writeLock.tryLock()) {
+            try {
+                if (!ready) {
+                    failedCause = null;
+                    createPool(this).getObject();
+                }
+            } catch (SQLException e) {
+                failedCause = e;
+            } finally {
+                writeLock.unlock();
+            }
+        } else {
+            try {
+                readLock.lock();
+            } finally {
+                readLock.unlock();
+            }
         }
+
+        if (failedCause != null) throw failedCause;
+        return pool.getObject();
     }
 
     //***************************************************************************************************************//
