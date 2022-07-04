@@ -47,7 +47,6 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     private static final AtomicIntegerFieldUpdater<PooledObject> ObjStUpd = AtomicIntegerFieldUpdaterImpl.newUpdater(PooledObject.class, "state");
     private static final AtomicReferenceFieldUpdater<Borrower, Object> BorrowStUpd = AtomicReferenceFieldUpdaterImpl.newUpdater(Borrower.class, Object.class, "state");
     private static final AtomicIntegerFieldUpdater<FastObjectPool> PoolStateUpd = AtomicIntegerFieldUpdaterImpl.newUpdater(FastObjectPool.class, "poolState");
-    private static final ThreadLocal<WeakReference<Borrower>> threadLocal =new ThreadLocal<WeakReference<Borrower>>();
     private static final Logger Log = LoggerFactory.getLogger(FastObjectPool.class);
     private final Object synLock = new Object();
 
@@ -82,6 +81,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
     private AtomicInteger idleScanState;
     private IdleTimeoutScanThread idleScanThread;
     private ConcurrentLinkedQueue<Borrower> waitQueue;
+    private ThreadLocal<WeakReference<Borrower>> threadLocal;
     private BeeObjectSourceConfig poolConfig;
     private ObjectPoolMonitorVo monitorVo;
     private ObjectPoolHook exitHook;
@@ -138,6 +138,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
         this.semaphoreSize = this.poolConfig.getBorrowSemaphoreSize();
         this.semaphore = new PoolSemaphore(this.semaphoreSize, isFairMode);
         this.waitQueue = new ConcurrentLinkedQueue<Borrower>();
+        this.threadLocal = new ThreadLocal<WeakReference<Borrower>>();
         this.servantTryCount = new AtomicInteger(0);
         this.servantState = new AtomicInteger(THREAD_WORKING);
         this.idleScanState = new AtomicInteger(THREAD_WORKING);
