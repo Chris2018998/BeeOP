@@ -282,8 +282,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
             boolean failed = false;
             Throwable cause = null;
             deadline += this.maxWaitNs;
-            Thread thd = b.thread;
-
+           
             do {
                 Object s = b.state;
                 if (s instanceof PooledObject) {
@@ -310,7 +309,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
                                 LockSupport.unpark(this);
 
                             LockSupport.parkNanos(t);//block exit:1:get transfer 2:timeout 3:interrupted
-                            if (thd.isInterrupted()) {
+                            if (Thread.interrupted()) {//auto clear interrupted status
                                 failed = true;
                                 cause = new ObjectException("Interrupted during getting object");
                                 BorrowStUpd.compareAndSet(b, BOWER_WAITING, cause);
