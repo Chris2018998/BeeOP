@@ -280,7 +280,7 @@ public final class FastObjectPool extends Thread implements ObjectPoolJmxBean, O
             b.state = BOWER_NORMAL;
             this.waitQueue.offer(b);
             boolean failed = false;
-            Throwable cause = null;
+            ObjectException cause = null;
             deadline += this.maxWaitNs;
            
             do {
