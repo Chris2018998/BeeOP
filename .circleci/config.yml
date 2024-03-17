@@ -15,14 +15,8 @@ jobs:
       - run:
           name: Build
           command: mvn clean package
-
-  upload_to_codecov: 
-        docker:
-          # replace with your preferred image
-          - image: cimg/base:stable
-        steps:
-          - codecov/upload
-
+      - codecov/upload
+ 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/workflows/ & https://circleci.com/docs/configuration-reference/#workflows
 workflows:
@@ -30,4 +24,3 @@ workflows:
     # Inside the workflow, you define the jobs you want to run.
     jobs:
       - build-and-test
-      - upload_to_codecov
