@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  codecov: codecov/codecov@3.0.0
 
 jobs:
   build-and-test:
@@ -8,21 +10,18 @@ jobs:
     steps:
       # Checkout the code as the first step.
       - checkout
-
+      - codecov/upload
       # Use mvn clean and package as the standard maven build phase
       - run:
           name: Build
           command: mvn clean package
-      # Then run your tests!
-      - run:
-          name: Test
-          command: mvn test
-      - run:   
-           name: Upload coverage reports to Codecov
-           uses: codecov/codecov-action@v4.0.1
-          with:
-            token: ${{ secrets.CODECOV_TOKEN }}
-            slug: Chris2018998/BeeOP
+
+  upload_to_codecov: 
+        docker:
+          # replace with your preferred image
+          - image: cimg/base:stable
+        steps:
+          - codecov/upload
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/workflows/ & https://circleci.com/docs/configuration-reference/#workflows
@@ -31,3 +30,4 @@ workflows:
     # Inside the workflow, you define the jobs you want to run.
     jobs:
       - build-and-test
+      - upload_to_codecov
