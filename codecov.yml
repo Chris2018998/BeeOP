@@ -1,18 +1,26 @@
-language: java
+codecov:
+  notify:
+    require_ci_to_pass: yes
 
-default_analysis:
-  open_source: true
-  commands:
-    - mvn test
- 
 coverage:
   precision: 2
   round: down
   range: "50..80"
-  
-ignore:
-  - '**/src/test/**/*'
-  - '**/target/**/*'
- 
-features:
-  delete_reports: true
+
+  status:
+    project: yes
+    patch: yes
+    changes: no
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+comment:
+  layout: "reach, diff, flags, files, footer"
+  behavior: default
+  require_changes: no
