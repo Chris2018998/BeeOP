@@ -16,6 +16,7 @@ jobs:
           name: Build
           command: mvn clean package
       - codecov/upload
+          file: build/coverage-report
  
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/workflows/ & https://circleci.com/docs/configuration-reference/#workflows
